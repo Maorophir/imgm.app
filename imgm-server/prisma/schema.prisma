@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// -----------------------------------------------------------------------------
+// Better Auth Core Tables
+// -----------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  emailVerified Boolean   @default(false)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  sessions      Session[]
+  accounts      Account[]
+  
+  // Custom IMGM relations
+  reviews       Review[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  expiresAt DateTime
+  token     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                    String    @id @default(cuid())
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+}
+
+model Verification {
+  id         String    @id @default(cuid())
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+// -----------------------------------------------------------------------------
+// IMGM Domain Tables
+// -----------------------------------------------------------------------------
+
+model Game {
+  id            Int      @id @default(autoincrement()) // Matching IGDB IDs
+  title         String
+  slug          String   @unique
+  coverUrl      String?
+  description   String?
+  releaseDate   DateTime?
+  developer     String?
+  publisher     String?
+  platforms     String[] // Natively supported by Postgres!
+  genres        String[] // Natively supported by Postgres!
+  
+  reviews       Review[]
+  aiSummary     GameAISummary?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Review {
+  id               String   @id @default(cuid())
+  rating           Int      // 1-10
+  reviewText       String
+  hoursPlayed      String?
+  platform         String?
+  completionStatus String?
+  playStyle        String?
+  difficulty       String?
+  recommendation   String?  // Yes, No, Wait for Sale
+  
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  gameId           Int
+  game             Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  
+  analysis         ReviewAnalysis?
+  
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model ReviewAnalysis {
+  id               String   @id @default(cuid())
+  sentiment        String   // Positive, Mixed, Negative
+  rawLlmResponse   String   // JSON string
+  modelUsed        String
+  
+  reviewId         String   @unique
+  review           Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  
+  analyzedAt       DateTime @default(now())
+}
+
+model GameAISummary {
+  id                     String   @id @default(cuid())
+  overallSentiment       String
+  summaryText            String
+  reviewCountAtGen       Int
+  
+  gameId                 Int      @unique
+  game                   Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  
+  generatedAt            DateTime @default(now())
+}

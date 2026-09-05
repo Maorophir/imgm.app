@@ -11,7 +11,7 @@
  */
 function Profile() {
   return (
-    <div className="flex items-center justify-center h-[80vh] text-3xl text-gray-400">
+    <div className="flex items-center justify-center h-[80vh] text-3xl text-slate-400">
       User Profile Coming Soon...
     </div>
   );

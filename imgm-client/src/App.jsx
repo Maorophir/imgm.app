@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Trending from './pages/Trending';
 import Profile from './pages/Profile';
+import GameDetails from './pages/GameDetails';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -26,13 +27,14 @@ import Profile from './pages/Profile';
 function App() {
   return (
     <Router>
-      <div className="bg-gray-900 min-h-screen text-white font-sans">
+      <div className="bg-slate-950 min-h-screen text-white font-sans">
         {/* Navbar renders on EVERY page — it's outside <Routes> */}
         <Navbar />
 
         {/* Only the matched route renders here */}
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/game/:id" element={<GameDetails />} />
           <Route path="/trending" element={<Trending />} />
           <Route path="/profile" element={<Profile />} />
         </Routes>

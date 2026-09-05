@@ -16,26 +16,26 @@ import { Link } from 'react-router-dom';
  */
 function Navbar() {
   return (
-    <nav className="p-5 bg-gray-800 flex justify-between items-center shadow-lg">
+    <nav className="p-5 bg-slate-900 flex justify-between items-center shadow-lg">
       {/* Logo / Brand — links back to home */}
-      <Link to="/" className="text-3xl font-extrabold text-purple-500 tracking-wider">
+      <Link to="/" className="text-3xl font-extrabold text-blue-500 tracking-wider">
         IMGM
       </Link>
 
       {/* Navigation links */}
       <ul className="flex gap-6 font-semibold">
         <li>
-          <Link to="/" className="hover:text-purple-400 transition">
+          <Link to="/" className="hover:text-blue-400 transition">
             Home
           </Link>
         </li>
         <li>
-          <Link to="/trending" className="hover:text-purple-400 transition">
+          <Link to="/trending" className="hover:text-blue-400 transition">
             Trending
           </Link>
         </li>
         <li>
-          <Link to="/profile" className="hover:text-purple-400 transition">
+          <Link to="/profile" className="hover:text-blue-400 transition">
             My Profile
           </Link>
         </li>

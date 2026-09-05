@@ -11,7 +11,7 @@
  *
  * Why we removed the old CSS variables (--text, --accent, etc.):
  * - They were from the Vite starter template and conflicted with Tailwind's
- *   color system (e.g., text-gray-400, bg-purple-600).
+ *   color system (e.g., text-slate-400, bg-blue-600).
  * - Tailwind already has a complete, consistent design system built in.
  * - Using both creates confusion about which system is "the truth."
  */
