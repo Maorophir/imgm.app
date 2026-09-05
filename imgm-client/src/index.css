@@ -1,0 +1,26 @@
+/*
+ * index.css — Global stylesheet for IMGM.
+ *
+ * This file does THREE things:
+ * 1. Imports Tailwind CSS (which provides all utility classes like flex, p-5, etc.)
+ * 2. Sets up font rendering optimizations (makes text look crisp on all OS's)
+ * 3. Resets the body margin (browsers add default margin that we don't want)
+ *
+ * Everything else (colors, spacing, layout) is handled by Tailwind classes
+ * directly in the JSX. This keeps styles co-located with the markup.
+ *
+ * Why we removed the old CSS variables (--text, --accent, etc.):
+ * - They were from the Vite starter template and conflicted with Tailwind's
+ *   color system (e.g., text-gray-400, bg-purple-600).
+ * - Tailwind already has a complete, consistent design system built in.
+ * - Using both creates confusion about which system is "the truth."
+ */
+@import "tailwindcss";
+
+body {
+  margin: 0;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
