@@ -13,8 +13,9 @@ dist-ssr
 *.local
 .env
 imgm-server/node_modules/
-imgm-server/prisma/dev.db*
 imgm-server/.env
+*.db
+*.db-journal
 
 # Editor directories and files
 .vscode/*
