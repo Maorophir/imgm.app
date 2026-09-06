@@ -55,6 +55,7 @@ model Account {
   password              String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
+  issuer                String?
 }
 
 model Verification {

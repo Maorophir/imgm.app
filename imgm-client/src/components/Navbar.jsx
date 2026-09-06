@@ -1,44 +1,68 @@
 import { Link } from 'react-router-dom';
+import { useSession, signOut } from '../lib/authClient';
 
-/**
- * Navbar — Top navigation bar for the IMGM app.
- *
- * Why this is its own component:
- * - Separation of concerns: Nav logic stays isolated from routing/page logic.
- * - Reusability: Every page gets the same Navbar without duplicating JSX.
- * - Scalability: When we add search, user avatar, or a mobile menu later,
- *   we only edit this one file.
- *
- * Why <Link> instead of <a>:
- * - <a href="/trending"> causes a FULL page reload (the browser re-downloads everything).
- * - <Link to="/trending"> does CLIENT-SIDE navigation (React swaps the component instantly).
- *   This is what makes React apps feel fast — only the page content changes, not the whole page.
- */
 function Navbar() {
+  const { data: session, isPending } = useSession();
+
   return (
-    <nav className="p-5 bg-slate-900 flex justify-between items-center shadow-lg">
-      {/* Logo / Brand — links back to home */}
+    <nav className="p-5 bg-slate-900 flex justify-between items-center shadow-lg sticky top-0 z-50">
+      {/* Logo / Brand */}
       <Link to="/" className="text-3xl font-extrabold text-blue-500 tracking-wider">
         IMGM
       </Link>
 
       {/* Navigation links */}
-      <ul className="flex gap-6 font-semibold">
+      <ul className="flex gap-6 font-semibold items-center">
         <li>
-          <Link to="/" className="hover:text-blue-400 transition">
+          <Link to="/" className="hover:text-blue-400 transition text-slate-200">
             Home
           </Link>
         </li>
         <li>
-          <Link to="/trending" className="hover:text-blue-400 transition">
+          <Link to="/trending" className="hover:text-blue-400 transition text-slate-200">
             Trending
           </Link>
         </li>
-        <li>
-          <Link to="/profile" className="hover:text-blue-400 transition">
-            My Profile
-          </Link>
-        </li>
+        
+        {!isPending && !session && (
+          <li>
+            <Link 
+              to="/login" 
+              className="ml-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-2 px-6 rounded-full shadow-lg transition"
+            >
+              Log In
+            </Link>
+          </li>
+        )}
+
+        {!isPending && session && (
+          <>
+            <li>
+              <Link to="/profile" className="hover:text-blue-400 transition text-slate-200">
+                My Profile
+              </Link>
+            </li>
+            <li className="ml-4 flex items-center gap-3">
+              <div className="flex items-center gap-2 bg-slate-800 rounded-full pl-2 pr-4 py-1 border border-slate-700">
+                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                  {session.user.name ? session.user.name[0].toUpperCase() : 'U'}
+                </div>
+                <span className="text-sm font-medium text-slate-200">
+                  {session.user.name || 'User'}
+                </span>
+              </div>
+              <button 
+                onClick={async () => {
+                  await signOut();
+                  window.location.reload();
+                }}
+                className="text-slate-400 hover:text-red-400 transition text-sm font-semibold"
+              >
+                Log Out
+              </button>
+            </li>
+          </>
+        )}
       </ul>
     </nav>
   );

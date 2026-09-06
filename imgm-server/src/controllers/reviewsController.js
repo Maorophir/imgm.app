@@ -1,5 +1,6 @@
 import { prisma } from '../lib/db.js';
 import { analyzeReview } from '../services/ai.js';
+import { auth } from '../lib/auth.js';
 
 export const getReviewsByGameId = async (req, res) => {
   try {
@@ -25,6 +26,14 @@ export const getReviewsByGameId = async (req, res) => {
 
 export const createReview = async (req, res) => {
   try {
+    const session = await auth.api.getSession({ headers: req.headers });
+    
+    if (!session) {
+      return res.status(401).json({ error: 'Unauthorized: You must be logged in to leave a review.' });
+    }
+
+    const userId = session.user.id;
+
     const { 
       gameId, 
       rating, 
@@ -36,19 +45,6 @@ export const createReview = async (req, res) => {
       difficulty, 
       recommendation 
     } = req.body;
-    
-    // TODO: Get actual logged-in user ID from Better Auth session middleware
-    // Hardcoding a dummy user ID for now to allow testing before auth is fully wired
-    const userId = req.user?.id || "dummy-user-id";
-    
-    // Ensure dummy user exists for testing (remove this block in prod)
-    if (userId === "dummy-user-id") {
-      await prisma.user.upsert({
-        where: { id: "dummy-user-id" },
-        update: {},
-        create: { id: "dummy-user-id", email: "test@imgm.app", name: "Test User" }
-      });
-    }
 
     // 1. Save the raw review to the database
     const newReview = await prisma.review.create({

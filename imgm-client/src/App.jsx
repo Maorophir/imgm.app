@@ -8,6 +8,8 @@ import Home from './pages/Home';
 import Trending from './pages/Trending';
 import Profile from './pages/Profile';
 import GameDetails from './pages/GameDetails';
+import Auth from './pages/Auth';
+import OAuthSuccess from './pages/OAuthSuccess';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -37,6 +39,8 @@ function App() {
           <Route path="/game/:id" element={<GameDetails />} />
           <Route path="/trending" element={<Trending />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/login" element={<Auth />} />
+          <Route path="/oauth-success" element={<OAuthSuccess />} />
         </Routes>
       </div>
     </Router>
