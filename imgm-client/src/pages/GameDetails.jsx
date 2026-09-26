@@ -8,9 +8,10 @@
  *   4. AI Summary — the glassmorphism AISummaryPanel
  *   5. User Reviews — list of ReviewCards + "Write Review" modal trigger
  */
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { mockGames, mockReviews } from '../utils/mockData';
+import { getGame } from '../lib/api';
 import AISummaryPanel from '../components/AISummaryPanel';
 import ReviewCard from '../components/ReviewCard';
 import SentimentBadge from '../components/SentimentBadge';
@@ -26,19 +27,72 @@ const RATING_SOURCES = [
   { key: 'steam', label: 'Steam', color: 'text-sky-400', bgColor: 'bg-sky-400/10', borderColor: 'border-sky-400/20', format: (v) => `${Math.round(v)}%` },
 ];
 
+/**
+ * Maps a review from our API (Review + ReviewAnalysis + User) to ReviewCard props.
+ */
+const toReviewCardProps = (review) => ({
+  ...review,
+  username: review.user?.name ?? 'Anonymous',
+  sentiment: review.analysis?.sentiment,
+});
+
+/**
+ * Dev fallback: the mock game + reviews for this id, when the API is unreachable.
+ */
+const getMockFallback = (id) => {
+  const game = mockGames.find((g) => g.id === Number(id));
+  if (!game) return { game: null, reviews: [] };
+  return { game, reviews: mockReviews.filter((r) => r.gameId === game.id) };
+};
+
+// Keyed by id so all page state (fetched data, video tab, modal) resets on navigation
 const GameDetails = () => {
   const { id } = useParams();
+  return <GameDetailsContent key={id} id={id} />;
+};
+
+const GameDetailsContent = ({ id }) => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
 
-  // Find the game by ID
-  const game = mockGames.find((g) => g.id === Number(id));
+  // { game, reviews } once loaded; null while loading
+  const [data, setData] = useState(null);
 
-  // Get reviews for this game
-  const reviews = useMemo(
-    () => mockReviews.filter((r) => r.gameId === Number(id)),
-    [id]
-  );
+  // Fetch the game from our backend (which pulls from IGDB if it isn't cached locally)
+  useEffect(() => {
+    const controller = new AbortController();
+
+    getGame(id, controller.signal)
+      .then((game) => setData({ game, reviews: game.reviews.map(toReviewCardProps) }))
+      .catch((error) => {
+        if (error.name === 'AbortError') return;
+        if (error.status !== 404) {
+          console.warn(`Falling back to mock data — game ${id} request failed:`, error);
+        }
+        setData(getMockFallback(id));
+      });
+
+    return () => controller.abort();
+  }, [id]);
+
+  // Loading state
+  if (!data) {
+    return (
+      <div className="min-h-screen animate-pulse">
+        <div className="h-[70vh] bg-gradient-to-t from-slate-950 to-slate-900" />
+        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row gap-8">
+          <div className="w-48 md:w-56 aspect-[3/4] bg-slate-800/60 rounded-xl" />
+          <div className="flex-1 flex flex-col gap-3">
+            <div className="h-4 bg-slate-800/70 rounded w-full" />
+            <div className="h-4 bg-slate-800/70 rounded w-5/6" />
+            <div className="h-4 bg-slate-800/70 rounded w-2/3" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const { game, reviews } = data;
 
   // 404 state
   if (!game) {
@@ -236,7 +290,7 @@ const GameDetails = () => {
 
           {/* Video selector tabs — only if more than 1 video */}
           {game.videos.length > 1 && (
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {game.videos.map((video, index) => (
                 <button
                   key={video.youtubeId}
@@ -264,11 +318,20 @@ const GameDetails = () => {
         <h2 className="text-2xl font-bold text-white mb-6">
           What the <span className="text-blue-400">AI</span> thinks
         </h2>
-        <AISummaryPanel
-          aiSummary={game.aiSummary}
-          aiSentiment={game.aiSentiment}
-          reviewCount={reviews.length}
-        />
+        {game.aiSummary ? (
+          <AISummaryPanel
+            aiSummary={game.aiSummary}
+            aiSentiment={game.aiSentiment}
+            reviewCount={reviews.length}
+          />
+        ) : (
+          <div className="bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-blue-900/20 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-6 md:p-8 text-center">
+            <p className="text-slate-300 mb-1">No AI summary yet</p>
+            <p className="text-slate-500 text-sm">
+              Once the community has shared a few reviews, our AI will summarize what players think.
+            </p>
+          </div>
+        )}
       </section>
 
       {/* ══════════════════════════════════════════════════════════

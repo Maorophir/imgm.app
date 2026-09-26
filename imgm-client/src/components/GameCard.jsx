@@ -218,10 +218,10 @@ const GameCard = ({
           </div>
         )}
 
-        {/* Platform tags */}
+        {/* Platform tags — show up to 3; IGDB games often list many platforms */}
         {platforms.length > 0 && (
           <div className="flex flex-wrap gap-1.5">
-            {platforms.map((platform) => (
+            {platforms.slice(0, 3).map((platform) => (
               <span
                 key={platform}
                 className="
@@ -234,6 +234,11 @@ const GameCard = ({
                 {platform}
               </span>
             ))}
+            {platforms.length > 3 && (
+              <span className="text-[10px] text-slate-500 font-medium self-center">
+                +{platforms.length - 3}
+              </span>
+            )}
           </div>
         )}
 

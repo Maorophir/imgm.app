@@ -82,7 +82,9 @@ model Game {
   publisher     String?
   platforms     String[] // Natively supported by Postgres!
   genres        String[] // Natively supported by Postgres!
-  
+  artworks      String[] // Full hero image URLs (t_1080p)
+  videos        Json?    // [{ name, youtubeId }]
+
   reviews       Review[]
   aiSummary     GameAISummary?
   

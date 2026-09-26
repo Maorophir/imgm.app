@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useSession, signOut } from '../lib/authClient';
+import SearchBar from './SearchBar';
 
 function Navbar() {
   const { data: session, isPending } = useSession();
@@ -10,6 +11,9 @@ function Navbar() {
       <Link to="/" className="text-3xl font-extrabold text-blue-500 tracking-wider">
         IMGM
       </Link>
+
+      {/* Game search with instant results */}
+      <SearchBar />
 
       {/* Navigation links */}
       <ul className="flex gap-6 font-semibold items-center">
