@@ -6,15 +6,26 @@
 export const API_BASE =
   import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:5000' : '');
 
-export async function fetchJson(path, { signal } = {}) {
+/**
+ * Calls our API and returns the JSON response.
+ * Pass `body` to send data (it's sent as JSON). On failure it throws an Error
+ * carrying `status` and the server's JSON (`data`, e.g. { error, issues }).
+ */
+export async function fetchJson(path, { signal, method = 'GET', body } = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
+    method,
     credentials: 'include',
     signal,
+    headers: body ? { 'Content-Type': 'application/json' } : undefined,
+    body: body ? JSON.stringify(body) : undefined,
   });
 
   if (!response.ok) {
-    const error = new Error(`Request to ${path} failed with status ${response.status}`);
+    // The server usually explains what went wrong — keep that for the UI
+    const data = await response.json().catch(() => null);
+    const error = new Error(data?.error || `Request to ${path} failed with status ${response.status}`);
     error.status = response.status;
+    error.data = data;
     throw error;
   }
 
@@ -27,3 +38,9 @@ export const searchGames = (query, signal) =>
 export const getFeaturedGames = (signal) => fetchJson('/api/games/featured', { signal });
 
 export const getGame = (id, signal) => fetchJson(`/api/games/${id}`, { signal });
+
+// The logged-in user's review of a game, or null if they haven't reviewed it
+export const getMyReview = (gameId, signal) => fetchJson(`/api/reviews/mine/${gameId}`, { signal });
+
+// Creates the review, or updates it if the user already reviewed this game
+export const saveReview = (review) => fetchJson('/api/reviews', { method: 'POST', body: review });

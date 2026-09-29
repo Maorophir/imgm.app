@@ -79,7 +79,8 @@ const ReviewCard = ({
         )}
       </div>
 
-      {/* Elaborated Context Grid */}
+      {/* Elaborated Context Grid — only when the reviewer filled in some of it */}
+      {(hoursPlayed != null || platform || completionStatus || playStyle || difficulty) && (
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-y-2 gap-x-4 mb-4 p-3 bg-slate-900/50 rounded-lg border border-slate-700/30 text-xs">
         {hoursPlayed && (
           <div className="flex flex-col">
@@ -112,6 +113,7 @@ const ReviewCard = ({
           </div>
         )}
       </div>
+      )}
 
       {/* Sub-scores (if available) */}
       {subScores && (

@@ -11,6 +11,7 @@ import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
 import Search from './pages/Search';
+import ReviewQuest from './pages/ReviewQuest';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -38,6 +39,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/game/:id" element={<GameDetails />} />
+          <Route path="/game/:id/review" element={<ReviewQuest />} />
           <Route path="/search" element={<Search />} />
           <Route path="/trending" element={<Trending />} />
           <Route path="/profile" element={<Profile />} />

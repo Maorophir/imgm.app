@@ -7,10 +7,8 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchGames } from '../lib/api';
+import useGameSearch from '../hooks/useGameSearch';
 
-const DEBOUNCE_MS = 300;
-const MIN_QUERY_LENGTH = 2;
 const MAX_DROPDOWN_RESULTS = 6;
 
 const SearchBar = () => {
@@ -19,32 +17,10 @@ const SearchBar = () => {
 
   const [query, setQuery] = useState('');
   const [isOpen, setIsOpen] = useState(false);
-  // Results are tagged with the query they belong to, so stale ones are never shown
-  const [results, setResults] = useState({ query: '', games: [], error: false });
-
-  const trimmed = query.trim();
-  const isSearchable = trimmed.length >= MIN_QUERY_LENGTH;
-  const isLoading = isSearchable && results.query !== trimmed;
-
-  // Debounced search
-  useEffect(() => {
-    if (!isSearchable) return;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => {
-      searchGames(trimmed, controller.signal)
-        .then((games) => setResults({ query: trimmed, games, error: false }))
-        .catch((error) => {
-          if (error.name === 'AbortError') return;
-          setResults({ query: trimmed, games: [], error: error.status === 429 ? 'rate-limited' : true });
-        });
-    }, DEBOUNCE_MS);
-
-    return () => {
-      clearTimeout(timeout);
-      controller.abort();
-    };
-  }, [trimmed, isSearchable]);
+  // Debounced IGDB search (see hooks/useGameSearch.js)
+  const search = useGameSearch(query);
+  const { trimmed, searchable: isSearchable, loading: isLoading } = search;
+  const results = { games: search.games, error: search.error };
 
   // Close the dropdown when clicking outside
   useEffect(() => {
