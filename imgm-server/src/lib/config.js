@@ -8,6 +8,9 @@ import 'dotenv/config';
 
 export const isProduction = process.env.NODE_ENV === 'production';
 
+// Public beta: reviewers get the "Beta Tester" badge. Set BETA=false at launch.
+export const isBeta = process.env.BETA !== 'false';
+
 // In production, refuse to start without real secrets — the dev fallbacks
 // (e.g. the placeholder auth secret) would be insecure on a public site
 const REQUIRED_IN_PRODUCTION = [

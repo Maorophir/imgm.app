@@ -87,32 +87,82 @@ model Game {
 
   reviews       Review[]
   aiSummary     GameAISummary?
-  
+
+  // Reviews that compared another game to this one ("It's like ___ meets ___")
+  comparedInA   Review[] @relation("ComparedA")
+  comparedInB   Review[] @relation("ComparedB")
+
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 }
 
+// A review written through the "review quest". Only `rating` is required —
+// every other field is one skippable quest screen (null / empty = skipped).
+// Allowed values for the string fields live in src/lib/reviewOptions.js.
 model Review {
   id               String   @id @default(cuid())
+
+  // ① Rating (required)
   rating           Int      // 1-10
-  reviewText       String
-  hoursPlayed      String?
+
+  // ② Your setup
   platform         String?
-  completionStatus String?
-  playStyle        String?
-  difficulty       String?
-  recommendation   String?  // Yes, No, Wait for Sale
-  
+  hoursPlayed      Int?
+  completionStatus String?  // playing | finished | completed_100 | dropped
+  difficulty       String?  // easy | normal | hard | extreme
+  playStyle        String?  // solo | coop | online
+
+  // ③ Vibe check (up to 3)
+  vibes            String[]
+
+  // ④ When did it get good?
+  gotGoodAfter     String?  // instantly | few_hours | many_hours | never
+
+  // ⑤ Rate the parts (1-10, null = N/A or skipped)
+  scoreStory       Int?
+  scoreGameplay    Int?
+  scoreVisuals     Int?
+  scoreSound       Int?
+  scorePerformance Int?
+
+  // ⑥ It's like ___ meets ___
+  comparedAId      Int?
+  comparedA        Game?    @relation("ComparedA", fields: [comparedAId], references: [id])
+  comparedBId      Int?
+  comparedB        Game?    @relation("ComparedB", fields: [comparedBId], references: [id])
+
+  // ⑦ Pros & cons
+  pros             String[]
+  cons             String[]
+
+  // ⑧ Best / worst moment
+  bestMoment       String?
+  worstMoment      String?
+  hasSpoilers      Boolean  @default(false)
+
+  // ⑨ Worth the price + replay
+  worthPrice       String?  // full | sale | free | never
+  replay           String?  // already | someday | once
+
+  // ⑩ Your words (optional — quick reviews may have none)
+  reviewText       String?
+
+  // Awarded by the server when the review is saved
+  badges           String[]
+
   userId           String
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
   gameId           Int
   game             Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  
+
   analysis         ReviewAnalysis?
-  
+
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+
+  // One review per person per game — reviewing again edits it
+  @@unique([userId, gameId])
 }
 
 model ReviewAnalysis {
