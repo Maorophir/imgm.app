@@ -39,7 +39,7 @@ function Auth() {
       const { data, error } = await signIn.social({
         provider: "google",
         disableRedirect: true,
-        callbackURL: "http://localhost:5173/oauth-success"
+        callbackURL: `${window.location.origin}/oauth-success`
       });
       if (error) throw new Error(error.message || "Google auth failed");
 

@@ -1,7 +1,10 @@
 /**
  * API client — thin fetch wrappers for the IMGM backend.
  */
-export const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Dev: the API runs on its own port. Production: '' makes requests same-origin
+// (/api/... on imgm.app), which the host proxies to the server.
+export const API_BASE =
+  import.meta.env.VITE_API_URL ?? (import.meta.env.DEV ? 'http://localhost:5000' : '');
 
 export async function fetchJson(path, { signal } = {}) {
   const response = await fetch(`${API_BASE}${path}`, {

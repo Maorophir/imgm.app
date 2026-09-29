@@ -1,15 +1,20 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { clientOrigins } from './src/lib/config.js';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// In production, requests arrive through a proxy (Vercel/Render) — trust its
+// X-Forwarded-* headers so Express sees the real client IP and HTTPS protocol
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173',
+  origin: clientOrigins,
   credentials: true
 }));
 app.use(express.json());

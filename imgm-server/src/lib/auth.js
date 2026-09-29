@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
+import { clientOrigins } from "./config.js";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000",
@@ -17,5 +18,5 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "placeholder_client_secret",
     },
   },
-  trustedOrigins: ["http://localhost:5173"],
+  trustedOrigins: clientOrigins,
 });
