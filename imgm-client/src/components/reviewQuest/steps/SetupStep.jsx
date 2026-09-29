@@ -1,22 +1,44 @@
 /**
- * ② Your setup — platform, hours, completion, difficulty, solo/co-op.
+ * ② Your setup — platform, hours, completion, solo/co-op.
  * Every group is optional; tapping a selected choice again un-selects it.
  */
 import { Chip, ChoiceCard, FieldLabel } from '../Choice';
-import { COMPLETION_STATUSES, DIFFICULTIES, PLAY_STYLES } from '../questOptions';
+import { COMPLETION_STATUSES, PLAY_STYLES } from '../questOptions';
 
 const HOUR_PRESETS = [5, 20, 50, 100];
 const MAX_HOURS = 100000;
+
+// The −/+ buttons next to the hours box, styled like the rest of the quest
+const StepperButton = ({ label, onClick, disabled, children }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={disabled}
+    aria-label={label}
+    className="w-10 h-10 rounded-xl border border-slate-700/60 bg-slate-800/60 text-slate-200 text-lg font-bold
+      hover:border-blue-400 hover:text-white hover:bg-blue-500/15 transition
+      disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-slate-700/60 disabled:hover:bg-slate-800/60"
+  >
+    {children}
+  </button>
+);
 
 const SetupStep = ({ answers, update, game }) => {
   // Tap once to pick, tap again to clear
   const toggle = (field, value) => update({ [field]: answers[field] === value ? null : value });
 
-  const setHours = (text) => {
-    if (text === '') return update({ hoursPlayed: null });
-    const hours = Math.floor(Number(text));
+  const pickPlatform = (platform) => {
+    const next = answers.platform === platform ? null : platform;
+    // "PC requirements" only applies to PC — drop that answer if another platform is picked
+    update(next && next !== 'PC' ? { platform: next, pcRequirements: null } : { platform: next });
+  };
+
+  const setHours = (value) => {
+    if (value === '' || value == null) return update({ hoursPlayed: null });
+    const hours = Math.floor(Number(value));
     if (Number.isFinite(hours)) update({ hoursPlayed: Math.min(MAX_HOURS, Math.max(0, hours)) });
   };
+  const hours = answers.hoursPlayed;
 
   return (
     <div className="flex flex-col gap-6">
@@ -26,7 +48,7 @@ const SetupStep = ({ answers, update, game }) => {
           <FieldLabel>Platform</FieldLabel>
           <div className="flex flex-wrap gap-2">
             {game.platforms.map((p) => (
-              <Chip key={p} label={p} selected={answers.platform === p} onClick={() => toggle('platform', p)} />
+              <Chip key={p} label={p} selected={answers.platform === p} onClick={() => pickPlatform(p)} />
             ))}
           </div>
         </div>
@@ -35,23 +57,28 @@ const SetupStep = ({ answers, update, game }) => {
       <div>
         <FieldLabel>Hours played</FieldLabel>
         <div className="flex flex-wrap items-center gap-2">
+          <StepperButton label="One hour less" onClick={() => setHours((hours ?? 0) - 1)} disabled={!hours}>−</StepperButton>
           <input
             type="number"
             inputMode="numeric"
             min="0"
             max={MAX_HOURS}
-            value={answers.hoursPlayed ?? ''}
+            value={hours ?? ''}
             onChange={(e) => setHours(e.target.value)}
             placeholder="0"
             aria-label="Hours played"
-            className="w-24 bg-slate-950/60 border border-slate-700/50 rounded-xl px-3 py-2 text-white font-bold tabular-nums focus:outline-none focus:border-blue-500/50"
+            // Hide the browser's built-in arrows — we have our own −/+ buttons
+            className="w-20 h-10 text-center bg-slate-950/60 border border-slate-700/50 rounded-xl text-white font-bold tabular-nums
+              focus:outline-none focus:border-blue-500/50
+              [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
-          <span className="text-slate-400 text-sm mr-2">hours</span>
+          <StepperButton label="One hour more" onClick={() => setHours((hours ?? 0) + 1)} disabled={hours >= MAX_HOURS}>+</StepperButton>
+          <span className="text-slate-400 text-sm mx-1">hours</span>
           {HOUR_PRESETS.map((h) => (
             <Chip
               key={h}
               label={h === 100 ? '100h+' : `${h}h`}
-              selected={answers.hoursPlayed === h}
+              selected={hours === h}
               onClick={() => toggle('hoursPlayed', h)}
             />
           ))}
@@ -67,22 +94,12 @@ const SetupStep = ({ answers, update, game }) => {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-6">
-        <div>
-          <FieldLabel>Difficulty</FieldLabel>
-          <div className="flex flex-wrap gap-2">
-            {DIFFICULTIES.map((o) => (
-              <Chip key={o.value} {...o} selected={answers.difficulty === o.value} onClick={() => toggle('difficulty', o.value)} />
-            ))}
-          </div>
-        </div>
-        <div>
-          <FieldLabel>Played</FieldLabel>
-          <div className="flex flex-wrap gap-2">
-            {PLAY_STYLES.map((o) => (
-              <Chip key={o.value} {...o} selected={answers.playStyle === o.value} onClick={() => toggle('playStyle', o.value)} />
-            ))}
-          </div>
+      <div>
+        <FieldLabel>Played</FieldLabel>
+        <div className="flex flex-wrap gap-2">
+          {PLAY_STYLES.map((o) => (
+            <Chip key={o.value} {...o} selected={answers.playStyle === o.value} onClick={() => toggle('playStyle', o.value)} />
+          ))}
         </div>
       </div>
     </div>

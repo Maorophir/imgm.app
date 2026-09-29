@@ -4,6 +4,7 @@
  * a game-controller icon and the reward the player gets.
  */
 import { Link } from 'react-router-dom';
+import { MAX_XP } from './questOptions';
 
 // Game controller icon (based on Lucide's "gamepad-2", ISC license)
 const GamepadIcon = ({ className }) => (
@@ -16,7 +17,7 @@ const GamepadIcon = ({ className }) => (
   </svg>
 );
 
-const StartQuestButton = ({ gameId, label = 'Start Review Quest', reward = '+1,000 XP · earn badges · ~2 min' }) => (
+const StartQuestButton = ({ gameId, label = 'Start Review Quest', reward = `Up to ${MAX_XP} XP · earn badges · ~2 min` }) => (
   <Link
     to={`/game/${gameId}/review`}
     className="

@@ -109,21 +109,26 @@ model Review {
   platform         String?
   hoursPlayed      Int?
   completionStatus String?  // playing | finished | completed_100 | dropped
-  difficulty       String?  // easy | normal | hard | extreme
   playStyle        String?  // solo | coop | online
 
   // ③ Vibe check (up to 3)
   vibes            String[]
 
   // ④ When did it get good?
-  gotGoodAfter     String?  // instantly | few_hours | many_hours | never
+  gotGoodAfter     String?  // never | many_hours | few_hours | instantly
 
-  // ⑤ Rate the parts (1-10, null = N/A or skipped)
-  scoreStory       Int?
-  scoreGameplay    Int?
-  scoreVisuals     Int?
-  scoreSound       Int?
-  scorePerformance Int?
+  // ⑤ The checklist — each category is optional (keys: CHECKLIST in reviewOptions.js)
+  graphics         String?
+  gameplay         String?
+  audio            String?
+  story            String?
+  difficulty       String?
+  grind            String?
+  gameLength       String?
+  bugs             String?
+  pcRequirements   String?
+  worthPrice       String?
+  replay           String?
 
   // ⑥ It's like ___ meets ___
   comparedAId      Int?
@@ -140,11 +145,7 @@ model Review {
   worstMoment      String?
   hasSpoilers      Boolean  @default(false)
 
-  // ⑨ Worth the price + replay
-  worthPrice       String?  // full | sale | free | never
-  replay           String?  // already | someday | once
-
-  // ⑩ Your words (optional — quick reviews may have none)
+  // ⑨ Final words (optional — quick reviews may have none)
   reviewText       String?
 
   // Awarded by the server when the review is saved

@@ -29,6 +29,8 @@ export async function fetchJson(path, { signal, method = 'GET', body } = {}) {
     throw error;
   }
 
+  // 204 No Content (e.g. after a delete) has no body to read
+  if (response.status === 204) return null;
   return response.json();
 }
 
@@ -44,3 +46,6 @@ export const getMyReview = (gameId, signal) => fetchJson(`/api/reviews/mine/${ga
 
 // Creates the review, or updates it if the user already reviewed this game
 export const saveReview = (review) => fetchJson('/api/reviews', { method: 'POST', body: review });
+
+// Deletes the logged-in user's review of a game
+export const deleteMyReview = (gameId) => fetchJson(`/api/reviews/mine/${gameId}`, { method: 'DELETE' });
