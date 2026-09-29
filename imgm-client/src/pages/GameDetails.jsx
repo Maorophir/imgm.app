@@ -8,14 +8,15 @@
  *   4. AI Summary — the glassmorphism AISummaryPanel
  *   5. User Reviews — list of ReviewCards + "Write Review" modal trigger
  */
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getGame } from '../lib/api';
+import { useSession } from '../lib/authClient';
 import AISummaryPanel from '../components/AISummaryPanel';
 import LoadError from '../components/LoadError';
 import ReviewCard from '../components/ReviewCard';
+import StartQuestButton from '../components/reviewQuest/StartQuestButton';
 import SentimentBadge from '../components/SentimentBadge';
-import StarRating from '../components/StarRating';
 
 /**
  * Rating source config — same as GameCard but with full labels for the detail view.
@@ -43,8 +44,8 @@ const GameDetails = () => {
 };
 
 const GameDetailsContent = ({ id }) => {
-  const [showReviewModal, setShowReviewModal] = useState(false);
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
+  const { data: session } = useSession();
 
   // null = loading | { game, reviews } = loaded | { game: null } = not found | { error: true } = failed
   const [data, setData] = useState(null);
@@ -348,24 +349,18 @@ const GameDetailsContent = ({ id }) => {
           SECTION 5: USER REVIEWS
          ══════════════════════════════════════════════════════════ */}
       <section className="max-w-7xl mx-auto px-6 py-10 pb-20">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <h2 className="text-2xl font-bold text-white">
             Community <span className="text-blue-400">Reviews</span>
             <span className="text-slate-500 text-lg font-normal ml-2">({reviews.length})</span>
           </h2>
 
-          <button
-            onClick={() => setShowReviewModal(true)}
-            className="
-              px-5 py-2.5 rounded-xl font-semibold text-sm
-              bg-blue-600 hover:bg-blue-700
-              shadow-lg shadow-blue-500/25
-              transition-all duration-200
-              hover:scale-105
-            "
-          >
-            ✍️ Write a Review
-          </button>
+          {/* When there are no reviews yet, the button lives in the empty state below */}
+          {reviews.length > 0 && (
+            reviews.some((r) => r.user?.id === session?.user?.id)
+              ? <StartQuestButton gameId={id} label="Edit your review" reward="Change any answer · keeps your badges" />
+              : <StartQuestButton gameId={id} />
+          )}
         </div>
 
         {reviews.length > 0 ? (
@@ -389,117 +384,17 @@ const GameDetailsContent = ({ id }) => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16 bg-slate-900/30 rounded-2xl border border-slate-800/30">
-            <p className="text-slate-500 text-lg mb-2">No reviews yet</p>
-            <p className="text-slate-700 text-sm">Be the first to share your thoughts!</p>
+          <div className="text-center py-14 px-6 bg-gradient-to-b from-indigo-500/10 to-slate-900/30 rounded-2xl border border-indigo-500/20">
+            <p className="text-5xl mb-3">🥇</p>
+            <p className="text-white text-xl font-bold mb-1">Be the first reviewer</p>
+            <p className="text-slate-400 text-sm mb-6">
+              Nobody has reviewed {game.title} yet — go first and earn the <span className="text-amber-300 font-semibold">First Reviewer</span> badge.
+            </p>
+            <StartQuestButton gameId={id} />
           </div>
         )}
       </section>
 
-      {/* ══════════════════════════════════════════════════════════
-          REVIEW MODAL
-         ══════════════════════════════════════════════════════════ */}
-      {showReviewModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0B0F19]/70 backdrop-blur-sm"
-          onClick={() => setShowReviewModal(false)}
-        >
-          <div
-            className="
-              bg-slate-900 border border-slate-800/50 rounded-2xl
-              p-6 md:p-8 w-full max-w-lg
-              shadow-2xl
-              transform transition-all
-            "
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-white">Write a Review</h3>
-              <button
-                onClick={() => setShowReviewModal(false)}
-                className="text-slate-400 hover:text-white transition text-xl"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-sm text-slate-400 mb-4">
-              Reviewing <span className="text-blue-400 font-semibold">{game.title}</span>
-            </p>
-
-            {/* Rating input */}
-            <div className="mb-5">
-              <label className="text-sm font-medium text-slate-300 block mb-2">Your Rating</label>
-              <div className="flex items-center gap-3">
-                <StarRating rating={0} size="md" />
-                <span className="text-slate-500 text-sm">Click to rate (coming soon)</span>
-              </div>
-            </div>
-
-            {/* Review text */}
-            <div className="mb-6">
-              <label className="text-sm font-medium text-slate-300 block mb-2">Your Review</label>
-              <textarea
-                rows={4}
-                placeholder="Share your experience with this game..."
-                className="
-                  w-full bg-slate-950/60 border border-slate-700/50
-                  rounded-xl px-4 py-3 text-sm text-slate-200
-                  placeholder:text-slate-700
-                  focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30
-                  resize-none transition
-                "
-              />
-            </div>
-
-            {/* Context Fields (Mocked for UI preview) */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <label className="text-xs font-medium text-slate-400 block mb-1">Platform</label>
-                <select className="w-full bg-slate-950/60 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-blue-500/50 appearance-none">
-                  <option>PC</option>
-                  <option>PlayStation 5</option>
-                  <option>Xbox Series X|S</option>
-                  <option>Nintendo Switch</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-400 block mb-1">Time Played</label>
-                <input type="text" placeholder="e.g. 45 hrs" className="w-full bg-slate-950/60 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-blue-500/50" />
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-400 block mb-1">Status</label>
-                <select className="w-full bg-slate-950/60 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-blue-500/50 appearance-none">
-                  <option>Finished Main Story</option>
-                  <option>100% Completed</option>
-                  <option>Still Playing</option>
-                  <option>Dropped</option>
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-medium text-slate-400 block mb-1">Recommendation</label>
-                <select className="w-full bg-slate-950/60 border border-slate-700/50 rounded-lg px-3 py-2 text-sm text-slate-300 focus:outline-none focus:border-blue-500/50 appearance-none">
-                  <option>👍 Yes</option>
-                  <option>👎 No</option>
-                  <option>⏳ Wait for Sale</option>
-                </select>
-              </div>
-            </div>
-
-            {/* Submit (disabled for now — no backend yet) */}
-            <button
-              disabled
-              className="
-                w-full py-3 rounded-xl font-semibold
-                bg-blue-600/50 text-blue-200/60
-                cursor-not-allowed
-              "
-            >
-              Submit Review (Backend coming in Phase 2)
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

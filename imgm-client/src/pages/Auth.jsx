@@ -1,7 +1,15 @@
 import { useState, useEffect } from 'react';
 import { signIn, signUp, authClient } from '../lib/authClient';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getFeaturedGames } from '../lib/api';
+
+/**
+ * Where to go after logging in, from ?redirect=/some/page (defaults to home).
+ * Only paths on OUR site are allowed: "//evil.com" or "/\evil.com" would make the
+ * browser leave for another website (an "open redirect" that phishers abuse).
+ */
+const safeRedirect = (path) =>
+  path?.startsWith('/') && !path.startsWith('//') && !path.startsWith('/\\') ? path : '/';
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -13,6 +21,8 @@ function Auth() {
   // Real popular games for the scrolling background (stays empty if the request fails)
   const [bgGames, setBgGames] = useState([]);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const redirectTo = safeRedirect(searchParams.get('redirect'));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -31,11 +41,11 @@ function Auth() {
       if (isLogin) {
         const { error } = await signIn.email({ email, password });
         if (error) throw new Error(error.message || "Failed to log in");
-        navigate('/');
+        navigate(redirectTo);
       } else {
         const { error } = await signUp.email({ email, password, name });
         if (error) throw new Error(error.message || "Failed to sign up");
-        navigate('/');
+        navigate(redirectTo);
       }
     } catch (err) {
       setError(err.message);
@@ -75,7 +85,7 @@ function Auth() {
             // Only redirect if the user actually signed in successfully
             const { data: sessionData } = await authClient.getSession();
             if (sessionData) {
-              window.location.href = '/';
+              window.location.href = redirectTo;
             }
           }
         }, 1000);
