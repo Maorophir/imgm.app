@@ -10,9 +10,9 @@
  */
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { mockGames, mockReviews } from '../utils/mockData';
 import { getGame } from '../lib/api';
 import AISummaryPanel from '../components/AISummaryPanel';
+import LoadError from '../components/LoadError';
 import ReviewCard from '../components/ReviewCard';
 import SentimentBadge from '../components/SentimentBadge';
 import StarRating from '../components/StarRating';
@@ -36,15 +36,6 @@ const toReviewCardProps = (review) => ({
   sentiment: review.analysis?.sentiment,
 });
 
-/**
- * Dev fallback: the mock game + reviews for this id, when the API is unreachable.
- */
-const getMockFallback = (id) => {
-  const game = mockGames.find((g) => g.id === Number(id));
-  if (!game) return { game: null, reviews: [] };
-  return { game, reviews: mockReviews.filter((r) => r.gameId === game.id) };
-};
-
 // Keyed by id so all page state (fetched data, video tab, modal) resets on navigation
 const GameDetails = () => {
   const { id } = useParams();
@@ -55,8 +46,10 @@ const GameDetailsContent = ({ id }) => {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [activeVideoIndex, setActiveVideoIndex] = useState(0);
 
-  // { game, reviews } once loaded; null while loading
+  // null = loading | { game, reviews } = loaded | { game: null } = not found | { error: true } = failed
   const [data, setData] = useState(null);
+  // Bumping this number re-runs the fetch effect below ("Try again")
+  const [attempt, setAttempt] = useState(0);
 
   // Fetch the game from our backend (which pulls from IGDB if it isn't cached locally)
   useEffect(() => {
@@ -64,16 +57,18 @@ const GameDetailsContent = ({ id }) => {
 
     getGame(id, controller.signal)
       .then((game) => setData({ game, reviews: game.reviews.map(toReviewCardProps) }))
-      .catch((error) => {
-        if (error.name === 'AbortError') return;
-        if (error.status !== 404) {
-          console.warn(`Falling back to mock data — game ${id} request failed:`, error);
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        if (err.status === 404) {
+          setData({ game: null });
+        } else {
+          console.error(`Game ${id} request failed:`, err);
+          setData({ error: true });
         }
-        setData(getMockFallback(id));
       });
 
     return () => controller.abort();
-  }, [id]);
+  }, [id, attempt]);
 
   // Loading state
   if (!data) {
@@ -88,6 +83,21 @@ const GameDetailsContent = ({ id }) => {
             <div className="h-4 bg-slate-800/70 rounded w-2/3" />
           </div>
         </div>
+      </div>
+    );
+  }
+
+  // Server unreachable / failed
+  if (data.error) {
+    return (
+      <div className="max-w-3xl mx-auto px-6 py-24">
+        <LoadError
+          title="Couldn't load this game"
+          onRetry={() => {
+            setData(null); // back to the loading state
+            setAttempt((n) => n + 1);
+          }}
+        />
       </div>
     );
   }

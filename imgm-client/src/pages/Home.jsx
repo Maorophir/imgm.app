@@ -13,11 +13,13 @@
  * - No naming conflicts: you never have to worry about class names colliding.
  * - Easy to scan: you can see exactly what an element looks like without jumping to another file.
  */
-import React, { useState, useEffect, useRef } from 'react';
-import { mockGames } from '../utils/mockData';
+import { useState, useEffect, useRef } from 'react';
 import { getFeaturedGames } from '../lib/api';
 import GameCard from '../components/GameCard';
 import GameCardSkeleton from '../components/GameCardSkeleton';
+import LoadError from '../components/LoadError';
+
+const PAGE_SIZE = 10; // games per carousel page (2 rows on desktop)
 
 const truncate = (text, max = 220) =>
   text && text.length > max ? `${text.slice(0, max).trimEnd()}…` : text;
@@ -25,28 +27,37 @@ const truncate = (text, max = 220) =>
 const Home = () => {
   // Featured games from IGDB (via our backend). null = still loading.
   const [games, setGames] = useState(null);
-  const [usingFallback, setUsingFallback] = useState(false);
+  const [error, setError] = useState(false);
+  // Bumping this number re-runs the fetch effect below ("Try again")
+  const [attempt, setAttempt] = useState(0);
 
   // State to track which game is currently displayed in the background
   const [currentIndex, setCurrentIndex] = useState(0);
+  // Which page of the Featured Games carousel is showing (0-based)
+  const [page, setPage] = useState(0);
 
   const gridRef = useRef(null);
 
-  // Fetch featured games once on mount; fall back to mock data if the API is unreachable
+  // Fetch featured games on mount, and again whenever "Try again" bumps `attempt`
   useEffect(() => {
     const controller = new AbortController();
 
     getFeaturedGames(controller.signal)
-      .then((data) => setGames(data.length > 0 ? data : mockGames))
-      .catch((error) => {
-        if (error.name === 'AbortError') return;
-        console.warn('Falling back to mock data — featured games request failed:', error);
-        setGames(mockGames);
-        setUsingFallback(true);
+      .then(setGames)
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        console.error('Featured games request failed:', err);
+        setError(true);
       });
 
     return () => controller.abort();
-  }, []);
+  }, [attempt]);
+
+  const retry = () => {
+    setError(false);
+    setGames(null); // back to the loading skeleton
+    setAttempt((n) => n + 1);
+  };
 
   const gameCount = games?.length ?? 0;
 
@@ -63,6 +74,12 @@ const Home = () => {
   }, [gameCount]);
 
   const currentGame = gameCount > 0 ? games[currentIndex % gameCount] : null;
+
+  // Carousel: slice out the games for the current page
+  const pageCount = Math.ceil(gameCount / PAGE_SIZE);
+  const pageGames = games?.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE) ?? [];
+  // Wrap around at the ends, like a carousel: last page → first, first → last
+  const goToPage = (next) => setPage((next + pageCount) % pageCount);
   const heroImage = currentGame?.artworks?.[0] ?? currentGame?.coverUrl;
 
   return (
@@ -123,7 +140,7 @@ const Home = () => {
 
       {/* ── Featured Games Grid ── */}
       <section ref={gridRef} className="relative z-10 px-6 py-16 max-w-7xl mx-auto scroll-mt-20">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
           <div>
             <h2 className="text-3xl font-bold text-white">
               Featured <span className="text-blue-400">Games</span>
@@ -132,16 +149,44 @@ const Home = () => {
               The most popular recent releases, powered by IGDB
             </p>
           </div>
-          {usingFallback && (
-            <span className="text-xs text-amber-400/80 bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded-lg">
-              Offline — showing sample data
-            </span>
+
+          {/* Carousel controls — only when there's more than one page */}
+          {pageCount > 1 && (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => goToPage(page - 1)}
+                aria-label="Previous games"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-white hover:border-blue-500/50 hover:bg-blue-500/10 transition"
+              >
+                ←
+              </button>
+              <div className="flex gap-1.5">
+                {Array.from({ length: pageCount }, (_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPage(i)}
+                    aria-label={`Page ${i + 1}`}
+                    className={`h-2 rounded-full transition-all ${i === page ? 'w-6 bg-blue-500' : 'w-2 bg-slate-700 hover:bg-slate-500'}`}
+                  />
+                ))}
+              </div>
+              <button
+                onClick={() => goToPage(page + 1)}
+                aria-label="Next games"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-white hover:border-blue-500/50 hover:bg-blue-500/10 transition"
+              >
+                →
+              </button>
+            </div>
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
-          {games === null && Array.from({ length: 10 }, (_, i) => <GameCardSkeleton key={i} />)}
-          {games?.map((game) => (
+        {error && <LoadError title="Couldn't load games right now" onRetry={retry} />}
+
+        {/* key={page} gives each page a fresh grid, so the fade-in animation replays */}
+        <div key={page} className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5 animate-fade-in">
+          {games === null && !error && Array.from({ length: PAGE_SIZE }, (_, i) => <GameCardSkeleton key={i} />)}
+          {pageGames.map((game) => (
             <GameCard
               key={game.id}
               id={game.id}

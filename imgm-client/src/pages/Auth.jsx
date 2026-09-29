@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn, signUp, authClient } from '../lib/authClient';
 import { useNavigate } from 'react-router-dom';
-import { mockGames } from '../utils/mockData'; // We'll use mock covers for the background
+import { getFeaturedGames } from '../lib/api';
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -10,7 +10,17 @@ function Auth() {
   const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  // Real popular games for the scrolling background (stays empty if the request fails)
+  const [bgGames, setBgGames] = useState([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const controller = new AbortController();
+    getFeaturedGames(controller.signal)
+      .then(setBgGames)
+      .catch(() => {}); // background is decorative — a plain dark page is fine
+    return () => controller.abort();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -75,8 +85,14 @@ function Auth() {
     }
   };
 
-  // Duplicate games to create a seamless infinite scroll effect
-  const scrollGames = [...mockGames, ...mockGames, ...mockGames];
+  // Split the games into two different rows. Each row is doubled ([A, A]) because the
+  // scroll animation moves exactly 50% — when copy 1 has scrolled out, copy 2 sits
+  // exactly where copy 1 started, so the loop restarts without a visible jump.
+  const half = Math.ceil(bgGames.length / 2);
+  const row1 = bgGames.slice(0, half);
+  const row2 = bgGames.slice(half);
+  const row1Loop = [...row1, ...row1];
+  const row2Loop = [...row2, ...row2];
 
   return (
     <div className="relative min-h-screen bg-slate-950 flex items-center justify-center overflow-hidden">
@@ -84,14 +100,14 @@ function Auth() {
       {/* Background Animated Slider */}
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none flex flex-col justify-center gap-4">
         {/* Row 1 - scrolling left */}
-        <div className="flex animate-scroll-left w-[300vw]">
-          {scrollGames.map((game, i) => (
+        <div className="flex animate-scroll-left w-max">
+          {row1Loop.map((game, i) => (
             <img key={`r1-${i}`} src={game.coverUrl} className="h-64 w-48 object-cover rounded-lg mx-2 flex-shrink-0 grayscale hover:grayscale-0 transition duration-700" alt="game cover" />
           ))}
         </div>
         {/* Row 2 - scrolling right */}
-        <div className="flex animate-scroll-right w-[300vw] ml-[-100vw]">
-          {scrollGames.map((game, i) => (
+        <div className="flex animate-scroll-right w-max">
+          {row2Loop.map((game, i) => (
             <img key={`r2-${i}`} src={game.coverUrl} className="h-64 w-48 object-cover rounded-lg mx-2 flex-shrink-0 grayscale hover:grayscale-0 transition duration-700" alt="game cover" />
           ))}
         </div>
