@@ -2,11 +2,13 @@
  * Review Quest answer options — the single source of truth for which values
  * each quest question accepts. The database stores these short keys; the
  * client maps them to labels/art (e.g. 'rage_inducing' → "Rage-inducing 😤").
+ *
+ * Checklist ladders are ordered worst → best (or less → more for neutral
+ * ones like difficulty), matching the left → right order on screen.
  */
 
 // ② Your setup
 export const COMPLETION_STATUSES = ['playing', 'finished', 'completed_100', 'dropped'];
-export const DIFFICULTIES = ['easy', 'normal', 'hard', 'extreme'];
 export const PLAY_STYLES = ['solo', 'coop', 'online'];
 
 // ③ Vibe check
@@ -18,12 +20,23 @@ export const VIBES = [
 export const MAX_VIBES = 3;
 
 // ④ When did it get good?
-export const GOT_GOOD_AFTER = ['instantly', 'few_hours', 'many_hours', 'never'];
+export const GOT_GOOD_AFTER = ['never', 'many_hours', 'few_hours', 'instantly'];
 
-// ⑨ Worth the price + replay
-export const WORTH_PRICE = ['full', 'sale', 'free', 'never'];
-export const REPLAY = ['already', 'someday', 'once'];
+// ⑤ The checklist — one optional ladder per category (field name → allowed keys)
+export const CHECKLIST = {
+  graphics:       ['ms_paint', 'potato', 'decent', 'pretty', 'screenshot', 'reality'],
+  gameplay:       ['dont', 'paint_dry', 'fine', 'good', 'great', 'one_more'],
+  audio:          ['deaf', 'mute', 'okay', 'good', 'repeat', 'eargasm'],
+  story:          ['none', 'lore', 'average', 'good', 'tears', 'life'],
+  difficulty:     ['press_w', 'easy', 'learn_master', 'brain', 'hard', 'dark_souls'],
+  grind:          ['none', 'optional', 'average', 'lots', 'second_life'],
+  gameLength:     ['coffee', 'short', 'average', 'long', 'infinity'],
+  bugs:           ['terrarium', 'annoying', 'minor', 'none'],
+  pcRequirements: ['toaster', 'potato', 'decent', 'fast', 'rich', 'nasa'],
+  worthPrice:     ['never', 'free', 'sale', 'full'],
+  replay:         ['once', 'someday', 'already'],
+};
 
 // Badges the server can award (see awardBadges in reviewsController)
-export const BADGES = ['first_reviewer', 'deep_diver', 'completionist', 'veteran', 'beta_tester'];
+export const BADGES = ['first_reviewer', 'deep_diver', 'completionist', 'veteran'];
 export const VETERAN_HOURS = 100;

@@ -38,12 +38,6 @@ export const COMPLETION_STATUSES = [
   { value: 'completed_100', label: '100% done', art: '🏆' },
   { value: 'dropped', label: 'Dropped it', art: '🚪' },
 ];
-export const DIFFICULTIES = [
-  { value: 'easy', label: 'Easy', art: '🌱' },
-  { value: 'normal', label: 'Normal', art: '⚖️' },
-  { value: 'hard', label: 'Hard', art: '🔥' },
-  { value: 'extreme', label: 'Extreme', art: '💀' },
-];
 export const PLAY_STYLES = [
   { value: 'solo', label: 'Solo', art: '🧍' },
   { value: 'coop', label: 'Co-op', art: '🤝' },
@@ -71,35 +65,142 @@ export const VIBES = [
 ];
 export const MAX_VIBES = 3;
 
-// ④ When did it get good? (art slot: the "bored → hooked" illustrations)
+// ④ When did it get good? — worst → best, left to right
+// (art slot: the "bored → hooked" illustrations)
 export const GOT_GOOD_AFTER = [
-  { value: 'instantly', label: 'Instantly', art: '🤩', hint: 'Hooked from minute one' },
-  { value: 'few_hours', label: 'After a few hours', art: '🙂', hint: 'Slow start, then it clicks' },
-  { value: 'many_hours', label: 'After many hours', art: '🥱', hint: 'You have to push through' },
-  { value: 'never', label: 'Never', art: '😴', hint: 'It never clicked for me' },
+  { value: 'never',      label: 'Never',             art: '😴', hint: 'It never clicked for me' },
+  { value: 'many_hours', label: 'After many hours',  art: '🥱', hint: 'You have to push through' },
+  { value: 'few_hours',  label: 'After a few hours', art: '🙂', hint: 'Slow start, then it clicks' },
+  { value: 'instantly',  label: 'Instantly',         art: '🤩', hint: 'Hooked from minute one' },
 ];
 
-// ⑤ Rate the parts
-export const PART_SCORES = [
-  { field: 'scoreStory', label: 'Story', art: '📖' },
-  { field: 'scoreGameplay', label: 'Gameplay', art: '🎮' },
-  { field: 'scoreVisuals', label: 'Visuals', art: '🎨' },
-  { field: 'scoreSound', label: 'Sound', art: '🎧' },
-  { field: 'scorePerformance', label: 'Performance', art: '⚡' },
+// ⑤ The checklist — every category is optional. Options go left → right:
+//   kind 'scale'   = worst → best (the picked option is coloured red → green)
+//   kind 'neutral' = less → more, neither good nor bad (picked option is blue)
+// `values` must match CHECKLIST in the server's src/lib/reviewOptions.js.
+// Edit the jokes freely — only the `value` keys are stored.
+export const CHECKLIST = [
+  {
+    field: 'graphics', title: 'Graphics', art: '🎨', kind: 'scale',
+    options: [
+      { value: 'ms_paint',   label: 'MS Paint' },
+      { value: 'potato',     label: 'Potato-core' },
+      { value: 'decent',     label: 'Decent' },
+      { value: 'pretty',     label: 'Pretty' },
+      { value: 'screenshot', label: 'Screenshot every 5 seconds' },
+      { value: 'reality',    label: 'You forget what reality is' },
+    ],
+  },
+  {
+    field: 'gameplay', title: 'Gameplay', art: '🎮', kind: 'scale',
+    options: [
+      { value: 'dont',      label: 'Just don\'t' },
+      { value: 'paint_dry', label: 'Watching paint dry is more fun' },
+      { value: 'fine',      label: 'It\'s… gameplay' },
+      { value: 'good',      label: 'Good' },
+      { value: 'great',     label: 'Great' },
+      { value: 'one_more',  label: '"One more match" (it\'s 4 AM)' },
+    ],
+  },
+  {
+    field: 'audio', title: 'Audio', art: '🎧', kind: 'scale',
+    options: [
+      { value: 'deaf',    label: 'I\'m now deaf' },
+      { value: 'mute',    label: 'Played it on mute' },
+      { value: 'okay',    label: 'Not bad' },
+      { value: 'good',    label: 'Good' },
+      { value: 'repeat',  label: 'Soundtrack on repeat' },
+      { value: 'eargasm', label: 'Eargasm' },
+    ],
+  },
+  {
+    field: 'story', title: 'Story', art: '📖', kind: 'scale',
+    options: [
+      { value: 'none',    label: 'What story?' },
+      { value: 'lore',    label: 'Some lore in the menus' },
+      { value: 'average', label: 'Average' },
+      { value: 'good',    label: 'Good' },
+      { value: 'tears',   label: 'I cried (don\'t tell anyone)' },
+      { value: 'life',    label: 'It\'ll replace your life' },
+    ],
+  },
+  {
+    field: 'difficulty', title: 'Difficulty', art: '🧠', kind: 'neutral',
+    options: [
+      { value: 'press_w',      label: 'Just press W' },
+      { value: 'easy',         label: 'Easy' },
+      { value: 'learn_master', label: 'Easy to learn, hard to master' },
+      { value: 'brain',        label: 'Brain required' },
+      { value: 'hard',         label: 'Hard' },
+      { value: 'dark_souls',   label: 'Dark Souls' },
+    ],
+  },
+  {
+    field: 'grind', title: 'Grind', art: '⚙️', kind: 'neutral',
+    options: [
+      { value: 'none',        label: 'Nothing to grind' },
+      { value: 'optional',    label: 'Only for completionists' },
+      { value: 'average',     label: 'Average grind' },
+      { value: 'lots',        label: 'Too much grind' },
+      { value: 'second_life', label: 'You\'ll need a second life' },
+    ],
+  },
+  {
+    field: 'gameLength', title: 'Game length', art: '⏳', kind: 'neutral',
+    options: [
+      { value: 'coffee',   label: 'One cup of coffee' },
+      { value: 'short',    label: 'Short' },
+      { value: 'average',  label: 'Average' },
+      { value: 'long',     label: 'Long' },
+      { value: 'infinity', label: 'To infinity and beyond' },
+    ],
+  },
+  {
+    field: 'bugs', title: 'Bugs', art: '🐛', kind: 'scale',
+    options: [
+      { value: 'terrarium', label: 'A bug terrarium with a game in it' },
+      { value: 'annoying',  label: 'Can get annoying' },
+      { value: 'minor',     label: 'Minor bugs' },
+      { value: 'none',      label: 'Never heard of \'em' },
+    ],
+  },
+  {
+    field: 'pcRequirements', title: 'PC requirements', art: '🖥️', kind: 'neutral',
+    // Only for PC players — hidden when another platform was picked in Setup
+    showIf: (answers) => !answers.platform || answers.platform === 'PC',
+    options: [
+      { value: 'toaster', label: 'Runs on a toaster' },
+      { value: 'potato',  label: 'Potato-friendly' },
+      { value: 'decent',  label: 'Decent' },
+      { value: 'fast',    label: 'Fast' },
+      { value: 'rich',    label: 'Rich kid rig' },
+      { value: 'nasa',    label: 'Ask NASA for a spare' },
+    ],
+  },
+  {
+    field: 'worthPrice', title: 'Price', art: '💰', kind: 'scale',
+    options: [
+      { value: 'never', label: 'Burn your money instead' },
+      { value: 'free',  label: 'Only if it\'s free' },
+      { value: 'sale',  label: 'Wait for a sale' },
+      { value: 'full',  label: 'Worth every penny' },
+    ],
+  },
+  {
+    field: 'replay', title: 'Replay', art: '🔁', kind: 'scale',
+    options: [
+      { value: 'once',    label: 'Once was enough' },
+      { value: 'someday', label: 'Maybe someday' },
+      { value: 'already', label: 'Already replaying it' },
+    ],
+  },
 ];
 
-// ⑨ Worth the price + replay
-export const WORTH_PRICE = [
-  { value: 'full', label: 'Worth full price', art: '💎' },
-  { value: 'sale', label: 'Wait for a sale', art: '🏷️' },
-  { value: 'free', label: 'Only if free', art: '🆓' },
-  { value: 'never', label: 'Not even free', art: '🗑️' },
-];
-export const REPLAY = [
-  { value: 'already', label: 'Already replayed', art: '🔁' },
-  { value: 'someday', label: 'Someday', art: '📅' },
-  { value: 'once', label: 'Once was enough', art: '✅' },
-];
+// XP per quest screen: every easy screen +10, the written review +50
+export const XP_EASY = 10;
+export const XP_WRITTEN = 50;
+export const QUEST_SCREENS = 9; // rating + 7 easy screens + final words
+export const MAX_XP = (QUEST_SCREENS - 1) * XP_EASY + XP_WRITTEN; // 130
 
 // Badges (awarded by the server)
 export const BADGES = {
@@ -107,18 +208,16 @@ export const BADGES = {
   deep_diver: { label: 'Deep Diver', art: '🔍' },
   completionist: { label: 'Completionist', art: '🏆' },
   veteran: { label: 'Veteran', art: '⏳' },
-  beta_tester: { label: 'Beta Tester', art: '🧪' },
 };
 
 // Every answer, "skipped" — the starting point for a new review
 export const EMPTY_ANSWERS = {
   rating: null,
-  platform: null, hoursPlayed: null, completionStatus: null, difficulty: null, playStyle: null,
+  platform: null, hoursPlayed: null, completionStatus: null, playStyle: null,
   vibes: [], gotGoodAfter: null,
-  scoreStory: null, scoreGameplay: null, scoreVisuals: null, scoreSound: null, scorePerformance: null,
+  ...Object.fromEntries(CHECKLIST.map((c) => [c.field, null])), // graphics: null, bugs: null, …
   comparedA: null, comparedB: null, // full game objects on the client; sent to the server as ids
   pros: [], cons: [],
   bestMoment: '', worstMoment: '', hasSpoilers: false,
-  worthPrice: null, replay: null,
   reviewText: '',
 };

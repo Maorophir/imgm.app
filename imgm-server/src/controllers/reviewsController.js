@@ -1,9 +1,8 @@
 import { fromNodeHeaders } from 'better-auth/node';
 import { prisma } from '../lib/db.js';
 import { auth } from '../lib/auth.js';
-import { isBeta } from '../lib/config.js';
 import { reviewSchema } from '../lib/reviewSchema.js';
-import { VETERAN_HOURS } from '../lib/reviewOptions.js';
+import { VETERAN_HOURS, CHECKLIST } from '../lib/reviewOptions.js';
 import { ensureGame } from '../services/gameStore.js';
 
 // What we send back for each review: the author and the "X meets Y" games
@@ -16,44 +15,44 @@ const REVIEW_INCLUDE = {
 
 // A skipped quest screen = null / empty. Starting every save from this means
 // that editing a review and skipping a screen clears the old answer.
+const CHECKLIST_FIELDS = Object.keys(CHECKLIST);
+
 const EMPTY_ANSWERS = {
-  platform: null, hoursPlayed: null, completionStatus: null, difficulty: null, playStyle: null,
+  platform: null, hoursPlayed: null, completionStatus: null, playStyle: null,
   vibes: [], gotGoodAfter: null,
-  scoreStory: null, scoreGameplay: null, scoreVisuals: null, scoreSound: null, scorePerformance: null,
+  ...Object.fromEntries(CHECKLIST_FIELDS.map((f) => [f, null])), // graphics: null, bugs: null, …
   comparedAId: null, comparedBId: null,
   pros: [], cons: [],
   bestMoment: null, worstMoment: null, hasSpoilers: false,
-  worthPrice: null, replay: null,
   reviewText: null,
 };
 
+const OPTIONAL_SCREENS = 8;
+
 /**
- * How many of the 9 optional quest screens (② – ⑩) were answered.
+ * How many of the 8 optional quest screens (② – ⑨) were answered.
  */
 const countAnsweredScreens = (r) =>
   [
-    r.platform || r.hoursPlayed != null || r.completionStatus || r.difficulty || r.playStyle, // ② setup
-    r.vibes.length > 0,                                                                       // ③ vibes
-    r.gotGoodAfter,                                                                           // ④ got good
-    [r.scoreStory, r.scoreGameplay, r.scoreVisuals, r.scoreSound, r.scorePerformance]
-      .some((s) => s != null),                                                                // ⑤ part scores
-    r.comparedAId || r.comparedBId,                                                           // ⑥ X meets Y
-    r.pros.length > 0 || r.cons.length > 0,                                                   // ⑦ pros & cons
-    r.bestMoment || r.worstMoment,                                                            // ⑧ moments
-    r.worthPrice || r.replay,                                                                 // ⑨ price + replay
-    r.reviewText,                                                                             // ⑩ your words
+    r.platform || r.hoursPlayed != null || r.completionStatus || r.playStyle, // ② setup
+    r.vibes.length > 0,                                                       // ③ vibes
+    r.gotGoodAfter,                                                           // ④ got good
+    CHECKLIST_FIELDS.some((f) => r[f]),                                       // ⑤ checklist
+    r.comparedAId || r.comparedBId,                                           // ⑥ X meets Y
+    r.pros.length > 0 || r.cons.length > 0,                                   // ⑦ pros & cons
+    r.bestMoment || r.worstMoment,                                            // ⑧ moments
+    r.reviewText,                                                             // ⑨ final words
   ].filter(Boolean).length;
 
 /**
- * Works out which badges a review earns. "Once earned" badges (first reviewer,
- * beta tester) are kept when a review is edited later.
+ * Works out which badges a review earns. "First Reviewer" is kept when a
+ * review is edited later, even if someone else has reviewed the game since.
  */
 const awardBadges = (answers, { previousBadges = [], isFirstForGame }) => {
   const badges = new Set();
 
   if (previousBadges.includes('first_reviewer') || isFirstForGame) badges.add('first_reviewer');
-  if (previousBadges.includes('beta_tester') || isBeta) badges.add('beta_tester');
-  if (countAnsweredScreens(answers) === 9) badges.add('deep_diver');
+  if (countAnsweredScreens(answers) === OPTIONAL_SCREENS) badges.add('deep_diver');
   if (answers.completionStatus === 'completed_100') badges.add('completionist');
   if (answers.hoursPlayed >= VETERAN_HOURS) badges.add('veteran');
 
@@ -174,6 +173,32 @@ export const saveReview = async (req, res) => {
     res.status(existing ? 200 : 201).json(review);
   } catch (error) {
     console.error('Error saving review:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// DELETE /api/reviews/mine/:gameId — delete the logged-in user's review of a game
+export const deleteMyReview = async (req, res) => {
+  const gameId = Number.parseInt(req.params.gameId, 10);
+  if (Number.isNaN(gameId)) {
+    return res.status(400).json({ error: 'Invalid game id' });
+  }
+
+  try {
+    const user = await getUser(req);
+    if (!user) {
+      return res.status(401).json({ error: 'You must be logged in.' });
+    }
+
+    // Filtering by userId means you can only ever delete your own review
+    const { count } = await prisma.review.deleteMany({ where: { userId: user.id, gameId } });
+    if (count === 0) {
+      return res.status(404).json({ error: "You haven't reviewed this game." });
+    }
+
+    res.status(204).end(); // 204 = done, nothing to send back
+  } catch (error) {
+    console.error('Error deleting review:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

@@ -7,44 +7,44 @@
  *     each screen is its own small component that reads/updates `answers`.
  *   - Screen 0 (rating) is the only required one. From there the user either posts
  *     a quick review or starts the quest (screens 1–9, all skippable).
- *   - Every screen has Back; quest screens also have Skip, Next and "Post now".
+ *   - Every screen has Back; quest screens also have Skip, Next and "Finish",
+ *     which jumps to Final words (the last screen), where the review is posted.
  *   - If the user already reviewed this game, the quest opens pre-filled and
  *     posting updates that review (one review per person per game).
  */
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getGame, getMyReview, saveReview } from '../lib/api';
+import { getGame, getMyReview, saveReview, deleteMyReview } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import LoadError from '../components/LoadError';
 import RarityStars from '../components/RarityStars';
-import { EMPTY_ANSWERS, BADGES, RATING_LABELS, getRarity } from '../components/reviewQuest/questOptions';
+import {
+  EMPTY_ANSWERS, BADGES, RATING_LABELS, CHECKLIST, XP_EASY, XP_WRITTEN, MAX_XP, getRarity,
+} from '../components/reviewQuest/questOptions';
 import RatingStep from '../components/reviewQuest/steps/RatingStep';
 import QuickStep from '../components/reviewQuest/steps/QuickStep';
 import SetupStep from '../components/reviewQuest/steps/SetupStep';
 import VibesStep from '../components/reviewQuest/steps/VibesStep';
 import GotGoodStep from '../components/reviewQuest/steps/GotGoodStep';
-import ScoresStep from '../components/reviewQuest/steps/ScoresStep';
+import ChecklistStep from '../components/reviewQuest/steps/ChecklistStep';
 import MeetsStep from '../components/reviewQuest/steps/MeetsStep';
 import ProsConsStep from '../components/reviewQuest/steps/ProsConsStep';
 import MomentsStep from '../components/reviewQuest/steps/MomentsStep';
-import WorthStep from '../components/reviewQuest/steps/WorthStep';
 import WordsStep from '../components/reviewQuest/steps/WordsStep';
 
-// The quest, in order. `fields` = what "Skip" clears on that screen.
+// The quest, in order. `fields` = what "Skip" clears; `xp` = what answering it earns.
 const STEPS = [
-  { key: 'rating',  art: '⭐', title: 'Your rating',                 Component: RatingStep },
-  { key: 'setup',   art: '🖥️', title: 'Your setup',                  Component: SetupStep, fields: ['platform', 'hoursPlayed', 'completionStatus', 'difficulty', 'playStyle'] },
-  { key: 'vibes',   art: '🎭', title: "What's the vibe?",            Component: VibesStep, fields: ['vibes'] },
-  { key: 'gotGood', art: '⏱️', title: 'When did it get good?',       Component: GotGoodStep, fields: ['gotGoodAfter'] },
-  { key: 'scores',  art: '📊', title: 'Rate the parts',              Component: ScoresStep, fields: ['scoreStory', 'scoreGameplay', 'scoreVisuals', 'scoreSound', 'scorePerformance'] },
-  { key: 'meets',   art: '🎮', title: "It's like ___ meets ___",     Component: MeetsStep, fields: ['comparedA', 'comparedB'] },
-  { key: 'prosCons', art: '➕', title: 'Pros & cons',                Component: ProsConsStep, fields: ['pros', 'cons'] },
-  { key: 'moments', art: '🎬', title: 'Best & worst moment',         Component: MomentsStep, fields: ['bestMoment', 'worstMoment', 'hasSpoilers'] },
-  { key: 'worth',   art: '💰', title: 'Worth it?',                   Component: WorthStep, fields: ['worthPrice', 'replay'] },
-  { key: 'words',   art: '✍️', title: 'Your words',                  Component: WordsStep, fields: ['reviewText'] },
+  { key: 'rating',    art: '⭐', title: 'Your rating',             xp: XP_EASY,    Component: RatingStep },
+  { key: 'setup',     art: '🖥️', title: 'Your setup',              xp: XP_EASY,    Component: SetupStep, fields: ['platform', 'hoursPlayed', 'completionStatus', 'playStyle'] },
+  { key: 'vibes',     art: '🎭', title: "What's the vibe?",        xp: XP_EASY,    Component: VibesStep, fields: ['vibes'] },
+  { key: 'gotGood',   art: '⏱️', title: 'When did it get good?',   xp: XP_EASY,    Component: GotGoodStep, fields: ['gotGoodAfter'] },
+  { key: 'checklist', art: '☑️', title: 'The checklist',           xp: XP_EASY,    Component: ChecklistStep, fields: CHECKLIST.map((c) => c.field) },
+  { key: 'meets',     art: '🎮', title: "It's like ___ meets ___", xp: XP_EASY,    Component: MeetsStep, fields: ['comparedA', 'comparedB'] },
+  { key: 'prosCons',  art: '➕', title: 'Pros & cons',             xp: XP_EASY,    Component: ProsConsStep, fields: ['pros', 'cons'] },
+  { key: 'moments',   art: '🎬', title: 'Best & worst moment',     xp: XP_EASY,    Component: MomentsStep, fields: ['bestMoment', 'worstMoment', 'hasSpoilers'] },
+  { key: 'words',     art: '✍️', title: 'Final words',             xp: XP_WRITTEN, Component: WordsStep, fields: ['reviewText'] },
 ];
 const LAST_STEP = STEPS.length - 1;
-const XP_PER_SCREEN = 100;
 
 // Special screens that aren't part of the numbered quest
 const QUICK = 'quick';
@@ -104,6 +104,10 @@ const ReviewQuest = () => {
   const [saveError, setSaveError] = useState(null);
   const [result, setResult] = useState(null); // { isNew, newBadges } after a successful post
 
+  // Deleting (two taps: "Delete my review" → "Yes, delete it")
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     const controller = new AbortController();
     getGame(id, controller.signal)
@@ -148,6 +152,18 @@ const ReviewQuest = () => {
       setSaveError(saveErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const removeReview = async () => {
+    setDeleting(true);
+    setSaveError(null);
+    try {
+      await deleteMyReview(id);
+      navigate(`/game/${id}`);
+    } catch (err) {
+      setSaveError(err.message || "Couldn't delete your review. Please try again.");
+      setDeleting(false);
     }
   };
 
@@ -199,7 +215,7 @@ const ReviewQuest = () => {
 
   const isQuestScreen = typeof step === 'number';
   const current = isQuestScreen ? STEPS[step] : null;
-  const earnedXp = STEPS.filter((s) => isAnswered(answers, s)).length * XP_PER_SCREEN;
+  const earnedXp = STEPS.filter((s) => isAnswered(answers, s)).reduce((sum, s) => sum + s.xp, 0);
   const rarity = answers.rating ? getRarity(answers.rating) : null;
 
   // A different screenshot behind every screen
@@ -229,9 +245,10 @@ const ReviewQuest = () => {
             {step === DONE ? 'Your review of' : isEditing ? 'Editing your review of' : 'Reviewing'}{' '}
             <span className="text-white font-semibold">{game.title}</span>
           </p>
-          {isQuestScreen && step > 0 ? (
-            <button onClick={post} disabled={saving} className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition whitespace-nowrap disabled:opacity-50">
-              {postWord} now ✓
+          {isQuestScreen && step > 0 && step < LAST_STEP ? (
+            // Jump to Final words, so everyone gets the chance to write before posting
+            <button onClick={() => changeStep(LAST_STEP)} className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition whitespace-nowrap">
+              Finish ✓
             </button>
           ) : (
             <span className="w-20" /> // keeps the title centered
@@ -241,9 +258,15 @@ const ReviewQuest = () => {
         {/* XP bar — only during the quest */}
         {isQuestScreen && step > 0 && (
           <div className="mb-6">
-            <div className="flex justify-between text-xs font-bold mb-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-bold mb-1.5">
               <span className="text-blue-300">LEVEL {step + 1} / {STEPS.length}</span>
-              <span className="text-amber-300">{earnedXp} XP</span>
+              <span className="flex items-center gap-3">
+                {/* What answering this screen earns — ticked once it's earned */}
+                <span className={isAnswered(answers, current) ? 'text-emerald-300' : 'text-slate-300'}>
+                  This step: +{current.xp} XP{isAnswered(answers, current) ? ' ✓' : ''}
+                </span>
+                <span className="text-amber-300 tabular-nums">Total: {earnedXp} / {MAX_XP} XP</span>
+              </span>
             </div>
             <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
               <div
@@ -342,8 +365,40 @@ const ReviewQuest = () => {
                 className="py-3.5 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 🎮 {isEditing ? 'Edit the quest' : 'Start the quest'}
-                <span className="block text-xs font-normal text-blue-100/80">9 fun questions · about 2 min</span>
+                <span className="block text-xs font-normal text-blue-100/80">{STEPS.length - 1} quick screens · up to {MAX_XP} XP</span>
               </button>
+            </div>
+          )}
+
+          {/* Delete — only for an existing review, with an "are you sure?" step */}
+          {step === 0 && isEditing && (
+            <div className="mt-5 text-center">
+              {confirmDelete ? (
+                <div role="alertdialog" aria-label="Delete review?" className="text-left bg-red-500/10 border border-red-500/30 rounded-xl p-4 animate-fade-in">
+                  <p className="text-sm font-semibold text-red-200 mb-1">Delete your review of {game.title}?</p>
+                  <p className="text-xs text-slate-400 mb-3">Your answers and the badges it earned will be gone. This can't be undone.</p>
+                  <div className="flex justify-end gap-2">
+                    <button
+                      onClick={() => setConfirmDelete(false)}
+                      disabled={deleting}
+                      className="px-4 py-2 rounded-lg text-sm font-semibold text-slate-300 hover:text-white transition"
+                    >
+                      Keep it
+                    </button>
+                    <button
+                      onClick={removeReview}
+                      disabled={deleting}
+                      className="px-4 py-2 rounded-lg text-sm font-bold bg-red-600 hover:bg-red-500 text-white transition disabled:opacity-50 disabled:cursor-wait"
+                    >
+                      {deleting ? 'Deleting…' : 'Yes, delete it'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmDelete(true)} className="text-sm font-semibold text-slate-500 hover:text-red-400 transition">
+                  🗑️ Delete my review
+                </button>
+              )}
             </div>
           )}
 
