@@ -1,5 +1,6 @@
 import { prisma } from '../lib/db.js';
 import * as igdb from '../services/igdbService.js';
+import { upsertGame } from '../services/gameStore.js';
 
 // Re-fetch a cached game from IGDB once it's older than this
 const GAME_STALE_AFTER = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -15,7 +16,10 @@ const GAME_INCLUDE = {
           name: true,
           image: true
         }
-      }
+      },
+      // "It's like ___ meets ___" games
+      comparedA: { select: { id: true, title: true, coverUrl: true } },
+      comparedB: { select: { id: true, title: true, coverUrl: true } },
     },
     orderBy: {
       createdAt: 'desc'
@@ -42,13 +46,6 @@ const toClientGame = (game) => {
     aiSentiment: aiSummary?.overallSentiment ?? null,
   };
 };
-
-const upsertGame = (mapped) =>
-  prisma.game.upsert({
-    where: { id: mapped.id },
-    create: mapped,
-    update: mapped,
-  });
 
 export const getAllGames = async (req, res) => {
   try {
