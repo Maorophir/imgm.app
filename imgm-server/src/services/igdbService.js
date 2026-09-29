@@ -186,6 +186,12 @@ export const mapIgdbGame = (raw) => {
 // Public API
 // ---------------------------------------------------------------------------
 
+// IGDB game types worth reviewing (IGDB /game_types): main game, DLC, expansion,
+// standalone expansion, remake, remaster, expanded game, port.
+// Hidden from search: bundles (this is a review site, not a store), mods, episodes,
+// seasons, forks, packs and updates.
+const REVIEWABLE_GAME_TYPES = [0, 1, 2, 4, 8, 9, 10, 11];
+
 const searchCache = new Map(); // lowercased query -> { expiresAt, results }
 let popularCache = { expiresAt: 0, results: null };
 
@@ -199,7 +205,7 @@ export const searchGames = async (query, limit = 12) => {
     return cached.results;
   }
 
-  const body = `search "${escapeSearch(query.trim())}"; ${GAME_FIELDS} where cover != null & version_parent = null; limit ${limit};`;
+  const body = `search "${escapeSearch(query.trim())}"; ${GAME_FIELDS} where cover != null & version_parent = null & game_type = (${REVIEWABLE_GAME_TYPES.join(',')}); limit ${limit};`;
   const results = (await igdbRequest('games', body)).map(mapIgdbGame);
 
   searchCache.set(key, { expiresAt: Date.now() + SEARCH_CACHE_TTL, results });
