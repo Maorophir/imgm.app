@@ -27,9 +27,9 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Sync the DB schema and regenerate the Prisma client on every start, so schema
+    # Apply any new migrations and regenerate the Prisma client on every start, so schema
     # changes apply without an image rebuild (the baked-in client goes stale otherwise)
-    command: sh -c "npx prisma db push && npx prisma generate && npm run dev"
+    command: sh -c "npx prisma migrate deploy && npx prisma generate && npm run dev"
     env_file:
       - ./imgm-server/.env
     environment:

@@ -29,7 +29,7 @@ const Search = () => {
       .then((games) => setResults({ query, games, error: false }))
       .catch((error) => {
         if (error.name === 'AbortError') return;
-        setResults({ query, games: [], error: true });
+        setResults({ query, games: [], error: error.status === 429 ? 'rate-limited' : true });
       });
 
     return () => controller.abort();
@@ -64,7 +64,9 @@ const Search = () => {
 
       {!isLoading && results.error && (
         <div className="text-center py-16 bg-slate-900/30 rounded-2xl border border-red-500/20">
-          <p className="text-red-400 text-lg mb-2">Search is unavailable right now</p>
+          <p className="text-red-400 text-lg mb-2">
+            {results.error === 'rate-limited' ? 'Too many searches' : 'Search is unavailable right now'}
+          </p>
           <p className="text-slate-500 text-sm">Please try again in a moment.</p>
         </div>
       )}

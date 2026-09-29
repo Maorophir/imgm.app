@@ -36,7 +36,7 @@ const SearchBar = () => {
         .then((games) => setResults({ query: trimmed, games, error: false }))
         .catch((error) => {
           if (error.name === 'AbortError') return;
-          setResults({ query: trimmed, games: [], error: true });
+          setResults({ query: trimmed, games: [], error: error.status === 429 ? 'rate-limited' : true });
         });
     }, DEBOUNCE_MS);
 
@@ -124,7 +124,11 @@ const SearchBar = () => {
           )}
 
           {!isLoading && results.error && (
-            <p className="px-4 py-3 text-sm text-red-400">Search is unavailable right now.</p>
+            <p className="px-4 py-3 text-sm text-red-400">
+              {results.error === 'rate-limited'
+                ? 'Too many searches — wait a moment and try again.'
+                : 'Search is unavailable right now.'}
+            </p>
           )}
 
           {!isLoading && !results.error && games.length === 0 && (

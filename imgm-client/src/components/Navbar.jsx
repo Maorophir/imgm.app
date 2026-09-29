@@ -8,8 +8,11 @@ function Navbar() {
   return (
     <nav className="p-5 bg-slate-900 flex justify-between items-center shadow-lg sticky top-0 z-50">
       {/* Logo / Brand */}
-      <Link to="/" className="text-3xl font-extrabold text-blue-500 tracking-wider">
-        IMGM
+      <Link to="/" className="flex items-center gap-2">
+        <span className="text-3xl font-extrabold text-blue-500 tracking-wider">IMGM</span>
+        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300 bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded">
+          Beta
+        </span>
       </Link>
 
       {/* Game search with instant results */}
