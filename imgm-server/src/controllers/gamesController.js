@@ -76,18 +76,28 @@ export const searchGames = async (req, res) => {
   }
 };
 
+const FEATURED_COUNT = 40;
+
+// The list we last saved to the DB. igdb.getPopularGames() returns the same cached
+// array until its 6h cache expires, so a new array means "fresh list — save it".
+let lastSavedFeatured = null;
+
 export const getFeaturedGames = async (req, res) => {
   try {
-    const games = await igdb.getPopularGames();
+    const games = await igdb.getPopularGames(FEATURED_COUNT);
 
-    // Cache featured games locally so their detail pages load from the DB
-    await Promise.all(
-      games.map((game) =>
-        upsertGame(game).catch((error) =>
-          console.error(`Error caching featured game ${game.id}:`, error)
+    // Cache featured games locally so their detail pages load from the DB.
+    // Runs in the background (not awaited) so visitors don't wait for 40 DB writes.
+    if (games !== lastSavedFeatured) {
+      lastSavedFeatured = games;
+      Promise.all(
+        games.map((game) =>
+          upsertGame(game).catch((error) =>
+            console.error(`Error caching featured game ${game.id}:`, error)
+          )
         )
-      )
-    );
+      );
+    }
 
     res.json(games);
   } catch (error) {
