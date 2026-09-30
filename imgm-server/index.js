@@ -22,6 +22,7 @@ app.use(express.json());
 // Import routes
 import gamesRouter from './src/routes/games.js';
 import reviewsRouter from './src/routes/reviews.js';
+import usersRouter from './src/routes/users.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/lib/auth.js';
 
@@ -36,6 +37,7 @@ app.use("/api/auth", toNodeHandler(auth));
 // API Routes
 app.use('/api/games', gamesRouter);
 app.use('/api/reviews', reviewsRouter);
+app.use('/api/users', usersRouter);
 
 // Start server
 app.listen(PORT, () => {

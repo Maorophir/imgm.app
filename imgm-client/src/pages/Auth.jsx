@@ -2,20 +2,12 @@ import { useState, useEffect } from 'react';
 import { signIn, signUp, authClient } from '../lib/authClient';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getFeaturedGames } from '../lib/api';
-
-/**
- * Where to go after logging in, from ?redirect=/some/page (defaults to home).
- * Only paths on OUR site are allowed: "//evil.com" or "/\evil.com" would make the
- * browser leave for another website (an "open redirect" that phishers abuse).
- */
-const safeRedirect = (path) =>
-  path?.startsWith('/') && !path.startsWith('//') && !path.startsWith('/\\') ? path : '/';
+import { safeRedirect } from '../lib/safeRedirect';
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   // Real popular games for the scrolling background (stays empty if the request fails)
@@ -43,7 +35,8 @@ function Auth() {
         if (error) throw new Error(error.message || "Failed to log in");
         navigate(redirectTo);
       } else {
-        const { error } = await signUp.email({ email, password, name });
+        // Better Auth needs a name; it stays private (the public gamer tag is chosen next)
+        const { error } = await signUp.email({ email, password, name: email.split('@')[0] });
         if (error) throw new Error(error.message || "Failed to sign up");
         navigate(redirectTo);
       }
@@ -141,20 +134,6 @@ function Auth() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {!isLogin && (
-            <div>
-              <label className="block text-sm font-semibold text-slate-300 mb-1">Display Name</label>
-              <input
-                type="text"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition placeholder-slate-500"
-                placeholder="GamerTag99"
-              />
-            </div>
-          )}
-
           <div>
             <label className="block text-sm font-semibold text-slate-300 mb-1">Email Address</label>
             <input

@@ -31,6 +31,15 @@ body {
   --animate-fade-in: fadeIn 0.4s ease-out;
   --animate-shine: shine 3.5s ease-in-out infinite;
   --animate-pop: pop 0.28s ease-out;
+  --animate-marquee: marquee var(--marquee-duration, 6s) linear infinite;
+
+  /* MarqueeText: slide to the end right away (--marquee-shift), pause to read,
+     slide back, pause — repeat. Linear = steady speed with no slow start. */
+  @keyframes marquee {
+    0% { transform: translateX(0); }
+    40%, 50% { transform: translateX(var(--marquee-shift)); }
+    90%, 100% { transform: translateX(0); }
+  }
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 
   /* A star "pops" when it becomes the newly selected one */
@@ -61,4 +70,69 @@ body {
     0% { transform: translateX(-50%); }
     100% { transform: translateX(0); }
   }
+}
+
+/*
+ * Review cards (components/reviewCard/RarityCard.jsx)
+ * --rc is set inline to the review's rarity colour.
+ */
+
+/* 3D flip: the card rotates around its vertical axis; each face hides its back */
+.card-flip { perspective: 1400px; }
+.card-flip-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  /* Stay a 3D layer even at rest. Without this, the browser switches from its 3D
+     layer back to a flat drawing when a flip back ends, and the card "snaps". */
+  transform: rotateY(0deg);
+  will-change: transform;
+  transition: transform 0.7s cubic-bezier(0.3, 0.9, 0.3, 1);
+}
+.card-flip.is-flipped .card-flip-inner { transform: rotateY(180deg); }
+.card-face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+.card-face-back { transform: rotateY(180deg); }
+
+/* Rarity frame: a padded wrapper whose background shows as a 3px border */
+.rarity-frame {
+  padding: 3px;
+  border-radius: 20px;
+  background: var(--rc);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--rc) 30%, transparent);
+}
+.rarity-frame.is-junk { box-shadow: none; filter: saturate(0.6); }
+.rarity-frame.is-epic { background: linear-gradient(135deg, #a855f7, #e9d5ff 40%, #a855f7 60%, #7e22ce); }
+.rarity-frame.is-legendary {
+  background: linear-gradient(115deg, #b45309, #fbbf24 18%, #fff7cc 32%, #fbbf24 46%, #b45309 64%, #fbbf24 80%, #fff7cc 92%, #fbbf24);
+  background-size: 300% 300%;
+  animation: card-foil 5s linear infinite;
+  box-shadow: 0 0 34px rgb(251 191 36 / 0.35);
+}
+@keyframes card-foil { to { background-position: 300% 0; } }
+
+/* Legendary only: a soft light sweep across the card art */
+.rarity-frame.is-legendary .card-art::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgb(255 247 204 / 0.28) 45%, transparent 60%);
+  background-size: 250% 100%;
+  animation: card-sheen 4s ease-in-out infinite;
+}
+@keyframes card-sheen {
+  0% { background-position: 150% 0; }
+  60%, 100% { background-position: -100% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-flip-inner { transition: none; }
+  .rarity-frame.is-legendary,
+  .rarity-frame.is-legendary .card-art::after { animation: none; }
 }

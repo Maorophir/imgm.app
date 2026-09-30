@@ -11,6 +11,8 @@ import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
 import Search from './pages/Search';
+import Welcome from './pages/Welcome';
+import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 
 /**
@@ -35,7 +37,9 @@ function App() {
         {/* Navbar renders on EVERY page — it's outside <Routes> */}
         <Navbar />
 
-        {/* Only the matched route renders here */}
+        {/* Only the matched route renders here. The gate sends logged-in users
+            without a gamer tag to /welcome first. */}
+        <GamerTagGate>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/game/:id" element={<GameDetails />} />
@@ -45,7 +49,9 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
+          <Route path="/welcome" element={<Welcome />} />
         </Routes>
+        </GamerTagGate>
       </div>
     </Router>
   );

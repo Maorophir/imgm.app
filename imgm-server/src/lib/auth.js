@@ -19,4 +19,14 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: clientOrigins,
+  // The gamer tag travels with the session (so the site knows who still needs to
+  // pick one). input: false = Better Auth's own update routes can't change these;
+  // only our /api/users routes can, and they enforce the name rules + 30-day limit.
+  user: {
+    additionalFields: {
+      username: { type: "string", required: false, input: false },
+      displayUsername: { type: "string", required: false, input: false },
+      usernameChangedAt: { type: "date", required: false, input: false },
+    },
+  },
 });

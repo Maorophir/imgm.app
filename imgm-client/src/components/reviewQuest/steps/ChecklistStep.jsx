@@ -3,15 +3,7 @@
  * One page, many categories, every one optional. Options read left → right,
  * worst → best (or less → more for neutral ones); tap again to un-tick.
  */
-import { CHECKLIST } from '../questOptions';
-
-// Colour of a ticked option. Scales go red (worst) → yellow → green (best);
-// neutral categories (difficulty, grind…) are always blue.
-const colorFor = (category, index) => {
-  if (category.kind === 'neutral') return { solid: 'rgb(96 165 250)', soft: 'rgb(96 165 250 / 0.15)' };
-  const hue = Math.round((index / (category.options.length - 1)) * 130); // 0 = red … 130 = green
-  return { solid: `hsl(${hue} 75% 58%)`, soft: `hsl(${hue} 75% 58% / 0.15)` };
-};
+import { CHECKLIST, checklistColor } from '../questOptions';
 
 const CheckChip = ({ label, checked, color, onClick }) => (
   <button
@@ -63,11 +55,25 @@ const ChecklistStep = ({ answers, update }) => {
                   key={option.value}
                   label={option.label}
                   checked={checked}
-                  color={colorFor(category, index)}
+                  color={checklistColor(category, index)}
                   onClick={() => update({ [category.field]: checked ? null : option.value })}
                 />
               );
             })}
+            {/* "Not applicable" sits apart from the ladder, after a thin divider, in grey */}
+            {category.na && (
+              <>
+                <span className="self-center w-px h-5 bg-slate-700 mx-1" aria-hidden="true" />
+                <CheckChip
+                  label={category.na.label}
+                  checked={answers[category.field] === category.na.value}
+                  color={checklistColor(category, 'na')}
+                  onClick={() =>
+                    update({ [category.field]: answers[category.field] === category.na.value ? null : category.na.value })
+                  }
+                />
+              </>
+            )}
           </div>
         </section>
       ))}

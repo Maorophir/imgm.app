@@ -1,6 +1,7 @@
 import { prisma } from '../lib/db.js';
 import * as igdb from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
+import { withMaskedText } from '../lib/reviewText.js';
 
 // Re-fetch a cached game from IGDB once it's older than this
 const GAME_STALE_AFTER = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -10,13 +11,8 @@ const GAME_INCLUDE = {
   reviews: {
     include: {
       analysis: true,
-      user: {
-        select: {
-          id: true,
-          name: true,
-          image: true
-        }
-      },
+      // Public author info = the gamer tag only (never the real name or Google photo)
+      user: { select: { id: true, displayUsername: true } },
       // "It's like ___ meets ___" games
       comparedA: { select: { id: true, title: true, coverUrl: true } },
       comparedB: { select: { id: true, title: true, coverUrl: true } },
@@ -40,7 +36,7 @@ const toClientGame = (game) => {
 
   return {
     ...rest,
-    reviews,
+    reviews: reviews.map(withMaskedText), // swearing gets a masked copy
     ratings,
     aiSummary: aiSummary?.summaryText ?? null,
     aiSentiment: aiSummary?.overallSentiment ?? null,

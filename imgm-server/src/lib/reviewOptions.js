@@ -5,6 +5,8 @@
  *
  * Checklist ladders are ordered worst → best (or less → more for neutral
  * ones like difficulty), matching the left → right order on screen.
+ * 'na' (not applicable) is allowed for a few categories and always comes last —
+ * it is NOT part of the ladder, so averages must skip it.
  */
 
 // ② Your setup
@@ -27,14 +29,14 @@ export const CHECKLIST = {
   graphics:       ['ms_paint', 'potato', 'decent', 'pretty', 'screenshot', 'reality'],
   gameplay:       ['dont', 'paint_dry', 'fine', 'good', 'great', 'one_more'],
   audio:          ['deaf', 'mute', 'okay', 'good', 'repeat', 'eargasm'],
-  story:          ['none', 'lore', 'average', 'good', 'tears', 'life'],
+  story:          ['none', 'lore', 'average', 'good', 'tears', 'life', 'na'],
   difficulty:     ['press_w', 'easy', 'learn_master', 'brain', 'hard', 'dark_souls'],
   grind:          ['none', 'optional', 'average', 'lots', 'second_life'],
-  gameLength:     ['coffee', 'short', 'average', 'long', 'infinity'],
+  gameLength:     ['coffee', 'short', 'average', 'long', 'infinity', 'na'],
   bugs:           ['terrarium', 'annoying', 'minor', 'none'],
   pcRequirements: ['toaster', 'potato', 'decent', 'fast', 'rich', 'nasa'],
-  worthPrice:     ['never', 'free', 'sale', 'full'],
-  replay:         ['once', 'someday', 'already'],
+  worthPrice:     ['never', 'free', 'sale', 'full', 'na'],
+  replay:         ['once', 'someday', 'already', 'na'],
 };
 
 // Badges the server can award (see awardBadges in reviewsController)

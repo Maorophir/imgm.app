@@ -2,11 +2,10 @@
  * GameDetails — The core page of IMGM. Route: /game/:id
  *
  * Layout (top to bottom):
- *   1. Hero Section — full-width background artwork with game title
- *   2. Game Details — cover art, metadata, multi-source ratings
- *   3. Videos — embedded YouTube trailers
- *   4. AI Summary — the glassmorphism AISummaryPanel
- *   5. User Reviews — list of ReviewCards + "Write Review" modal trigger
+ *   1. Header — cover, title and details, with the game's artwork behind them
+ *   2. Screenshots & Videos — tabs; screenshots first, videos filtered to the relevant few
+ *   3. AI Summary — the glassmorphism AISummaryPanel
+ *   4. User Reviews — each review as a rarity card + written review, and the Review Quest button
  */
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -14,37 +13,45 @@ import { getGame } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import AISummaryPanel from '../components/AISummaryPanel';
 import LoadError from '../components/LoadError';
-import ReviewCard from '../components/ReviewCard';
+import ReviewEntry from '../components/reviewCard/ReviewEntry';
 import StartQuestButton from '../components/reviewQuest/StartQuestButton';
-import SentimentBadge from '../components/SentimentBadge';
+import { useStrongLanguage } from '../hooks/useStrongLanguage';
+import GameHeader from '../components/game/GameHeader';
+import MediaSection from '../components/game/MediaSection';
 
-/**
- * Rating source config — same as GameCard but with full labels for the detail view.
- */
-const RATING_SOURCES = [
-  { key: 'imgm', label: 'IMGM', color: 'text-blue-400', bgColor: 'bg-blue-500/15', borderColor: 'border-blue-500/30' },
-  { key: 'metacritic', label: 'Metacritic', color: 'text-yellow-400', bgColor: 'bg-yellow-400/10', borderColor: 'border-yellow-400/20', format: (v) => Math.round(v) },
-  { key: 'ign', label: 'IGN', color: 'text-red-400', bgColor: 'bg-red-400/10', borderColor: 'border-red-400/20', format: (v) => v.toFixed(1) },
-  { key: 'steam', label: 'Steam', color: 'text-sky-400', bgColor: 'bg-sky-400/10', borderColor: 'border-sky-400/20', format: (v) => `${Math.round(v)}%` },
-];
+// Card art for a review: a medium-size version of the game's artworks + screenshots
+const cardArt = (game, i) => {
+  const pool = [...(game.artworks ?? []), ...(game.screenshots ?? [])];
+  if (pool.length === 0) return game.coverUrl;
+  return pool[i % pool.length].replace('/t_1080p/', '/t_screenshot_big/');
+};
 
-/**
- * Maps a review from our API (Review + ReviewAnalysis + User) to ReviewCard props.
- */
-const toReviewCardProps = (review) => ({
-  ...review,
-  username: review.user?.name ?? 'Anonymous',
-  sentiment: review.analysis?.sentiment,
-});
+// Keyed by id so all page state (fetched data, media tabs…) resets on navigation
+// "Show strong language" — off = swearing shows as "f***"
+const StrongLanguageSwitch = () => {
+  const [shown, setShown] = useStrongLanguage();
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={shown}
+      onClick={() => setShown(!shown)}
+      className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white"
+    >
+      <span className={`relative w-9 h-5 rounded-full transition ${shown ? 'bg-rose-500' : 'bg-slate-700'}`}>
+        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${shown ? 'translate-x-4' : ''}`} />
+      </span>
+      🤬 Show strong language
+    </button>
+  );
+};
 
-// Keyed by id so all page state (fetched data, video tab, modal) resets on navigation
 const GameDetails = () => {
   const { id } = useParams();
   return <GameDetailsContent key={id} id={id} />;
 };
 
 const GameDetailsContent = ({ id }) => {
-  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const { data: session } = useSession();
 
   // null = loading | { game, reviews } = loaded | { game: null } = not found | { error: true } = failed
@@ -57,7 +64,7 @@ const GameDetailsContent = ({ id }) => {
     const controller = new AbortController();
 
     getGame(id, controller.signal)
-      .then((game) => setData({ game, reviews: game.reviews.map(toReviewCardProps) }))
+      .then((game) => setData({ game, reviews: game.reviews }))
       .catch((err) => {
         if (err.name === 'AbortError') return;
         if (err.status === 404) {
@@ -75,8 +82,7 @@ const GameDetailsContent = ({ id }) => {
   if (!data) {
     return (
       <div className="min-h-screen animate-pulse">
-        <div className="h-[70vh] bg-gradient-to-t from-slate-950 to-slate-900" />
-        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col md:flex-row gap-8">
+        <div className="max-w-7xl mx-auto px-6 pt-16 pb-10 flex flex-col md:flex-row gap-8">
           <div className="w-48 md:w-56 aspect-[3/4] bg-slate-800/60 rounded-xl" />
           <div className="flex-1 flex flex-col gap-3">
             <div className="h-4 bg-slate-800/70 rounded w-full" />
@@ -121,209 +127,13 @@ const GameDetailsContent = ({ id }) => {
     );
   }
 
-  const releaseYear = game.releaseDate ? new Date(game.releaseDate).getFullYear() : null;
-  const availableRatings = RATING_SOURCES.filter((src) => game.ratings?.[src.key] != null);
-
   return (
     <div className="min-h-screen">
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 1: HERO — Full-width background with game title
-         ══════════════════════════════════════════════════════════ */}
-      <section className="relative h-[70vh] flex items-end overflow-hidden">
-        {/* Background artwork */}
-        <div
-          className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${game.artworks?.[0] || game.coverUrl})` }}
-        >
-          {/* Gradient overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/60 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/80 via-transparent to-transparent" />
-        </div>
-
-        {/* Title overlay at the bottom of the hero */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pb-10">
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-slate-400 mb-3">
-            <Link to="/" className="hover:text-blue-400 transition">Home</Link>
-            <span className="text-slate-700">›</span>
-            <span className="text-slate-300">{game.title}</span>
-          </div>
-
-          <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight drop-shadow-2xl mb-3">
-            {game.title}
-          </h1>
-
-          <div className="flex items-center flex-wrap gap-3 text-sm">
-            {game.developer && (
-              <span className="text-slate-300">
-                <span className="text-slate-500">by </span>
-                <span className="font-semibold">{game.developer}</span>
-              </span>
-            )}
-            {releaseYear && (
-              <span className="text-slate-500">• {releaseYear}</span>
-            )}
-            {game.aiSentiment && (
-              <SentimentBadge sentiment={game.aiSentiment} size="sm" />
-            )}
-          </div>
-        </div>
-      </section>
+      <GameHeader game={game} />
+      <MediaSection game={game} />
 
       {/* ══════════════════════════════════════════════════════════
-          SECTION 2: GAME DETAILS — Cover, metadata, ratings
-         ══════════════════════════════════════════════════════════ */}
-      <section className="max-w-7xl mx-auto px-6 py-10">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Cover art */}
-          <div className="shrink-0">
-            <img
-              src={game.coverUrl}
-              alt={`${game.title} cover`}
-              className="w-48 md:w-56 rounded-xl shadow-2xl shadow-black/50 border border-slate-800/50"
-            />
-          </div>
-
-          {/* Details column */}
-          <div className="flex-1 flex flex-col gap-5">
-            {/* Description */}
-            <p className="text-slate-300 leading-relaxed">
-              {game.description}
-            </p>
-
-            {/* Metadata grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {game.developer && (
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Developer</p>
-                  <p className="text-sm text-white font-medium">{game.developer}</p>
-                </div>
-              )}
-              {game.publisher && (
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Publisher</p>
-                  <p className="text-sm text-white font-medium">{game.publisher}</p>
-                </div>
-              )}
-              {game.releaseDate && (
-                <div>
-                  <p className="text-xs text-slate-500 uppercase tracking-wider mb-1">Release Date</p>
-                  <p className="text-sm text-white font-medium">
-                    {new Date(game.releaseDate).toLocaleDateString('en-US', {
-                      year: 'numeric', month: 'long', day: 'numeric',
-                    })}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* Genres */}
-            {game.genres?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {game.genres.map((genre) => (
-                  <span
-                    key={genre}
-                    className="text-xs font-semibold uppercase tracking-wider text-slate-300 bg-slate-800/60 border border-slate-700/40 px-3 py-1 rounded-lg"
-                  >
-                    {genre}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Platforms */}
-            {game.platforms?.length > 0 && (
-              <div className="flex flex-wrap gap-2">
-                {game.platforms.map((platform) => (
-                  <span
-                    key={platform}
-                    className="text-xs font-bold uppercase tracking-widest text-blue-300/80 bg-blue-500/10 border border-blue-500/20 px-3 py-1 rounded-lg"
-                  >
-                    {platform}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* ── Multi-source Ratings Bar ── */}
-            {availableRatings.length > 0 && (
-              <div className="flex flex-wrap gap-3 mt-1">
-                {availableRatings.map((src) => {
-                  const value = game.ratings[src.key];
-                  const display = src.format ? src.format(value) : value.toFixed(1);
-                  const isImgm = src.key === 'imgm';
-
-                  return (
-                    <div
-                      key={src.key}
-                      className={`
-                        flex items-center gap-2
-                        ${src.bgColor} ${src.borderColor}
-                        border rounded-xl px-4 py-2.5
-                        ${isImgm ? 'ring-1 ring-blue-500/30' : ''}
-                      `}
-                    >
-                      <span className={`text-xs font-bold ${src.color} ${isImgm ? '' : 'opacity-70'}`}>
-                        {src.label}
-                      </span>
-                      <span className={`text-lg font-black ${src.color}`}>
-                        {display}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 3: VIDEOS — Embedded YouTube trailers
-         ══════════════════════════════════════════════════════════ */}
-      {game.videos?.length > 0 && (
-        <section className="max-w-7xl mx-auto px-6 py-10">
-          <h2 className="text-2xl font-bold text-white mb-6">
-            Videos & <span className="text-blue-400">Trailers</span>
-          </h2>
-
-          {/* Video player */}
-          <div className="aspect-video rounded-2xl overflow-hidden bg-slate-900 border border-slate-800/50 shadow-2xl shadow-black/30 mb-4">
-            <iframe
-              key={game.videos[activeVideoIndex].youtubeId}
-              src={`https://www.youtube.com/embed/${game.videos[activeVideoIndex].youtubeId}`}
-              title={game.videos[activeVideoIndex].name}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
-              className="w-full h-full"
-            />
-          </div>
-
-          {/* Video selector tabs — only if more than 1 video */}
-          {game.videos.length > 1 && (
-            <div className="flex flex-wrap gap-2">
-              {game.videos.map((video, index) => (
-                <button
-                  key={video.youtubeId}
-                  onClick={() => setActiveVideoIndex(index)}
-                  className={`
-                    px-4 py-2 rounded-lg text-sm font-semibold transition-all duration-200
-                    ${index === activeVideoIndex
-                      ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
-                      : 'bg-slate-900/60 text-slate-400 border border-slate-800/50 hover:text-white hover:border-slate-700'
-                    }
-                  `}
-                >
-                  {video.name}
-                </button>
-              ))}
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* ══════════════════════════════════════════════════════════
-          SECTION 4: AI SUMMARY — The core feature
+          AI SUMMARY — The core feature
          ══════════════════════════════════════════════════════════ */}
       <section className="max-w-7xl mx-auto px-6 py-10">
         <h2 className="text-2xl font-bold text-white mb-6">
@@ -346,14 +156,18 @@ const GameDetailsContent = ({ id }) => {
       </section>
 
       {/* ══════════════════════════════════════════════════════════
-          SECTION 5: USER REVIEWS
+          USER REVIEWS
          ══════════════════════════════════════════════════════════ */}
       <section className="max-w-7xl mx-auto px-6 py-10 pb-20">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-          <h2 className="text-2xl font-bold text-white">
-            Community <span className="text-blue-400">Reviews</span>
-            <span className="text-slate-500 text-lg font-normal ml-2">({reviews.length})</span>
-          </h2>
+          <div className="flex flex-col items-start gap-2">
+            <h2 className="text-2xl font-bold text-white">
+              Community <span className="text-blue-400">Reviews</span>
+              <span className="text-slate-500 text-lg font-normal ml-2">({reviews.length})</span>
+            </h2>
+            {/* Only offered when some review actually has masked swearing */}
+            {reviews.some((r) => r.masked) && <StrongLanguageSwitch />}
+          </div>
 
           {/* When there are no reviews yet, the button lives in the empty state below */}
           {reviews.length > 0 && (
@@ -364,22 +178,14 @@ const GameDetailsContent = ({ id }) => {
         </div>
 
         {reviews.length > 0 ? (
-          <div className="flex flex-col gap-4">
-            {reviews.map((review) => (
-              <ReviewCard
+          <div className="flex flex-col gap-10">
+            {reviews.map((review, i) => (
+              <ReviewEntry
                 key={review.id}
-                username={review.username}
-                rating={review.rating}
-                reviewText={review.reviewText}
-                createdAt={review.createdAt}
-                sentiment={review.sentiment}
-                hoursPlayed={review.hoursPlayed}
-                platform={review.platform}
-                completionStatus={review.completionStatus}
-                playStyle={review.playStyle}
-                difficulty={review.difficulty}
-                subScores={review.subScores}
-                recommendation={review.recommendation}
+                review={review}
+                game={game}
+                // A different artwork/screenshot per review, so the cards don't all look the same
+                artUrl={cardArt(game, i)}
               />
             ))}
           </div>
