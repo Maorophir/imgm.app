@@ -56,3 +56,6 @@ export const checkUsername = (name, signal) =>
 
 // Choose or change the logged-in user's gamer tag
 export const setUsername = (name) => fetchJson('/api/users/me/username', { method: 'PUT', body: { name } });
+
+// Your XP and review count — { xp, reviews }
+export const getMyProgress = (signal) => fetchJson('/api/users/me/progress', { signal });

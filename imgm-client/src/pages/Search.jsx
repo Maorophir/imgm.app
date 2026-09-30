@@ -88,6 +88,8 @@ const Search = () => {
               coverUrl={game.coverUrl}
               genres={game.genres}
               platforms={game.platforms}
+              ratings={game.ratings}
+              reviewCount={game.reviewCount}
               releaseDate={game.releaseDate}
             />
           ))}

@@ -8,8 +8,8 @@
 
 // ① Rating — a word for every score
 export const RATING_LABELS = {
-  1: 'Unplayable', 2: 'Awful', 3: 'Bad', 4: 'Weak', 5: 'Meh',
-  6: 'Okay', 7: 'Good', 8: 'Great', 9: 'Amazing', 10: 'Masterpiece',
+  1: 'Unplayable', 2: 'Bad', 3: 'Weak', 4: 'Meh', 5: 'Okay',
+  6: 'Good', 7: 'Great', 8: 'Excellent', 9: 'Amazing', 10: 'Masterpiece',
 };
 
 // Loot rarity — the review's verdict, from the reviewer's own score (not AI).

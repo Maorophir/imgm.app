@@ -42,3 +42,8 @@ export const CHECKLIST = {
 // Badges the server can award (see awardBadges in reviewsController)
 export const BADGES = ['first_reviewer', 'deep_diver', 'completionist', 'veteran'];
 export const VETERAN_HOURS = 100;
+
+// XP per review, as in the quest: every answered screen (the rating included)
+// earns XP_EASY, and the Final words earn XP_WRITTEN. A full review = 130 XP.
+export const XP_EASY = 10;
+export const XP_WRITTEN = 50;

@@ -195,6 +195,7 @@ const Home = () => {
               genres={game.genres}
               platforms={game.platforms}
               ratings={game.ratings}
+              reviewCount={game.reviewCount}
               aiSentiment={game.aiSentiment}
               aiSummary={game.aiSummary}
               releaseDate={game.releaseDate}

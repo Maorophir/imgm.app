@@ -1,0 +1,24 @@
+[project]
+name = "imgm-ai"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Maorophir", email = "maorophir@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "black>=26.5.1",
+    "isort>=9.0.2",
+    "langchain-google-genai>=4.4.0",
+    "langchain-ollama>=1.1.0",
+    "langgraph>=1.2.12",
+    "python-dotenv>=1.2.3",
+]
+
+[project.scripts]
+imgm-ai = "imgm_ai:main"
+
+[build-system]
+requires = ["uv_build>=0.12.17,<0.13.0"]
+build-backend = "uv_build"

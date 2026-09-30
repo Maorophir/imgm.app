@@ -10,6 +10,7 @@ import { useStrongLanguage } from '../../hooks/useStrongLanguage';
 import { getRarity, RATING_LABELS, BADGES } from '../reviewQuest/questOptions';
 import { formatDate, tickedChecklist, reviewerName } from './reviewDisplay';
 import { Avatar } from './RarityCard';
+import { getProgress } from '../../lib/levels';
 
 const LONG_REVIEW = 420; // characters — longer reviews start collapsed
 
@@ -30,6 +31,7 @@ const ReviewPanel = ({ review: original }) => {
   const review = strongLanguage || !original.masked ? original : { ...original, ...original.masked };
 
   const rarity = getRarity(review.rating);
+  const author = review.user?.xp != null ? getProgress(review.user.xp) : null;
   const name = reviewerName(review);
   const text = review.reviewText?.trim() ?? '';
   // Blank lines split paragraphs; single line breaks are kept inside a paragraph
@@ -57,7 +59,14 @@ const ReviewPanel = ({ review: original }) => {
           <Avatar name={name} size="w-9 h-9 text-sm" />
           <span className="min-w-0">
             <span className="block font-bold text-white truncate">{name}</span>
-            <span className="block text-xs text-slate-400">{formatDate(review.createdAt)}</span>
+            <span className="block text-xs text-slate-400">
+              {author && (
+                <span className="font-bold" style={{ color: author.tier.color }}>
+                  {author.tier.label} · Lv {author.level} ·{' '}
+                </span>
+              )}
+              {formatDate(review.createdAt)}
+            </span>
           </span>
         </div>
         <span className="flex items-baseline gap-2 shrink-0">

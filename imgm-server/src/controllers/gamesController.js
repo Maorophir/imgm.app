@@ -2,6 +2,7 @@ import { prisma } from '../lib/db.js';
 import * as igdb from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
 import { withMaskedText } from '../lib/reviewText.js';
+import { withAuthorXp } from '../lib/playerXp.js';
 
 // Re-fetch a cached game from IGDB once it's older than this
 const GAME_STALE_AFTER = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -43,6 +44,28 @@ const toClientGame = (game) => {
   };
 };
 
+/**
+ * Adds our community score to a list of IGDB games: `ratings.imgm` (the average)
+ * and `reviewCount`. One grouped query for the whole list, not one per game.
+ * Returns new objects: the IGDB cache's arrays must never be changed in place.
+ */
+const withImgmRatings = async (games) => {
+  const stats = await prisma.review.groupBy({
+    by: ['gameId'],
+    where: { gameId: { in: games.map((g) => g.id) } },
+    _avg: { rating: true },
+    _count: { _all: true },
+  });
+  const byGame = new Map(stats.map((s) => [s.gameId, s]));
+
+  return games.map((game) => {
+    const s = byGame.get(game.id);
+    return s
+      ? { ...game, ratings: { ...game.ratings, imgm: s._avg.rating }, reviewCount: s._count._all }
+      : { ...game, reviewCount: 0 };
+  });
+};
+
 export const getAllGames = async (req, res) => {
   try {
     const games = await prisma.game.findMany({
@@ -65,7 +88,7 @@ export const searchGames = async (req, res) => {
 
   try {
     const results = await igdb.searchGames(query);
-    res.json(results);
+    res.json(await withImgmRatings(results));
   } catch (error) {
     console.error(`Error searching IGDB for "${query}":`, error);
     res.status(502).json({ error: 'Failed to search games' });
@@ -95,7 +118,7 @@ export const getFeaturedGames = async (req, res) => {
       );
     }
 
-    res.json(games);
+    res.json(await withImgmRatings(games));
   } catch (error) {
     console.error('Error fetching featured games:', error);
     res.status(502).json({ error: 'Failed to fetch featured games' });
@@ -139,7 +162,7 @@ export const getGameById = async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    res.json(toClientGame(game));
+    res.json(toClientGame({ ...game, reviews: await withAuthorXp(game.reviews) }));
   } catch (error) {
     console.error(`Error fetching game ${req.params.id}:`, error);
     res.status(500).json({ error: 'Internal server error' });
