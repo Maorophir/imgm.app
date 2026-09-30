@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
-import { useSession, signOut } from '../lib/authClient';
+import { useSession } from '../lib/authClient';
 import SearchBar from './SearchBar';
+import UserMenu from './UserMenu';
 
 function Navbar() {
   const { data: session, isPending } = useSession();
@@ -43,32 +44,9 @@ function Navbar() {
         )}
 
         {!isPending && session && (
-          <>
-            <li>
-              <Link to="/profile" className="hover:text-blue-400 transition text-slate-200">
-                My Profile
-              </Link>
-            </li>
-            <li className="ml-4 flex items-center gap-3">
-              <div className="flex items-center gap-2 bg-slate-800 rounded-full pl-2 pr-4 py-1 border border-slate-700">
-                <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
-                  {(session.user.displayUsername || '?')[0].toUpperCase()}
-                </div>
-                <span className="text-sm font-medium text-slate-200">
-                  {session.user.displayUsername || 'Choose a tag'}
-                </span>
-              </div>
-              <button 
-                onClick={async () => {
-                  await signOut();
-                  window.location.reload();
-                }}
-                className="text-slate-400 hover:text-red-400 transition text-sm font-semibold"
-              >
-                Log Out
-              </button>
-            </li>
-          </>
+          <li className="ml-4">
+            <UserMenu user={session.user} />
+          </li>
         )}
       </ul>
     </nav>

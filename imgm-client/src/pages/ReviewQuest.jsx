@@ -15,6 +15,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getGame, getMyReview, saveReview, deleteMyReview } from '../lib/api';
+import { refreshMyProgress } from '../hooks/useMyProgress';
+import { getProgress } from '../lib/levels';
+import { XpBar } from '../components/LevelBadge';
 import { useSession } from '../lib/authClient';
 import LoadError from '../components/LoadError';
 import RarityStars from '../components/RarityStars';
@@ -45,6 +48,28 @@ const STEPS = [
   { key: 'words',     art: '✍️', title: 'Final words',             xp: XP_WRITTEN, Component: WordsStep, fields: ['reviewText'] },
 ];
 const LAST_STEP = STEPS.length - 1;
+
+// Done screen: your level after this review — with a fanfare if you levelled up
+const LevelProgress = ({ before, after }) => {
+  const was = getProgress(before);
+  const now = getProgress(after);
+  const levelUp = now.level > was.level;
+  const newTier = now.tier !== was.tier;
+  return (
+    <div className="mt-3 mx-auto max-w-xs text-left">
+      {levelUp && (
+        <p className="text-center text-sm font-black uppercase tracking-[0.2em] mb-2 text-amber-300 animate-pop" style={{ textShadow: '0 0 14px #fbbf2466' }}>
+          ⬆ Level up! {newTier ? <>You're now a <span style={{ color: now.tier.color }}>{now.tier.label}</span></> : `Level ${now.level}`}
+        </p>
+      )}
+      <p className="flex justify-between text-xs font-bold mb-1">
+        <span style={{ color: now.tier.color }}>{now.tier.label} · Level {now.level}</span>
+        <span className="text-slate-500 tabular-nums">{now.toNext.toLocaleString()} XP to Level {now.level + 1}</span>
+      </p>
+      <XpBar progress={now} />
+    </div>
+  );
+};
 
 // Special screens that aren't part of the numbered quest
 const QUICK = 'quick';
@@ -102,7 +127,7 @@ const ReviewQuest = () => {
   // Posting
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
-  const [result, setResult] = useState(null); // { isNew, newBadges } after a successful post
+  const [result, setResult] = useState(null); // { isNew, newBadges, playerXp } after a successful post
 
   // Deleting (two taps: "Delete my review" → "Yes, delete it")
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -145,7 +170,9 @@ const ReviewQuest = () => {
       setResult({
         isNew: !isEditing,
         newBadges: saved.badges.filter((b) => !previousBadges.includes(b)),
+        playerXp: saved.playerXp, // { before, after }
       });
+      refreshMyProgress(); // the navbar's level updates too
       setExisting({ loaded: true, review: saved });
       setStep(DONE);
     } catch (err) {
@@ -160,6 +187,7 @@ const ReviewQuest = () => {
     setSaveError(null);
     try {
       await deleteMyReview(id);
+      refreshMyProgress();
       navigate(`/game/${id}`);
     } catch (err) {
       setSaveError(err.message || "Couldn't delete your review. Please try again.");
@@ -319,6 +347,7 @@ const ReviewQuest = () => {
               </div>
 
               <p className="mt-5 text-lg font-black text-amber-300">+{earnedXp} XP</p>
+              {result.playerXp && <LevelProgress {...result.playerXp} />}
 
               {/* Badges */}
               {existing.review?.badges.length > 0 && (

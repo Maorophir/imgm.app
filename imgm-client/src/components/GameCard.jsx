@@ -92,6 +92,7 @@ const GameCard = ({
   genres = [],
   platforms = [],
   ratings = {},
+  reviewCount,
   aiSentiment,
   aiSummary,
   releaseDate,
@@ -163,9 +164,34 @@ const GameCard = ({
               {displayImgmScore}
             </div>
             <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider drop-shadow">
-              IMGM
+              IMGM{reviewCount > 0 && ` · ${reviewCount}`}
             </span>
           </div>
+        )}
+
+        {/* No reviews yet: an invitation that jumps straight into the Review Quest */}
+        {reviewCount === 0 && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation(); // don't also open the game page
+              navigate(`/game/${id}/review`);
+            }}
+            title="Nobody has reviewed this yet. Earn the First Reviewer badge!"
+            className="
+              absolute top-2.5 right-2.5 overflow-hidden
+              flex items-center gap-1 px-2.5 py-1.5 rounded-lg
+              text-[10px] font-black uppercase tracking-wider text-amber-200
+              bg-slate-950/75 backdrop-blur-sm border border-dashed border-amber-400/60
+              shadow-lg shadow-black/40
+              transition duration-300
+              hover:bg-amber-400 hover:text-slate-950 hover:border-solid hover:scale-105
+            "
+          >
+            <span aria-hidden="true">✦</span> Be the first
+            {/* A light sweep across the chip, reusing the card shine animation */}
+            <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-shine" />
+          </button>
         )}
 
         {/* Gradient fade at the bottom of the image */}

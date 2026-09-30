@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { checkUsername, setUsername } from '../controllers/usersController.js';
+import { checkUsername, setUsername, getMyProgress } from '../controllers/usersController.js';
 
 const router = Router();
 
@@ -18,5 +18,8 @@ router.get('/username-available', checkLimiter, checkUsername);
 
 // PUT /api/users/me/username — choose or change your gamer tag
 router.put('/me/username', setUsername);
+
+// GET /api/users/me/progress — your XP and review count
+router.get('/me/progress', getMyProgress);
 
 export default router;

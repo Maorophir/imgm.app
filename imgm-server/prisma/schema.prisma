@@ -157,6 +157,7 @@ model Review {
 
   // Awarded by the server when the review is saved
   badges           String[]
+  xp               Int      @default(0) // XP this review earned; a player's XP = the sum
 
   userId           String
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)

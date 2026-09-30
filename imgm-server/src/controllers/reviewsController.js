@@ -1,9 +1,10 @@
 import { prisma } from '../lib/db.js';
 import { getSessionUser as getUser } from '../lib/session.js';
 import { reviewSchema } from '../lib/reviewSchema.js';
-import { VETERAN_HOURS, CHECKLIST } from '../lib/reviewOptions.js';
+import { VETERAN_HOURS, CHECKLIST, XP_EASY, XP_WRITTEN } from '../lib/reviewOptions.js';
 import { ensureGame } from '../services/gameStore.js';
 import { findSlurField, withMaskedText } from '../lib/reviewText.js';
+import { getPlayerXp, withAuthorXp } from '../lib/playerXp.js';
 
 // What we send back for each review: the author and the "X meets Y" games
 const REVIEW_INCLUDE = {
@@ -46,6 +47,13 @@ const countAnsweredScreens = (r) =>
   ].filter(Boolean).length;
 
 /**
+ * The XP a review earns — the same as the quest shows: the rating and each
+ * answered screen earn XP_EASY, the Final words earn XP_WRITTEN (max 130).
+ */
+const reviewXp = (r) =>
+  XP_EASY + (countAnsweredScreens(r) - (r.reviewText ? 1 : 0)) * XP_EASY + (r.reviewText ? XP_WRITTEN : 0);
+
+/**
  * Works out which badges a review earns. "First Reviewer" is kept when a
  * review is edited later, even if someone else has reviewed the game since.
  */
@@ -74,7 +82,7 @@ export const getReviewsByGameId = async (req, res) => {
       orderBy: { createdAt: 'desc' },
     });
     // Swearing gets a masked copy; the site shows it unless the viewer opts in
-    res.json(reviews.map(withMaskedText));
+    res.json((await withAuthorXp(reviews)).map(withMaskedText));
   } catch (error) {
     console.error('Error fetching reviews:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -151,7 +159,7 @@ export const saveReview = async (req, res) => {
     // 4. Badges
     const existing = await prisma.review.findUnique({
       where: { userId_gameId: { userId: user.id, gameId } },
-      select: { badges: true },
+      select: { badges: true, xp: true },
     });
     const otherReviews = await prisma.review.count({
       where: { gameId, userId: { not: user.id } },
@@ -162,7 +170,8 @@ export const saveReview = async (req, res) => {
     });
 
     // 5. Save — one review per user per game, so this creates or updates
-    const data = { rating, ...answers, badges };
+    const xp = reviewXp(answers);
+    const data = { rating, ...answers, badges, xp };
     const review = await prisma.review.upsert({
       where: { userId_gameId: { userId: user.id, gameId } },
       create: { ...data, userId: user.id, gameId },
@@ -170,10 +179,14 @@ export const saveReview = async (req, res) => {
       include: REVIEW_INCLUDE,
     });
 
-    // AI analysis is intentionally skipped for now — services/ai.js is still a
-    // placeholder, and a fake "Positive" is worse than no sentiment (Phase 6).
+    // AI review analysis comes later (Phase 6), built on services/ai/ — until then
+    // no sentiment at all, because a fake "Positive" is worse than none.
 
-    res.status(existing ? 200 : 201).json(review);
+    // The player's XP before and after, so the quest can celebrate a level-up
+    const { xp: after } = await getPlayerXp(user.id);
+    const playerXp = { before: after - xp + (existing?.xp ?? 0), after };
+
+    res.status(existing ? 200 : 201).json({ ...review, playerXp });
   } catch (error) {
     console.error('Error saving review:', error);
     res.status(500).json({ error: 'Internal server error' });

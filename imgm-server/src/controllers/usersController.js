@@ -1,6 +1,7 @@
 import { prisma } from '../lib/db.js';
 import { getSessionUser } from '../lib/session.js';
 import { checkUsernameRules, normalizeUsername, nextChangeAllowedAt } from '../lib/usernameRules.js';
+import { getPlayerXp } from '../lib/playerXp.js';
 
 // Is `name` free for this user? (Their own current name counts as free.)
 const isTaken = async (name, userId) => {
@@ -74,6 +75,20 @@ export const setUsername = async (req, res) => {
     }
   } catch (error) {
     console.error('Error setting username:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// GET /api/users/me/progress — your XP and review count (the level is worked out on the client)
+export const getMyProgress = async (req, res) => {
+  try {
+    const user = await getSessionUser(req);
+    if (!user) {
+      return res.status(401).json({ error: 'You must be logged in.' });
+    }
+    res.json(await getPlayerXp(user.id));
+  } catch (error) {
+    console.error('Error fetching progress:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
