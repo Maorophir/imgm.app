@@ -1,14 +1,15 @@
-import { fromNodeHeaders } from 'better-auth/node';
 import { prisma } from '../lib/db.js';
-import { auth } from '../lib/auth.js';
+import { getSessionUser as getUser } from '../lib/session.js';
 import { reviewSchema } from '../lib/reviewSchema.js';
 import { VETERAN_HOURS, CHECKLIST } from '../lib/reviewOptions.js';
 import { ensureGame } from '../services/gameStore.js';
+import { findSlurField, withMaskedText } from '../lib/reviewText.js';
 
 // What we send back for each review: the author and the "X meets Y" games
 const REVIEW_INCLUDE = {
   analysis: true,
-  user: { select: { id: true, name: true, image: true } },
+  // Public author info = the gamer tag only (never the real name or Google photo)
+  user: { select: { id: true, displayUsername: true } },
   comparedA: { select: { id: true, title: true, coverUrl: true } },
   comparedB: { select: { id: true, title: true, coverUrl: true } },
 };
@@ -59,14 +60,6 @@ const awardBadges = (answers, { previousBadges = [], isFirstForGame }) => {
   return [...badges];
 };
 
-/**
- * Returns the logged-in user, or null.
- */
-const getUser = async (req) => {
-  const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
-  return session?.user ?? null;
-};
-
 // GET /api/reviews/game/:gameId
 export const getReviewsByGameId = async (req, res) => {
   const gameId = Number.parseInt(req.params.gameId, 10);
@@ -80,7 +73,8 @@ export const getReviewsByGameId = async (req, res) => {
       include: REVIEW_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
-    res.json(reviews);
+    // Swearing gets a masked copy; the site shows it unless the viewer opts in
+    res.json(reviews.map(withMaskedText));
   } catch (error) {
     console.error('Error fetching reviews:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -128,6 +122,15 @@ export const saveReview = async (req, res) => {
       });
     }
     const { gameId, rating, ...answers } = { ...EMPTY_ANSWERS, ...parsed.data };
+
+    // Slurs and hateful terms can't be posted (casual swearing is fine — it's masked on display)
+    const slurField = findSlurField(answers);
+    if (slurField) {
+      return res.status(400).json({
+        error: `Your ${slurField} contain${slurField.endsWith('s') ? '' : 's'} a slur or hateful term. Please remove it. Casual swearing is fine.`,
+        field: slurField,
+      });
+    }
 
     // 2. Make sure the reviewed game — and any "X meets Y" games — are in our DB
     const game = await ensureGame(gameId);

@@ -77,7 +77,9 @@ export const GOT_GOOD_AFTER = [
 // ⑤ The checklist — every category is optional. Options go left → right:
 //   kind 'scale'   = worst → best (the picked option is coloured red → green)
 //   kind 'neutral' = less → more, neither good nor bad (picked option is blue)
-// `values` must match CHECKLIST in the server's src/lib/reviewOptions.js.
+// `na` (optional) = a "not applicable" answer shown apart from the ladder, in grey
+//   (e.g. no story in an online shooter, no price for a free-to-play game).
+// `values` (plus 'na') must match CHECKLIST in the server's src/lib/reviewOptions.js.
 // Edit the jokes freely — only the `value` keys are stored.
 export const CHECKLIST = [
   {
@@ -115,6 +117,7 @@ export const CHECKLIST = [
   },
   {
     field: 'story', title: 'Story', art: '📖', kind: 'scale',
+    na: { value: 'na', label: 'N/A · It\'s not that kind of game' },
     options: [
       { value: 'none',    label: 'What story?' },
       { value: 'lore',    label: 'Some lore in the menus' },
@@ -147,6 +150,7 @@ export const CHECKLIST = [
   },
   {
     field: 'gameLength', title: 'Game length', art: '⏳', kind: 'neutral',
+    na: { value: 'na', label: 'N/A · It\'s an endless online game' },
     options: [
       { value: 'coffee',   label: 'One cup of coffee' },
       { value: 'short',    label: 'Short' },
@@ -179,6 +183,7 @@ export const CHECKLIST = [
   },
   {
     field: 'worthPrice', title: 'Price', art: '💰', kind: 'scale',
+    na: { value: 'na', label: 'N/A · It\'s free-to-play' },
     options: [
       { value: 'never', label: 'Burn your money instead' },
       { value: 'free',  label: 'Only if it\'s free' },
@@ -188,6 +193,7 @@ export const CHECKLIST = [
   },
   {
     field: 'replay', title: 'Replay', art: '🔁', kind: 'scale',
+    na: { value: 'na', label: 'N/A · It never really ends' },
     options: [
       { value: 'once',    label: 'Once was enough' },
       { value: 'someday', label: 'Maybe someday' },
@@ -195,6 +201,18 @@ export const CHECKLIST = [
     ],
   },
 ];
+
+// Colour of a ticked checklist answer, from its position in the ladder.
+// Scales go red (worst) → yellow → green (best); neutral categories are always blue.
+// Used by the quest's checklist and by the back of the review card.
+export const NA_COLOR = { solid: 'rgb(100 116 139)', soft: 'rgb(100 116 139 / 0.15)' }; // slate-500
+
+export const checklistColor = (category, index) => {
+  if (index === 'na') return NA_COLOR;
+  if (category.kind === 'neutral') return { solid: 'rgb(96 165 250)', soft: 'rgb(96 165 250 / 0.15)' };
+  const hue = Math.round((index / (category.options.length - 1)) * 130); // 0 = red … 130 = green
+  return { solid: `hsl(${hue} 75% 58%)`, soft: `hsl(${hue} 75% 58% / 0.15)` };
+};
 
 // XP per quest screen: every easy screen +10, the written review +50
 export const XP_EASY = 10;

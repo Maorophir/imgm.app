@@ -20,6 +20,7 @@
  */
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { getRarity } from './reviewQuest/questOptions';
 
 /**
  * Maps sentiment strings to their visual styling (color + icon).
@@ -83,16 +84,6 @@ const RATING_SOURCES = [
   },
 ];
 
-/**
- * Returns a gradient color class for the IMGM score badge.
- * Green for great (8+), yellow for decent (6-8), red for low (<6).
- */
-function getImgmScoreColor(score) {
-  if (score >= 8.5) return 'from-emerald-400 to-emerald-600';
-  if (score >= 7.0) return 'from-yellow-400 to-amber-500';
-  if (score >= 5.0) return 'from-orange-400 to-orange-600';
-  return 'from-red-400 to-red-600';
-}
 
 const GameCard = ({
   id,
@@ -153,20 +144,21 @@ const GameCard = ({
           "
         />
 
-        {/* IMGM score badge — hero position, top-right, blue-branded */}
+        {/* IMGM score badge — top-right, in the average's loot-rarity colour */}
         {displayImgmScore && (
           <div className="absolute top-2.5 right-2.5 flex flex-col items-center gap-0.5">
             <div
-              className={`
-                bg-gradient-to-br ${getImgmScoreColor(imgmScore)}
-                text-white font-black text-sm
+              className="
+                text-slate-950 font-black text-sm
                 w-11 h-11 rounded-xl
                 flex items-center justify-center
                 shadow-lg shadow-black/30
                 ring-2 ring-white/10
                 transition-transform duration-300
                 group-hover:scale-110
-              `}
+              "
+              style={{ background: getRarity(imgmScore).color }}
+              title={`${getRarity(imgmScore).label} · ${displayImgmScore}/10 on IMGM`}
             >
               {displayImgmScore}
             </div>

@@ -172,6 +172,11 @@ export const mapIgdbGame = (raw) => {
     releaseDate: raw.first_release_date ? new Date(raw.first_release_date * 1000) : null,
     coverUrl: igdbImageUrl(raw.cover?.image_id, 't_cover_big'),
     artworks: pickHeroImages(raw.artworks, raw.screenshots),
+    // In-game screenshots for the game page gallery (full HD; thumbnails swap the size)
+    screenshots: (raw.screenshots ?? [])
+      .map((s) => igdbImageUrl(s.image_id, 't_1080p'))
+      .filter(Boolean)
+      .slice(0, MAX_SCREENSHOTS),
     genres: (raw.genres ?? []).map((g) => g.name),
     platforms: (raw.platforms ?? []).map((p) => PLATFORM_NAME_MAP[p.name] ?? p.name),
     developer: findCompany(raw.involved_companies, 'developer'),
@@ -191,6 +196,8 @@ export const mapIgdbGame = (raw) => {
 // Hidden from search: bundles (this is a review site, not a store), mods, episodes,
 // seasons, forks, packs and updates.
 const REVIEWABLE_GAME_TYPES = [0, 1, 2, 4, 8, 9, 10, 11];
+
+const MAX_SCREENSHOTS = 24;
 
 const searchCache = new Map(); // lowercased query -> { expiresAt, results }
 let popularCache = { expiresAt: 0, results: null };

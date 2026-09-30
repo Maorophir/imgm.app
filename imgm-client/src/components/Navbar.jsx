@@ -52,10 +52,10 @@ function Navbar() {
             <li className="ml-4 flex items-center gap-3">
               <div className="flex items-center gap-2 bg-slate-800 rounded-full pl-2 pr-4 py-1 border border-slate-700">
                 <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-bold text-sm">
-                  {session.user.name ? session.user.name[0].toUpperCase() : 'U'}
+                  {(session.user.displayUsername || '?')[0].toUpperCase()}
                 </div>
                 <span className="text-sm font-medium text-slate-200">
-                  {session.user.name || 'User'}
+                  {session.user.displayUsername || 'Choose a tag'}
                 </span>
               </div>
               <button 

@@ -27,9 +27,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    # Apply any new migrations and regenerate the Prisma client on every start, so schema
-    # changes apply without an image rebuild (the baked-in client goes stale otherwise)
-    command: sh -c "npx prisma migrate deploy && npx prisma generate && npm run dev"
+    # On every start, bring the container up to date with the code — no image rebuild needed:
+    #   1. npm install: installs any package added to package.json since the image was built
+    #      (--no-save: never rewrites package.json / package-lock.json in your folder)
+    #   2. apply new database migrations   3. regenerate the Prisma client   4. start the server
+    command: sh -c "npm install --no-save --no-audit --no-fund && npx prisma migrate deploy && npx prisma generate && npm run dev"
     env_file:
       - ./imgm-server/.env
     environment:
@@ -50,6 +52,9 @@ services:
       - "5173:5173"
     depends_on:
       - server
+    # On every start, install any package added to package.json since the image was built
+    # (--no-save: never rewrites package.json / package-lock.json), then start Vite
+    command: sh -c "npm install --no-save --no-audit --no-fund && npm run dev -- --host 0.0.0.0"
     volumes:
       - ./imgm-client:/app
       - /app/node_modules

@@ -49,3 +49,10 @@ export const saveReview = (review) => fetchJson('/api/reviews', { method: 'POST'
 
 // Deletes the logged-in user's review of a game
 export const deleteMyReview = (gameId) => fetchJson(`/api/reviews/mine/${gameId}`, { method: 'DELETE' });
+
+// Is this gamer tag free and allowed? → { available, reason? }
+export const checkUsername = (name, signal) =>
+  fetchJson(`/api/users/username-available?name=${encodeURIComponent(name)}`, { signal });
+
+// Choose or change the logged-in user's gamer tag
+export const setUsername = (name) => fetchJson('/api/users/me/username', { method: 'PUT', body: { name } });
