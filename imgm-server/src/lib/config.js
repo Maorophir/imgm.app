@@ -36,3 +36,11 @@ export const clientOrigins = (process.env.CLIENT_ORIGINS || 'http://localhost:51
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
+
+/**
+ * The AI service (imgm-ai) that runs the Game Guide. Only this server talks to it:
+ * it passes the logged-in player's id plus a shared secret (INTERNAL_API_KEY).
+ * Locally, docker-compose points this at the service running on the host.
+ */
+export const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+export const internalApiKey = process.env.INTERNAL_API_KEY || null;

@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: imgm-postgres
     restart: always
     environment:
@@ -37,6 +37,8 @@ services:
     environment:
       # Override localhost with the internal docker service name ('db')
       - DATABASE_URL=postgresql://imgm_user:imgm_password@db:5432/imgm_db?schema=public
+      # The AI service (imgm-ai) runs on the host during development: uv run uvicorn ...
+      - AI_SERVICE_URL=http://host.docker.internal:8000
     volumes:
       # Mount the local folder to see changes instantly
       - ./imgm-server:/app

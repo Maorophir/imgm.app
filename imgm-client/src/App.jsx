@@ -14,6 +14,7 @@ import Search from './pages/Search';
 import Welcome from './pages/Welcome';
 import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
+import GameGuide from './pages/GameGuide';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -46,6 +47,7 @@ function App() {
           <Route path="/game/:id/review" element={<ReviewQuest />} />
           <Route path="/search" element={<Search />} />
           <Route path="/trending" element={<Trending />} />
+          <Route path="/guide" element={<GameGuide />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />

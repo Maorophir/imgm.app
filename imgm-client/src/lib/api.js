@@ -59,3 +59,45 @@ export const setUsername = (name) => fetchJson('/api/users/me/username', { metho
 
 // Your XP and review count — { xp, reviews }
 export const getMyProgress = (signal) => fetchJson('/api/users/me/progress', { signal });
+
+/**
+ * Asks the Game Guide and streams its work. The server answers with Server-Sent
+ * Events; each one is handed to onEvent(name, data) the moment it arrives.
+ * (The browser's EventSource can't send a POST body, so the stream is read by hand.)
+ */
+export async function streamGuide(body, { signal, onEvent }) {
+  const response = await fetch(`${API_BASE}/api/guide/stream`, {
+    method: 'POST',
+    credentials: 'include',
+    signal,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    const error = new Error(data?.error || 'The Game Guide is unavailable right now.');
+    error.status = response.status;
+    throw error;
+  }
+
+  // Events are separated by a blank line: "event: step\ndata: {...}\n\n"
+  const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
+  let buffer = '';
+  for (;;) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += value;
+    let end;
+    while ((end = buffer.indexOf('\n\n')) !== -1) {
+      const block = buffer.slice(0, end);
+      buffer = buffer.slice(end + 2);
+      let event = 'message';
+      let data = '';
+      for (const line of block.split('\n')) {
+        if (line.startsWith('event: ')) event = line.slice(7);
+        else if (line.startsWith('data: ')) data += line.slice(6);
+      }
+      if (data) onEvent(event, JSON.parse(data));
+    }
+  }
+}

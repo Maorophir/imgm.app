@@ -1,22 +1,11 @@
-import os
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_ollama import ChatOllama
+"""
+IMGM AI: the game recommendation agent behind imgm.app.
 
-load_dotenv()
+    agent/       the LangGraph agent: state, prompts, tools, nodes, graph
+    rag/         IMGM reviews made searchable by meaning (pgvector)
+    data/        IMGM's data: Postgres (read-only) and the Express API
+    models/      the chat and embedding models, chosen by .env
+    moderation.py  masks swearing in quotes the agent sees
 
-
-def get_model():
-    return (
-        ChatGoogleGenerativeAI(
-            model="gemini-3.8-flash", thinking_level="low", timeout=60
-        )
-        if os.environ.get("LLM_PROVIDER") == "gemini"
-        else ChatOllama(model="gemma4:e4b")
-    )
-
-
-if __name__ == "__main__":
-    llm = get_model()
-    response = llm.invoke("Hi from imgm the new gen game reviews site !")
-    print(response.content)
+Talk to the agent:  uv run python -m imgm_ai "your question"
+"""

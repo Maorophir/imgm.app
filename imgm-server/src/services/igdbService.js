@@ -205,6 +205,49 @@ let popularCache = { expiresAt: 0, results: null };
 /**
  * Searches IGDB for games matching `query`.
  */
+// IGDB's `search` orders by text match only (and can't be combined with `sort`),
+// so "hades" returned a 1995 shooter before Supergiant's Hades. We fetch a wider
+// set of matches with their popularity and re-rank them ourselves.
+const SEARCH_CANDIDATES = 50;
+const SEARCH_FIELDS = GAME_FIELDS.replace(/;\s*$/, ', total_rating_count, hypes;');
+
+const ROMAN_NUMERALS = { ii: '2', iii: '3', iv: '4', v: '5', vi: '6', vii: '7', viii: '8', ix: '9', x: '10' };
+
+// "The Witcher 3: Wild Hunt" → "the witcher 3 wild hunt", "Hades II" → "hades 2"
+// (so punctuation and roman numerals don't block a match)
+const normalizeTitle = (title) =>
+  title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .split(' ')
+    .map((word) => ROMAN_NUMERALS[word] ?? word)
+    .join(' ');
+
+/**
+ * Best matches first. Each game gets a score:
+ *   popularity  log10(1 + IGDB rating count), or hype for upcoming games:
+ *               10 ratings → 1, 100 → 2, 1,000 → 3
+ *   + match     exact title +1.5, title starts with the query +0.5
+ * The log keeps popularity from drowning out the match: an obscure exact match
+ * ("Zelda", 1989) loses to a famous partial one ("The Legend of Zelda: …"),
+ * but the right title still wins between games of similar popularity.
+ * Ties keep IGDB's own order.
+ */
+const rankSearchResults = (games, query) => {
+  const q = normalizeTitle(query);
+  const score = (game) => {
+    const title = normalizeTitle(game.name ?? '');
+    const match = title === q ? 1.5 : title.startsWith(q) ? 0.5 : 0;
+    return Math.log10(1 + (game.total_rating_count ?? game.hypes ?? 0)) + match;
+  };
+
+  return games
+    .map((game, index) => ({ game, index, score: score(game) }))
+    .sort((a, b) => b.score - a.score || a.index - b.index)
+    .map(({ game }) => game);
+};
+
 export const searchGames = async (query, limit = 12) => {
   const key = `${query.trim().toLowerCase()}|${limit}`;
   const cached = searchCache.get(key);
@@ -212,8 +255,9 @@ export const searchGames = async (query, limit = 12) => {
     return cached.results;
   }
 
-  const body = `search "${escapeSearch(query.trim())}"; ${GAME_FIELDS} where cover != null & version_parent = null & game_type = (${REVIEWABLE_GAME_TYPES.join(',')}); limit ${limit};`;
-  const results = (await igdbRequest('games', body)).map(mapIgdbGame);
+  const body = `search "${escapeSearch(query.trim())}"; ${SEARCH_FIELDS} where cover != null & version_parent = null & game_type = (${REVIEWABLE_GAME_TYPES.join(',')}); limit ${SEARCH_CANDIDATES};`;
+  const candidates = await igdbRequest('games', body);
+  const results = rankSearchResults(candidates, query).slice(0, limit).map(mapIgdbGame);
 
   searchCache.set(key, { expiresAt: Date.now() + SEARCH_CACHE_TTL, results });
   return results;
