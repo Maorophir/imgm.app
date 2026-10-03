@@ -31,6 +31,11 @@ function Navbar() {
             Trending
           </Link>
         </li>
+        <li>
+          <Link to="/guide" className="font-bold bg-gradient-to-r from-amber-300 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition">
+            ✦ Game Guide
+          </Link>
+        </li>
         
         {!isPending && !session && (
           <li>
