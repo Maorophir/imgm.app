@@ -1,5 +1,5 @@
 /**
- * Game Guide — Route: /guide
+ * Play Next — Route: /play-next (the old /guide redirects here)
  *
  * The AI recommendation chat. The player asks; the guide shows its work live (a
  * step timeline, the games it considers, its answer streaming in), then lands on
@@ -13,6 +13,7 @@ import GuideTimeline from '../components/guide/GuideTimeline';
 import GuidePanel from '../components/guide/GuidePanel';
 import GuideComposer from '../components/guide/GuideComposer';
 import RichText from '../components/guide/RichText';
+import { PowerIcon } from '../components/Logo';
 
 
 const GuideTurn = ({ turn, isLatest }) => {
@@ -22,14 +23,14 @@ const GuideTurn = ({ turn, isLatest }) => {
   return (
     <div className="flex flex-col gap-4">
       {/* The player's question */}
-      <p className="self-end max-w-[85%] rounded-2xl rounded-br-md bg-indigo-600/90 text-white px-4 py-2.5 font-medium">
+      <p className="self-end max-w-[85%] rounded-2xl rounded-br-md bg-white text-slate-950 px-4 py-2.5 font-semibold">
         {turn.question}
       </p>
 
       {/* The guide: its steps, then its answer */}
       <div className="flex gap-3">
-        <span className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-300 to-indigo-500 flex items-center justify-center text-sm shrink-0" aria-hidden="true">
-          🎮
+        <span className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center shrink-0" aria-hidden="true">
+          <PowerIcon className="w-4.5 h-4.5 text-brand" />
         </span>
         <div className="min-w-0 flex-1 flex flex-col gap-3">
           <GuideTimeline steps={turn.steps} running={turn.status === 'running'} collapsible={Boolean(turn.cards)} />
@@ -37,7 +38,7 @@ const GuideTurn = ({ turn, isLatest }) => {
           {turn.cards ? (
             <div className="rounded-2xl rounded-tl-md bg-slate-900/80 border border-slate-800 px-4 py-3 text-slate-200 leading-relaxed">
               <p>{turn.cards.intro}</p>
-              <p className="mt-2 text-sm text-indigo-300 font-semibold hidden lg:block">Your 5 picks are in the panel →</p>
+              <p className="mt-2 text-sm text-brand font-semibold hidden lg:block">Your 5 picks are in the panel →</p>
               {turn.answer && (
                 <button type="button" onClick={() => setShowFull((s) => !s)} className="mt-2 text-xs font-bold text-slate-400 hover:text-white">
                   {showFull ? 'Hide the full answer ▴' : 'Read the full answer ▾'}
@@ -54,7 +55,7 @@ const GuideTurn = ({ turn, isLatest }) => {
             turn.answer && (
               <div className="rounded-2xl rounded-tl-md bg-slate-900/80 border border-slate-800 px-4 py-3 text-slate-200 leading-relaxed whitespace-pre-line">
                 <RichText text={turn.answer} />
-                {streaming && <span className="inline-block w-2 h-4 ml-0.5 bg-indigo-300 animate-pulse align-middle" aria-hidden="true" />}
+                {streaming && <span className="inline-block w-2 h-4 ml-0.5 bg-brand animate-pulse align-middle" aria-hidden="true" />}
               </div>
             )
           )}
@@ -92,12 +93,14 @@ function GameGuide() {
   if (!session) {
     return (
       <div className="max-w-xl mx-auto px-6 py-24 text-center">
-        <p className="text-5xl mb-4" aria-hidden="true">🎮</p>
-        <h1 className="text-3xl font-black text-white mb-2">Meet your Game Guide</h1>
+        <PowerIcon className="w-12 h-12 text-brand mx-auto mb-4" />
+        <h1 className="font-display text-5xl uppercase tracking-tight text-white mb-3">
+          Play Next<span className="text-brand">.</span>
+        </h1>
         <p className="text-slate-400 mb-8">
-          Tell it what you're in the mood for. It reads your reviews and what IMGM players say, then picks 5 games for you.
+          Tell it what you're in the mood for. It reads your reviews and what IMGM players say, then picks your next 5 games.
         </p>
-        <Link to="/login?redirect=%2Fguide" className="px-6 py-3 rounded-full font-bold bg-blue-600 hover:bg-blue-700 transition">
+        <Link to="/login?redirect=%2Fplay-next" className="px-6 py-3 rounded-full font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition">
           Log in to start
         </Link>
       </div>
@@ -109,8 +112,8 @@ function GameGuide() {
       {/* Chat */}
       <section className="flex flex-col gap-6 min-h-[70vh]">
         <header>
-          <h1 className="text-3xl md:text-4xl font-black text-white">
-            Game <span className="bg-gradient-to-r from-amber-300 to-indigo-400 bg-clip-text text-transparent">Guide</span>
+          <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
+            Play Next<span className="text-brand">.</span>
           </h1>
           <p className="text-slate-400 mt-1">
             Tell it what you're in the mood for. Watch it dig through your reviews and the IMGM community, live.

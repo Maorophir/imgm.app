@@ -12,7 +12,7 @@ const guideLimiter = rateLimit({
   keyGenerator: (req) => req.user.id,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  message: { error: "You've asked the Game Guide a lot in a short time. Take a breather and try again in a few minutes." },
+  message: { error: "You've asked Play Next a lot in a short time. Take a breather and try again in a few minutes." },
 });
 
 // POST /api/guide/stream — ask the Game Guide (logged-in players only)

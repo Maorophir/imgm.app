@@ -1,7 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { clientOrigins } from './src/lib/config.js';
+import { clientOrigins, playNextEnabled } from './src/lib/config.js';
 
 dotenv.config();
 
@@ -39,7 +39,8 @@ app.use("/api/auth", toNodeHandler(auth));
 app.use('/api/games', gamesRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/users', usersRouter);
-app.use('/api/guide', guideRouter);
+// Play Next: the route only exists once the feature is switched on (see config.js)
+if (playNextEnabled) app.use('/api/guide', guideRouter);
 
 // Start server
 app.listen(PORT, () => {

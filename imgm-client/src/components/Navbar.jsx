@@ -1,59 +1,102 @@
-import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, NavLink } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
 import SearchBar from './SearchBar';
 import UserMenu from './UserMenu';
+import Logo from './Logo';
+import { PLAY_NEXT_ENABLED } from '../lib/features';
 
+// White links; the current page gets a thin lime underline
+const navClass = ({ isActive }) =>
+  `transition py-1 ${isActive ? 'text-white shadow-[inset_0_-2px_0_var(--color-brand)]' : 'text-slate-300 hover:text-white'}`;
+
+// Phone menu rows; the current page gets a lime bar on the left
+const mobileNavClass = ({ isActive }) =>
+  `block px-5 py-3 font-semibold border-l-2 transition ${
+    isActive ? 'border-brand text-white bg-white/5' : 'border-transparent text-slate-300 hover:text-white hover:bg-white/5'
+  }`;
+
+const LINKS = [
+  { to: '/', label: 'Home', end: true },
+  { to: '/trending', label: 'Trending' },
+  // Hidden until Play Next launches (lib/features.js)
+  ...(PLAY_NEXT_ENABLED ? [{ to: '/play-next', label: <><span className="text-brand">✦</span> Play Next</> }] : []),
+];
+
+/**
+ * Desktop (md+): logo · search · links · account, all on one row.
+ * Phone: logo · account · ☰ on top, the search bar full-width underneath,
+ * and the links in a menu that drops down from ☰. The account part (Log In or
+ * the player menu) is rendered once and shown at every width.
+ */
 function Navbar() {
   const { data: session, isPending } = useSession();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const closeMenu = () => setMenuOpen(false);
+
+  const logInButton = (
+    <Link
+      to="/login"
+      onClick={closeMenu}
+      className="bg-white hover:bg-slate-200 text-slate-950 font-bold py-2 px-4 md:px-6 rounded-full transition whitespace-nowrap"
+    >
+      Log In
+    </Link>
+  );
 
   return (
-    <nav className="p-5 bg-slate-900 flex justify-between items-center shadow-lg sticky top-0 z-50">
-      {/* Logo / Brand */}
-      <Link to="/" className="flex items-center gap-2">
-        <span className="text-3xl font-extrabold text-blue-500 tracking-wider">IMGM</span>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-blue-300 bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded">
-          Beta
-        </span>
-      </Link>
+    <nav className="sticky top-0 z-50 bg-slate-950/90 backdrop-blur border-b border-slate-800">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 md:px-5 py-3 md:py-4">
+        {/* Logo / Brand */}
+        <Link to="/" onClick={closeMenu} className="flex items-center gap-3 shrink-0" aria-label="IMGM home">
+          <Logo />
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 border border-slate-700 px-1.5 py-0.5 rounded">
+            Beta
+          </span>
+        </Link>
 
-      {/* Game search with instant results */}
-      <SearchBar />
+        {/* Search: middle of the row on desktop; its own full-width row on phones */}
+        <div className="order-last w-full md:order-none md:w-auto md:flex-1 md:flex md:justify-center">
+          <SearchBar />
+        </div>
 
-      {/* Navigation links */}
-      <ul className="flex gap-6 font-semibold items-center">
-        <li>
-          <Link to="/" className="hover:text-blue-400 transition text-slate-200">
-            Home
-          </Link>
-        </li>
-        <li>
-          <Link to="/trending" className="hover:text-blue-400 transition text-slate-200">
-            Trending
-          </Link>
-        </li>
-        <li>
-          <Link to="/guide" className="font-bold bg-gradient-to-r from-amber-300 to-indigo-400 bg-clip-text text-transparent hover:opacity-80 transition">
-            ✦ Game Guide
-          </Link>
-        </li>
-        
-        {!isPending && !session && (
-          <li>
-            <Link 
-              to="/login" 
-              className="ml-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-2 px-6 rounded-full shadow-lg transition"
-            >
-              Log In
-            </Link>
-          </li>
-        )}
+        {/* Desktop links */}
+        <ul className="hidden md:flex gap-6 font-semibold items-center">
+          {LINKS.map((l) => (
+            <li key={l.to}>
+              <NavLink to={l.to} end={l.end} className={navClass}>{l.label}</NavLink>
+            </li>
+          ))}
+        </ul>
 
-        {!isPending && session && (
-          <li className="ml-4">
-            <UserMenu user={session.user} />
-          </li>
-        )}
-      </ul>
+        {/* Account (every width) + the phone menu button */}
+        <div className="ml-auto md:ml-4 flex items-center gap-2">
+          {!isPending && (session ? <UserMenu user={session.user} /> : logInButton)}
+          <button
+            type="button"
+            onClick={() => setMenuOpen((o) => !o)}
+            aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
+            aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+            className="md:hidden w-10 h-10 grid place-items-center rounded-xl border border-slate-700 text-slate-200 hover:text-white hover:border-slate-500 transition"
+          >
+            <span aria-hidden="true" className="text-xl leading-none">{menuOpen ? '✕' : '☰'}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Phone menu */}
+      {menuOpen && (
+        <div id="mobile-menu" className="md:hidden border-t border-slate-800 pb-3 animate-fade-in">
+          <ul>
+            {LINKS.map((l) => (
+              <li key={l.to}>
+                <NavLink to={l.to} end={l.end} onClick={closeMenu} className={mobileNavClass}>{l.label}</NavLink>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </nav>
   );
 }

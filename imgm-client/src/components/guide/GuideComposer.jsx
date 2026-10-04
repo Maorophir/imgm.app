@@ -43,7 +43,7 @@ const GuideComposer = ({ onAsk, disabled, platforms, onPlatformsChange, showStar
               type="button"
               onClick={() => submit(starter)}
               disabled={disabled}
-              className="px-3.5 py-2 rounded-full text-sm font-semibold text-slate-200 bg-slate-800/80 border border-slate-700 hover:border-indigo-400 hover:text-white transition disabled:opacity-40"
+              className="px-3.5 py-2 rounded-full text-sm font-semibold text-slate-200 bg-slate-800/80 border border-slate-700 hover:border-brand/70 hover:text-white transition disabled:opacity-40"
             >
               {starter}
             </button>
@@ -56,21 +56,21 @@ const GuideComposer = ({ onAsk, disabled, platforms, onPlatformsChange, showStar
           e.preventDefault();
           submit(text);
         }}
-        className="flex items-center gap-2 rounded-2xl bg-slate-900 border border-slate-700 focus-within:border-indigo-400 p-2 transition"
+        className="flex items-center gap-2 rounded-2xl bg-slate-900 border border-slate-700 focus-within:border-brand/60 p-2 transition"
       >
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
           maxLength={1000}
-          placeholder={disabled ? 'The guide is working…' : 'What are you in the mood for?'}
+          placeholder={disabled ? 'Picking your games…' : 'What are you in the mood for?'}
           disabled={disabled}
-          aria-label="Ask the Game Guide"
+          aria-label="Ask Play Next"
           className="flex-1 min-w-0 bg-transparent px-3 py-2 text-white placeholder:text-slate-500 outline-none"
         />
         <button
           type="submit"
           disabled={disabled || !text.trim()}
-          className="px-5 py-2.5 rounded-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white transition disabled:opacity-40"
+          className="px-5 py-2.5 rounded-xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition disabled:opacity-40"
         >
           Ask
         </button>
@@ -87,7 +87,7 @@ const GuideComposer = ({ onAsk, disabled, platforms, onPlatformsChange, showStar
               onClick={() => togglePlatform(value)}
               aria-pressed={on}
               className={`px-2.5 py-1 rounded-full font-bold border transition ${
-                on ? 'bg-indigo-500/20 border-indigo-400 text-indigo-200' : 'border-slate-700 text-slate-400 hover:text-slate-200'
+                on ? 'bg-brand/15 border-brand text-white' : 'border-slate-700 text-slate-400 hover:text-slate-200'
               }`}
             >
               {label}

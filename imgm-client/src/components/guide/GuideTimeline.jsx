@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 const Spinner = () => (
-  <span className="w-3.5 h-3.5 rounded-full border-2 border-indigo-400/30 border-t-indigo-300 animate-spin shrink-0" aria-hidden="true" />
+  <span className="w-3.5 h-3.5 rounded-full border-2 border-brand/30 border-t-brand animate-spin shrink-0" aria-hidden="true" />
 );
 
 const Check = () => (
@@ -20,7 +20,7 @@ const GuideTimeline = ({ steps, running, collapsible = false }) => {
   if (steps.length === 0) {
     return running ? (
       <p className="flex items-center gap-2 text-sm text-slate-400">
-        <Spinner /> Warming up the guide…
+        <Spinner /> Warming up…
       </p>
     ) : null;
   }

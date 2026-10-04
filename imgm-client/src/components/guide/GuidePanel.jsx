@@ -51,7 +51,7 @@ const GuidePanel = ({ turn }) => {
   return (
     <div className="flex flex-col gap-3">
       <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-        {turn.status === 'running' && <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" aria-hidden="true" />}
+        {turn.status === 'running' && <span className="w-2 h-2 rounded-full bg-brand animate-pulse" aria-hidden="true" />}
         Considering {turn.games.length > 0 && `${turn.games.length} games`}
       </h2>
       {turn.games.length > 0 ? (

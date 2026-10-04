@@ -44,3 +44,13 @@ export const clientOrigins = (process.env.CLIENT_ORIGINS || 'http://localhost:51
  */
 export const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 export const internalApiKey = process.env.INTERNAL_API_KEY || null;
+
+/**
+ * Play Next (the AI recommender) is OFF on the live site until PLAY_NEXT=on is set
+ * on Render (together with AI_SERVICE_URL and INTERNAL_API_KEY). Locally it's on
+ * because docker-compose sets AI_SERVICE_URL. Deliberately not tied to NODE_ENV
+ * alone, so a missing NODE_ENV can't switch it on by accident.
+ * The website has a matching switch: VITE_PLAY_NEXT in Vercel.
+ */
+export const playNextEnabled =
+  process.env.PLAY_NEXT === 'on' || (!isProduction && Boolean(process.env.AI_SERVICE_URL));

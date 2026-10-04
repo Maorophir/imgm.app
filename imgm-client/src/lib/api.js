@@ -75,7 +75,7 @@ export async function streamGuide(body, { signal, onEvent }) {
   });
   if (!response.ok) {
     const data = await response.json().catch(() => null);
-    const error = new Error(data?.error || 'The Game Guide is unavailable right now.');
+    const error = new Error(data?.error || 'Play Next is unavailable right now.');
     error.status = response.status;
     throw error;
   }

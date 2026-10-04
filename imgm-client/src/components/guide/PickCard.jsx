@@ -59,7 +59,7 @@ const PickCard = ({ pick, rank }) => {
   return (
     <Link
       to={`/game/${pick.game_id}`}
-      className="flex gap-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-indigo-400/50 transition animate-fade-in"
+      className="flex gap-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-brand/60 transition animate-fade-in"
     >
       <Cover src={pick.cover} title={pick.title} className="w-14 h-20 rounded-lg shrink-0" />
       <div className="min-w-0 flex flex-col gap-1">

@@ -40,12 +40,12 @@ export const streamGuide = async (req, res) => {
   } catch (error) {
     if (upstreamAbort.signal.aborted) return;
     console.error('Game Guide service unreachable:', error.message);
-    return res.status(503).json({ error: 'The Game Guide is offline right now. Please try again later.' });
+    return res.status(503).json({ error: 'Play Next is offline right now. Please try again later.' });
   }
 
   if (!upstream.ok || !upstream.body) {
     console.error('Game Guide service error:', upstream.status);
-    return res.status(502).json({ error: 'The Game Guide is unavailable right now. Please try again later.' });
+    return res.status(502).json({ error: 'Play Next is unavailable right now. Please try again later.' });
   }
 
   // Pass the event stream through as it arrives (no buffering anywhere on the way)

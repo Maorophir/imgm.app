@@ -63,7 +63,7 @@ function reducer(turns, action) {
       return updateLast(turns, (turn) =>
         turn.cards
           ? { ...turn, status: 'done' }
-          : { ...turn, status: 'error', error: 'The guide finished without picks. Try asking another way.' }
+          : { ...turn, status: 'error', error: 'No picks this time. Try asking another way.' }
       );
     case 'error':
       return updateLast(turns, (turn) => ({ ...turn, status: 'error', error: action.message }));

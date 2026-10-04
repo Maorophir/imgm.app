@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 
 // Layout components
 import Navbar from './components/Navbar';
@@ -15,6 +15,7 @@ import Welcome from './pages/Welcome';
 import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
+import { PLAY_NEXT_ENABLED } from './lib/features';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -47,7 +48,9 @@ function App() {
           <Route path="/game/:id/review" element={<ReviewQuest />} />
           <Route path="/search" element={<Search />} />
           <Route path="/trending" element={<Trending />} />
-          <Route path="/guide" element={<GameGuide />} />
+          {/* Play Next: live locally; hidden in production until launch (lib/features.js) */}
+          <Route path="/play-next" element={PLAY_NEXT_ENABLED ? <GameGuide /> : <Navigate to="/" replace />} />
+          <Route path="/guide" element={<Navigate to={PLAY_NEXT_ENABLED ? '/play-next' : '/'} replace />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
