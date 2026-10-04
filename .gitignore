@@ -69,8 +69,10 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+# Only the Python project's build folders: a bare "lib/" would also hide the
+# JavaScript src/lib/ folders (that's how reviewScoring.js went missing)
+/imgm-ai/lib/
+/imgm-ai/lib64/
 parts/
 sdist/
 var/
