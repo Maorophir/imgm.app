@@ -40,9 +40,9 @@ const Search = () => {
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-white">
           {isSearchable ? (
-            <>Results for <span className="text-blue-400">"{query}"</span></>
+            <>Results for <span className="text-brand">"{query}"</span></>
           ) : (
-            <>Search <span className="text-blue-400">Games</span></>
+            <>Search <span className="text-brand">Games</span></>
           )}
         </h1>
         {isSearchable && !isLoading && !results.error && (

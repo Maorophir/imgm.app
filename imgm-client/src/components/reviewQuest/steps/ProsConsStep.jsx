@@ -43,7 +43,7 @@ const ChipList = ({ title, tone, placeholder, items, onChange }) => {
           disabled={full}
           placeholder={full ? `That's ${MAX_ITEMS}!` : placeholder}
           aria-label={title}
-          className="flex-1 min-w-0 bg-slate-950/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 disabled:opacity-50"
+          className="flex-1 min-w-0 bg-slate-950/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-brand/60 disabled:opacity-50"
         />
         <button
           type="submit"

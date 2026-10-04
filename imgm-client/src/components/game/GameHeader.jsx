@@ -46,7 +46,7 @@ const GameHeader = ({ game }) => {
       <div className="relative max-w-7xl mx-auto px-6 pt-6 pb-12">
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-sm text-slate-400 mb-6" aria-label="Breadcrumb">
-          <Link to="/" className="hover:text-blue-400 transition">Home</Link>
+          <Link to="/" className="hover:text-white transition">Home</Link>
           <span className="text-slate-600">›</span>
           <span className="text-slate-300 truncate">{game.title}</span>
         </nav>
@@ -87,7 +87,7 @@ const GameHeader = ({ game }) => {
                     type="button"
                     onClick={() => setDescriptionOpen((o) => !o)}
                     aria-expanded={descriptionOpen}
-                    className="mt-1 text-sm font-bold text-indigo-300 hover:text-indigo-200"
+                    className="mt-1 text-sm font-bold text-white hover:text-brand"
                   >
                     {descriptionOpen ? 'Show less ▴' : 'Read more ▾'}
                   </button>
@@ -118,7 +118,7 @@ const GameHeader = ({ game }) => {
             {game.platforms?.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {game.platforms.map((platform) => (
-                  <span key={platform} className="text-xs font-bold uppercase tracking-widest text-blue-200 bg-blue-500/15 border border-blue-500/25 px-3 py-1 rounded-lg">
+                  <span key={platform} className="text-xs font-bold uppercase tracking-widest text-slate-200 bg-white/5 border border-slate-700 px-3 py-1 rounded-lg">
                     {platform}
                   </span>
                 ))}

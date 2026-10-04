@@ -19,7 +19,7 @@ const MeetsStep = ({ answers, update, game }) => {
           excludeIds={[game.id, b?.id]}
           placeholder="First game…"
         />
-        <span className="text-center font-black uppercase tracking-widest text-sm text-blue-300">meets</span>
+        <span className="text-center font-black uppercase tracking-widest text-sm text-brand">meets</span>
         <GamePicker
           value={b}
           onChange={(g) => update({ comparedB: g })}

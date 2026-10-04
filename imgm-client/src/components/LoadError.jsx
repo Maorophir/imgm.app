@@ -9,7 +9,7 @@ const LoadError = ({ title = "Couldn't load this right now", onRetry }) => (
     {onRetry && (
       <button
         onClick={onRetry}
-        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-full font-semibold text-sm shadow-lg shadow-blue-500/25 transition"
+        className="px-6 py-2.5 bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] rounded-full font-semibold text-sm transition"
       >
         Try again
       </button>

@@ -56,7 +56,7 @@ function UserMenu({ user }) {
             <LevelBadge level={progress.level} tier={progress.tier} small className="absolute -bottom-1.5 -right-2" />
           )}
         </span>
-        <span className="text-sm font-semibold text-slate-100 max-w-[10rem] truncate">{name}</span>
+        <span className="hidden sm:block text-sm font-semibold text-slate-100 max-w-[10rem] truncate">{name}</span>
         <span aria-hidden="true" className={`text-[10px] text-slate-400 transition-transform ${open ? 'rotate-180' : ''}`}>▼</span>
       </button>
 

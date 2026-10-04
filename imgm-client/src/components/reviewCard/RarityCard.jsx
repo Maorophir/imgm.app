@@ -58,7 +58,7 @@ const RarityCard = ({ review, game, artUrl }) => {
 
   return (
     <div
-      className={`card-flip w-[270px] max-w-full aspect-[300/450] shrink-0 ${flipped ? 'is-flipped' : ''} ${canFlip ? 'cursor-pointer' : ''} rounded-[20px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-blue-500`}
+      className={`card-flip w-[270px] max-w-full aspect-[300/450] shrink-0 ${flipped ? 'is-flipped' : ''} ${canFlip ? 'cursor-pointer' : ''} rounded-[20px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand`}
       // Only flippable cards act as a button
       role={canFlip ? 'button' : undefined}
       tabIndex={canFlip ? 0 : undefined}
@@ -127,7 +127,7 @@ const RarityCard = ({ review, game, artUrl }) => {
                 <div className="flex items-center gap-1.5 text-xs min-w-0">
                   {meets.map((g, i) => (
                     <span key={g.id} className="contents">
-                      {i > 0 && <span className="font-black text-indigo-300 shrink-0">×</span>}
+                      {i > 0 && <span className="font-black text-slate-400 shrink-0">×</span>}
                       <span className="flex items-center gap-1.5 min-w-0 flex-1">
                         {g.coverUrl && <img src={g.coverUrl} alt="" className="w-[22px] h-[30px] object-cover rounded-sm shrink-0" />}
                         {/* Long names slowly slide to show the whole title */}
@@ -155,7 +155,7 @@ const RarityCard = ({ review, game, artUrl }) => {
               <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-slate-400 min-w-0">
                 {meta.map((m) => <span key={m}>{m}</span>)}
               </span>
-              {canFlip && <span className="text-[11px] font-bold text-indigo-300 whitespace-nowrap">Flip ↻</span>}
+              {canFlip && <span className="text-[11px] font-bold text-slate-300 whitespace-nowrap">Flip ↻</span>}
               {!canFlip && quick && (
                 <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 whitespace-nowrap">
                   Quick review
@@ -188,7 +188,7 @@ const RarityCard = ({ review, game, artUrl }) => {
                   </div>
                 ))}
               </div>
-              <span className="mt-auto text-center text-[11px] font-bold text-indigo-300">Flip back ↺</span>
+              <span className="mt-auto text-center text-[11px] font-bold text-slate-300">Flip back ↺</span>
             </div>
           </Frame>
         )}

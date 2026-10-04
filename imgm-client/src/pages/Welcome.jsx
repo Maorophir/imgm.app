@@ -76,12 +76,12 @@ const Welcome = () => {
                 key={idea}
                 type="button"
                 onClick={() => setName(idea)}
-                className="px-3 py-1.5 rounded-full text-sm font-semibold bg-slate-800/70 border border-slate-700/60 text-slate-200 hover:border-blue-400 hover:text-white transition"
+                className="px-3 py-1.5 rounded-full text-sm font-semibold bg-slate-800/70 border border-slate-700/60 text-slate-200 hover:border-brand/70 hover:text-white transition"
               >
                 {idea}
               </button>
             ))}
-            <button type="button" onClick={() => setIdeas(suggestTags())} className="px-2 text-sm font-bold text-indigo-300 hover:text-indigo-200" aria-label="More ideas">
+            <button type="button" onClick={() => setIdeas(suggestTags())} className="px-2 text-sm font-bold text-white hover:text-brand" aria-label="More ideas">
               ↻
             </button>
           </div>
@@ -92,7 +92,7 @@ const Welcome = () => {
         <button
           type="submit"
           disabled={!check.ok || saving}
-          className="py-3.5 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          className="py-3.5 rounded-2xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {saving ? 'Saving…' : "Let's go →"}
         </button>

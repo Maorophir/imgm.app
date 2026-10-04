@@ -26,7 +26,7 @@ const GamerTagField = ({ value, onChange, check, id = 'gamer-tag', autoFocus = f
       className={`w-full bg-slate-950/60 border rounded-xl px-4 py-3 text-lg font-bold text-white placeholder:text-slate-600 placeholder:font-normal focus:outline-none focus:ring-1 transition ${
         check.state === 'bad' ? 'border-red-500/60 focus:ring-red-500/40'
           : check.state === 'ok' ? 'border-emerald-500/60 focus:ring-emerald-500/40'
-            : 'border-slate-700/60 focus:border-blue-500/50 focus:ring-blue-500/30'
+            : 'border-slate-700/60 focus:border-brand/60 focus:ring-brand/30'
       }`}
     />
     <p id={`${id}-status`} role="status" className={`min-h-5 mt-1.5 text-sm font-semibold ${STATE_COLOR[check.state]}`}>

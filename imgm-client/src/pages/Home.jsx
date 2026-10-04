@@ -93,13 +93,14 @@ const Home = () => {
       >
         {/* Subtle dark gradient overlay so text stands out above the image */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent"></div>
-        <div className="absolute inset-0 bg-[#0B0F19]/40"></div>
+        <div className="absolute inset-0 bg-black/40"></div>
       </div>
 
       {/* Home page content (sits above the background via z-10) */}
       <div className="relative z-10 flex flex-col items-center">
-        <h2 className="text-7xl font-black mb-4 uppercase tracking-tighter drop-shadow-2xl text-white">
-          I Am <span className="text-blue-500">Gaming.</span>
+        {/* The logo's headline: heavy white letters, one lime full stop */}
+        <h2 className="font-display text-7xl md:text-8xl mb-4 uppercase tracking-tight drop-shadow-2xl text-white">
+          I Am Gaming<span className="text-brand drop-shadow-[0_0_18px_var(--color-brand)]">.</span>
         </h2>
         
         <p className="text-2xl text-slate-200 mb-8 max-w-2xl font-light drop-shadow-md">
@@ -110,19 +111,19 @@ const Home = () => {
         {currentGame && (
           <div className="bg-slate-900/60 backdrop-blur-md border border-slate-700/50 p-6 rounded-2xl mb-10 max-w-3xl text-left transform transition-all duration-500">
             <div className="flex items-center gap-3 mb-2">
-              <span className="bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded uppercase">
+              <span className="shrink-0 whitespace-nowrap bg-brand text-slate-950 text-xs font-bold px-2 py-1 rounded uppercase">
                 Trending Now
               </span>
               <h3 className="text-xl font-bold text-white">{currentGame.title}</h3>
             </div>
             {currentGame.aiSummary ? (
               <p className="text-slate-300 italic text-sm">
-                <span className="font-semibold text-blue-400">AI Summary: </span>
+                <span className="font-semibold text-white">AI Summary: </span>
                 "{currentGame.aiSummary}"
               </p>
             ) : currentGame.description && (
               <p className="text-slate-300 text-sm">
-                <span className="font-semibold text-blue-400">About: </span>
+                <span className="font-semibold text-white">About: </span>
                 {truncate(currentGame.description)}
               </p>
             )}
@@ -131,7 +132,7 @@ const Home = () => {
 
         <button
           onClick={() => gridRef.current?.scrollIntoView({ behavior: 'smooth' })}
-          className="px-10 py-4 bg-blue-600 hover:bg-blue-700 rounded-full font-bold text-lg shadow-lg shadow-blue-500/40 transition transform hover:scale-105">
+          className="px-10 py-4 bg-brand hover:brightness-110 text-slate-950 rounded-full font-bold text-lg shadow-[0_8px_30px_-6px_var(--color-brand)] transition transform hover:scale-105">
           Explore Games
         </button>
       </div>
@@ -143,7 +144,7 @@ const Home = () => {
         <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
           <div>
             <h2 className="text-3xl font-bold text-white">
-              Featured <span className="text-blue-400">Games</span>
+              Featured <span className="text-brand">Games</span>
             </h2>
             <p className="text-slate-400 text-sm mt-1">
               The most popular recent releases, powered by IGDB
@@ -156,7 +157,7 @@ const Home = () => {
               <button
                 onClick={() => goToPage(page - 1)}
                 aria-label="Previous games"
-                className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-white hover:border-blue-500/50 hover:bg-blue-500/10 transition"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-brand hover:border-brand/60 hover:bg-brand/10 transition"
               >
                 ←
               </button>
@@ -166,14 +167,14 @@ const Home = () => {
                     key={i}
                     onClick={() => setPage(i)}
                     aria-label={`Page ${i + 1}`}
-                    className={`h-2 rounded-full transition-all ${i === page ? 'w-6 bg-blue-500' : 'w-2 bg-slate-700 hover:bg-slate-500'}`}
+                    className={`h-2 rounded-full transition-all ${i === page ? 'w-6 bg-brand' : 'w-2 bg-slate-700 hover:bg-slate-500'}`}
                   />
                 ))}
               </div>
               <button
                 onClick={() => goToPage(page + 1)}
                 aria-label="Next games"
-                className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-white hover:border-blue-500/50 hover:bg-blue-500/10 transition"
+                className="w-10 h-10 rounded-full flex items-center justify-center bg-slate-900/60 border border-slate-700/50 text-slate-300 hover:text-brand hover:border-brand/60 hover:bg-brand/10 transition"
               >
                 →
               </button>

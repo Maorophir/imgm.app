@@ -75,7 +75,7 @@ const Screenshots = ({ images, title }) => {
             type="button"
             onClick={() => setOpen(i)}
             aria-label={`Open screenshot ${i + 1}`}
-            className="group relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-slate-900 focus-visible:outline-2 focus-visible:outline-blue-500"
+            className="group relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-slate-900 focus-visible:outline-2 focus-visible:outline-brand"
           >
             <img
               src={thumb(url)}
@@ -87,7 +87,7 @@ const Screenshots = ({ images, title }) => {
         ))}
       </div>
       {images.length > GRID_LIMIT && (
-        <button type="button" onClick={() => setShowAll((s) => !s)} className="mt-4 text-sm font-bold text-indigo-300 hover:text-indigo-200">
+        <button type="button" onClick={() => setShowAll((s) => !s)} className="mt-4 text-sm font-bold text-white hover:text-brand">
           {showAll ? 'Show fewer ▴' : `Show all ${images.length} screenshots ▾`}
         </button>
       )}
@@ -123,7 +123,7 @@ const Videos = ({ videos }) => {
             onClick={() => setActiveId(video.youtubeId)}
             className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
               video.youtubeId === active.youtubeId
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25'
+                ? 'bg-brand text-slate-950'
                 : 'bg-slate-900/60 text-slate-400 border border-slate-800/50 hover:text-white hover:border-slate-700'
             }`}
           >
@@ -131,7 +131,7 @@ const Videos = ({ videos }) => {
           </button>
         ))}
         {everything.length > list.length || showAll ? (
-          <button type="button" onClick={() => setShowAll((s) => !s)} className="ml-1 text-sm font-bold text-indigo-300 hover:text-indigo-200">
+          <button type="button" onClick={() => setShowAll((s) => !s)} className="ml-1 text-sm font-bold text-white hover:text-brand">
             {showAll ? 'Show fewer ▴' : `Show all ${everything.length} videos ▾`}
           </button>
         ) : null}
@@ -155,7 +155,7 @@ const MediaSection = ({ game }) => {
     <section className="max-w-7xl mx-auto px-6 py-10">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <h2 className="text-2xl font-bold text-white">
-          Screenshots & <span className="text-blue-400">Videos</span>
+          Screenshots & <span className="text-brand">Videos</span>
         </h2>
         {tabs.length > 1 && (
           <div role="tablist" aria-label="Media" className="inline-flex p-1 rounded-xl bg-slate-900/80 border border-slate-800">
@@ -167,7 +167,7 @@ const MediaSection = ({ game }) => {
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${
-                  tab === t.key ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                  tab === t.key ? 'bg-brand text-slate-950 shadow' : 'text-slate-400 hover:text-white'
                 }`}
               >
                 {t.label} <span className="font-medium opacity-70 tabular-nums">{t.count}</span>

@@ -36,7 +36,7 @@ const ChecklistStep = ({ answers, update }) => {
     <div className="flex flex-col gap-6">
       <p className="text-slate-400 text-sm -mb-1">
         Tick what fits. Answer as many or as few as you like.
-        <span className="ml-2 font-bold tabular-nums text-blue-300">{ticked}/{categories.length}</span>
+        <span className="ml-2 font-bold tabular-nums text-brand">{ticked}/{categories.length}</span>
       </p>
 
       {categories.map((category) => (

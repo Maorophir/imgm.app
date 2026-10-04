@@ -11,11 +11,25 @@
  *
  * Why we removed the old CSS variables (--text, --accent, etc.):
  * - They were from the Vite starter template and conflicted with Tailwind's
- *   color system (e.g., text-slate-400, bg-blue-600).
+ *   color system (e.g., text-slate-400, bg-brand).
  * - Tailwind already has a complete, consistent design system built in.
  * - Using both creates confusion about which system is "the truth."
  */
 @import "tailwindcss";
+
+/* Keyboard focus shows the brand lime. In the base layer, so a component's own
+   focus: classes still win */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+html,
+body {
+  background: var(--color-slate-950);
+}
 
 body {
   margin: 0;
@@ -26,6 +40,30 @@ body {
 }
 
 @theme {
+  /* ── Brand (from the logo) ──
+     Lime is the logo's colour and is used sparingly, like GOG's purple or Steam's
+     blue: the logo, the favicon, the active nav link and keyboard focus. Everything
+     else is white on black. Use it as text-brand / bg-brand / border-brand. */
+  --color-brand: #b8f03a;
+  --font-display: "Anton", Impact, "Arial Narrow", sans-serif;
+  --font-wordmark: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+
+  /* ── Surfaces ──
+     Tailwind's "slate" greys are tinted navy. IMGM is black like the logo, so the
+     slate scale is redefined here as near-neutral greys (with the logo's faint cool
+     tint). Every bg-slate-* / text-slate-* in the app picks this up automatically. */
+  --color-slate-50: #f8f9fa;
+  --color-slate-100: #f1f2f4;
+  --color-slate-200: #e3e6ea;
+  --color-slate-300: #cfd3da;
+  --color-slate-400: #a0a6b1;
+  --color-slate-500: #707784;
+  --color-slate-600: #4f5560;
+  --color-slate-700: #353943;
+  --color-slate-800: #23262d;
+  --color-slate-900: #16181d;
+  --color-slate-950: #0d0f12;
+
   --animate-scroll-left: scrollLeft 120s linear infinite;
   --animate-scroll-right: scrollRight 120s linear infinite;
   --animate-fade-in: fadeIn 0.4s ease-out;

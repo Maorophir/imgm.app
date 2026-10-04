@@ -21,7 +21,7 @@ export const Chip = ({ label, art, selected, disabled, onClick }) => (
     className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border text-sm font-semibold transition-all
       disabled:opacity-35 disabled:cursor-not-allowed
       ${selected
-        ? 'bg-blue-500/20 border-blue-400 text-white shadow-[0_0_14px_rgba(59,130,246,0.35)]'
+        ? 'bg-brand/15 border-brand text-white shadow-[0_0_14px_rgb(184_240_58/0.3)]'
         : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:border-slate-500 hover:text-white'}`}
   >
     {art && <span aria-hidden="true">{art}</span>}
@@ -36,7 +36,7 @@ export const ChoiceCard = ({ label, art, hint, selected, onClick }) => (
     aria-pressed={selected}
     className={`flex flex-col items-center justify-center gap-1.5 p-4 rounded-2xl border text-center transition-all
       ${selected
-        ? 'bg-blue-500/20 border-blue-400 shadow-[0_0_18px_rgba(59,130,246,0.35)] scale-[1.03]'
+        ? 'bg-brand/15 border-brand shadow-[0_0_18px_rgb(184_240_58/0.3)] scale-[1.03]'
         : 'bg-slate-800/50 border-slate-700/60 hover:border-slate-500 hover:bg-slate-800/80'}`}
   >
     {/* The "art slot" — an emoji today, an illustration later */}

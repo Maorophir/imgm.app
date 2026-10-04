@@ -23,23 +23,22 @@ const StartQuestButton = ({ gameId, label = 'Start Review Quest', reward = `Up t
     className="
       group relative inline-flex items-center gap-3 pl-3 pr-6 py-2.5
       rounded-2xl overflow-hidden
-      bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600
-      shadow-lg shadow-indigo-500/30 hover:shadow-xl hover:shadow-indigo-500/50
-      ring-1 ring-white/10
+      bg-brand text-slate-950
+      shadow-[0_8px_28px_-8px_var(--color-brand)] hover:shadow-[0_10px_36px_-6px_var(--color-brand)]
       transition-all duration-300 hover:scale-105 active:scale-100
     "
   >
     {/* The light sweep */}
-    <span className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-shine pointer-events-none" />
+    <span className="absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/50 to-transparent animate-shine pointer-events-none" />
 
     {/* Icon tile — wiggles a little on hover */}
-    <span className="relative w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-110">
-      <GamepadIcon className="w-6 h-6 text-white" />
+    <span className="relative w-10 h-10 rounded-xl bg-slate-950/10 flex items-center justify-center transition-transform duration-300 group-hover:rotate-[-8deg] group-hover:scale-110">
+      <GamepadIcon className="w-6 h-6 text-slate-950" />
     </span>
 
     <span className="relative text-left">
-      <span className="block font-black text-white leading-tight tracking-wide">{label}</span>
-      <span className="block text-[11px] font-semibold text-indigo-100/80">{reward}</span>
+      <span className="block font-black text-slate-950 leading-tight tracking-wide">{label}</span>
+      <span className="block text-[11px] font-semibold text-slate-950/70">{reward}</span>
     </span>
   </Link>
 );

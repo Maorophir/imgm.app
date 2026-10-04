@@ -16,7 +16,7 @@ const StepperButton = ({ label, onClick, disabled, children }) => (
     disabled={disabled}
     aria-label={label}
     className="w-10 h-10 rounded-xl border border-slate-700/60 bg-slate-800/60 text-slate-200 text-lg font-bold
-      hover:border-blue-400 hover:text-white hover:bg-blue-500/15 transition
+      hover:border-brand/70 hover:text-white hover:bg-brand/10 transition
       disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:border-slate-700/60 disabled:hover:bg-slate-800/60"
   >
     {children}
@@ -69,7 +69,7 @@ const SetupStep = ({ answers, update, game }) => {
             aria-label="Hours played"
             // Hide the browser's built-in arrows — we have our own −/+ buttons
             className="w-20 h-10 text-center bg-slate-950/60 border border-slate-700/50 rounded-xl text-white font-bold tabular-nums
-              focus:outline-none focus:border-blue-500/50
+              focus:outline-none focus:border-brand/60
               [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
           />
           <StepperButton label="One hour more" onClick={() => setHours((hours ?? 0) + 1)} disabled={hours >= MAX_HOURS}>+</StepperButton>

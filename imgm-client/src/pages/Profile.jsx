@@ -21,7 +21,7 @@ const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', 
 const LevelCard = ({ progress }) => (
   <section
     className="rounded-2xl border p-6 flex flex-col gap-4"
-    style={{ borderColor: `${progress.tier.color}55`, background: `radial-gradient(120% 120% at 0% 0%, ${progress.tier.color}1f, transparent 60%), rgb(15 23 42 / 0.6)` }}
+    style={{ borderColor: `${progress.tier.color}55`, background: `radial-gradient(120% 120% at 0% 0%, ${progress.tier.color}1f, transparent 60%), rgb(22 24 29 / 0.6)` }}
   >
     <div className="flex items-end justify-between gap-4">
       <div>
@@ -105,7 +105,7 @@ function Profile() {
 
   return (
     <div className="max-w-2xl mx-auto px-6 py-12 flex flex-col gap-6">
-      <h1 className="text-3xl font-black text-white">Your <span className="text-blue-400">profile</span></h1>
+      <h1 className="text-3xl font-black text-white">Your <span className="text-brand">profile</span></h1>
 
       {progress && <LevelCard progress={progress} />}
 
@@ -134,7 +134,7 @@ function Profile() {
         <button
           type="submit"
           disabled={!canSave}
-          className="self-start px-6 py-3 rounded-xl font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition disabled:opacity-40 disabled:cursor-not-allowed"
+          className="self-start px-6 py-3 rounded-xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition disabled:opacity-40 disabled:cursor-not-allowed"
         >
           {saving ? 'Saving…' : 'Save new tag'}
         </button>

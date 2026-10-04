@@ -119,7 +119,7 @@ const GameDetailsContent = ({ id }) => {
         <p className="text-xl text-slate-400 mb-8">Game not found</p>
         <Link
           to="/"
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-full font-semibold transition"
+          className="px-6 py-3 bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] rounded-full font-semibold transition"
         >
           Back to Home
         </Link>
@@ -137,7 +137,7 @@ const GameDetailsContent = ({ id }) => {
          ══════════════════════════════════════════════════════════ */}
       <section className="max-w-7xl mx-auto px-6 py-10">
         <h2 className="text-2xl font-bold text-white mb-6">
-          What the <span className="text-blue-400">AI</span> thinks
+          What the <span className="text-brand">AI</span> thinks
         </h2>
         {game.aiSummary ? (
           <AISummaryPanel
@@ -146,7 +146,7 @@ const GameDetailsContent = ({ id }) => {
             reviewCount={reviews.length}
           />
         ) : (
-          <div className="bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-blue-900/20 backdrop-blur-xl border border-blue-500/20 rounded-2xl p-6 md:p-8 text-center">
+          <div className="bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 md:p-8 text-center">
             <p className="text-slate-300 mb-1">No AI summary yet</p>
             <p className="text-slate-500 text-sm">
               Once the community has shared a few reviews, our AI will summarize what players think.
@@ -162,7 +162,7 @@ const GameDetailsContent = ({ id }) => {
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex flex-col items-start gap-2">
             <h2 className="text-2xl font-bold text-white">
-              Community <span className="text-blue-400">Reviews</span>
+              Community <span className="text-brand">Reviews</span>
               <span className="text-slate-500 text-lg font-normal ml-2">({reviews.length})</span>
             </h2>
             {/* Only offered when some review actually has masked swearing */}
@@ -190,7 +190,7 @@ const GameDetailsContent = ({ id }) => {
             ))}
           </div>
         ) : (
-          <div className="text-center py-14 px-6 bg-gradient-to-b from-indigo-500/10 to-slate-900/30 rounded-2xl border border-indigo-500/20">
+          <div className="text-center py-14 px-6 bg-gradient-to-b from-brand/5 to-slate-900/30 rounded-2xl border border-slate-800">
             <p className="text-5xl mb-3">🥇</p>
             <p className="text-white text-xl font-bold mb-1">Be the first reviewer</p>
             <p className="text-slate-400 text-sm mb-6">

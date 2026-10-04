@@ -98,7 +98,7 @@ const ReviewPanel = ({ review: original }) => {
               type="button"
               onClick={() => setExpanded((e) => !e)}
               aria-expanded={expanded}
-              className="mt-2 text-sm font-bold text-indigo-300 hover:text-indigo-200"
+              className="mt-2 text-sm font-bold text-white hover:text-brand"
             >
               {expanded ? 'Show less ▴' : 'Read more ▾'}
             </button>

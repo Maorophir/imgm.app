@@ -27,7 +27,7 @@ const WordsStep = ({ answers, update }) => (
       onChange={(e) => update({ reviewText: e.target.value })}
       placeholder="Write as much or as little as you like…"
       aria-label="Your review"
-      className="w-full bg-slate-950/60 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 resize-y"
+      className="w-full bg-slate-950/60 border border-slate-700/50 rounded-xl px-4 py-3 text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-brand/60 focus:ring-1 focus:ring-brand/30 resize-y"
     />
     <p className="text-right text-xs text-slate-500 tabular-nums">{answers.reviewText.length}/{MAX_LENGTH}</p>
   </div>

@@ -233,7 +233,7 @@ const ReviewQuest = () => {
         {/* After logging in, come straight back here */}
         <Link
           to={`/login?redirect=${encodeURIComponent(`/game/${id}/review`)}`}
-          className="px-6 py-3 bg-blue-600 hover:bg-blue-700 rounded-full font-semibold transition"
+          className="px-6 py-3 bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] rounded-full font-semibold transition"
         >
           Log in
         </Link>
@@ -250,7 +250,7 @@ const ReviewQuest = () => {
   const backgrounds = game.artworks?.length ? game.artworks : [game.coverUrl];
   const background = backgrounds[(isQuestScreen ? step : 0) % backgrounds.length];
 
-  const primaryButton = 'rounded-xl font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition disabled:opacity-50 disabled:cursor-wait';
+  const primaryButton = 'rounded-xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition disabled:opacity-50 disabled:cursor-wait';
 
   return (
     <div className="relative min-h-[calc(100vh-80px)] flex items-center justify-center px-4 py-10 overflow-hidden">
@@ -275,7 +275,7 @@ const ReviewQuest = () => {
           </p>
           {isQuestScreen && step > 0 && step < LAST_STEP ? (
             // Jump to Final words, so everyone gets the chance to write before posting
-            <button onClick={() => changeStep(LAST_STEP)} className="text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition whitespace-nowrap">
+            <button onClick={() => changeStep(LAST_STEP)} className="text-sm font-semibold text-brand hover:brightness-110 transition whitespace-nowrap">
               Finish ✓
             </button>
           ) : (
@@ -287,10 +287,10 @@ const ReviewQuest = () => {
         {isQuestScreen && step > 0 && (
           <div className="mb-6">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs font-bold mb-1.5">
-              <span className="text-blue-300">LEVEL {step + 1} / {STEPS.length}</span>
+              <span className="text-brand">LEVEL {step + 1} / {STEPS.length}</span>
               <span className="flex items-center gap-3">
                 {/* What answering this screen earns — ticked once it's earned */}
-                <span className={isAnswered(answers, current) ? 'text-emerald-300' : 'text-slate-300'}>
+                <span className={isAnswered(answers, current) ? 'text-brand' : 'text-slate-300'}>
                   This step: +{current.xp} XP{isAnswered(answers, current) ? ' ✓' : ''}
                 </span>
                 <span className="text-amber-300 tabular-nums">Total: {earnedXp} / {MAX_XP} XP</span>
@@ -298,7 +298,7 @@ const ReviewQuest = () => {
             </div>
             <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-blue-500 to-indigo-400 rounded-full transition-all duration-500"
+                className="h-full bg-brand rounded-full transition-all duration-500"
                 style={{ width: `${((step + 1) / STEPS.length) * 100}%` }}
               />
             </div>
@@ -307,7 +307,7 @@ const ReviewQuest = () => {
 
         {/* Editing notice on the first screen */}
         {step === 0 && isEditing && (
-          <p className="mb-5 text-sm text-blue-200 bg-blue-500/10 border border-blue-500/30 rounded-xl px-4 py-2.5">
+          <p className="mb-5 text-sm text-slate-200 bg-white/5 border border-slate-700 rounded-xl px-4 py-2.5">
             ✏️ You reviewed this on {new Date(existing.review.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.
             Your answers are filled in, so change anything and update it.
           </p>
@@ -391,10 +391,10 @@ const ReviewQuest = () => {
               <button
                 disabled={!answers.rating}
                 onClick={() => changeStep(1)}
-                className="py-3.5 rounded-2xl font-bold bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-500/25 disabled:opacity-40 disabled:cursor-not-allowed transition"
+                className="py-3.5 rounded-2xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
                 🎮 {isEditing ? 'Edit the quest' : 'Start the quest'}
-                <span className="block text-xs font-normal text-blue-100/80">{STEPS.length - 1} quick screens · up to {MAX_XP} XP</span>
+                <span className="block text-xs font-semibold text-slate-950/70">{STEPS.length - 1} quick screens · up to {MAX_XP} XP</span>
               </button>
             </div>
           )}

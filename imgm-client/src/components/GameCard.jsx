@@ -127,8 +127,8 @@ const GameCard = ({
         rounded-2xl overflow-hidden
         cursor-pointer
         transition-all duration-300 ease-out
-        hover:border-blue-500/50
-        hover:shadow-[0_0_30px_rgba(168,85,247,0.15)]
+        hover:border-brand/70
+        hover:shadow-[0_0_28px_-4px_rgb(184_240_58/0.35)]
         hover:-translate-y-1
       "
     >
@@ -202,7 +202,7 @@ const GameCard = ({
       <div className="flex flex-col gap-3 p-4 flex-1">
         {/* Title + Year */}
         <div>
-          <h3 className="text-base font-bold text-white leading-tight line-clamp-2 group-hover:text-blue-300 transition-colors duration-300">
+          <h3 className="text-base font-bold text-white leading-tight line-clamp-2">
             {title}
           </h3>
           {releaseYear && (
@@ -244,8 +244,8 @@ const GameCard = ({
                 key={platform}
                 className="
                   text-[10px] font-bold uppercase tracking-widest
-                  text-blue-300/70
-                  bg-blue-500/10 border border-blue-500/20
+                  text-slate-300
+                  bg-slate-800/60 border border-slate-700/60
                   px-1.5 py-0.5 rounded
                 "
               >

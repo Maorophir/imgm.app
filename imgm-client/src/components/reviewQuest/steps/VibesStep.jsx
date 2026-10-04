@@ -19,7 +19,7 @@ const VibesStep = ({ answers, update }) => {
     <div>
       <p className="text-slate-400 text-sm mb-4">
         How does it <span className="text-white font-semibold">feel</span> to play? Pick up to {MAX_VIBES}.
-        <span className="ml-2 font-bold tabular-nums text-blue-300">{picked.length}/{MAX_VIBES}</span>
+        <span className="ml-2 font-bold tabular-nums text-brand">{picked.length}/{MAX_VIBES}</span>
       </p>
       <div className="flex flex-wrap gap-2">
         {VIBES.map((v) => (

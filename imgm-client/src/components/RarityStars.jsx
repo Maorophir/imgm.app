@@ -82,7 +82,7 @@ const RarityStars = ({ value, onChange, size = 'lg', readOnly = false }) => {
       aria-valuemin={readOnly ? undefined : 1}
       aria-valuemax={readOnly ? undefined : STAR_COUNT}
       aria-valuenow={readOnly ? undefined : value ?? undefined}
-      className={`flex ${gap} ${readOnly ? '' : 'cursor-pointer touch-none select-none p-1.5 rounded-xl focus-visible:outline-2 focus-visible:outline-blue-500'}`}
+      className={`flex ${gap} ${readOnly ? '' : 'cursor-pointer touch-none select-none p-1.5 rounded-xl focus-visible:outline-2 focus-visible:outline-brand'}`}
     >
       {Array.from({ length: STAR_COUNT }, (_, i) => {
         // How much of this star is filled, 0–1 (fractions happen for averages, e.g. 8.4)

@@ -54,7 +54,7 @@ const SearchBar = () => {
   const games = results.games.slice(0, MAX_DROPDOWN_RESULTS);
 
   return (
-    <div ref={containerRef} className="relative flex-1 max-w-md mx-6">
+    <div ref={containerRef} className="relative w-full md:max-w-md">
       <form onSubmit={handleSubmit} role="search">
         <div className="relative">
           <svg
@@ -80,7 +80,7 @@ const SearchBar = () => {
               w-full bg-slate-800/60 border border-slate-700/50
               rounded-full pl-11 pr-4 py-2 text-sm text-slate-200
               placeholder:text-slate-500
-              focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30
+              focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500/40
               transition
             "
           />
@@ -122,7 +122,7 @@ const SearchBar = () => {
                     <button
                       type="button"
                       onClick={() => handleSelect(game.id)}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-blue-500/10 transition"
+                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-white/5 transition"
                     >
                       {game.coverUrl ? (
                         <img
@@ -146,7 +146,7 @@ const SearchBar = () => {
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="w-full px-4 py-2.5 text-sm font-semibold text-blue-400 hover:text-blue-300 hover:bg-blue-500/10 text-left transition"
+                  className="w-full px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/5 text-left transition"
                 >
                   See all results for "{trimmed}" →
                 </button>

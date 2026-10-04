@@ -14,7 +14,7 @@ const GamePicker = ({ value, onChange, excludeIds = [], placeholder = 'Search a 
   // A game is picked → show it
   if (value) {
     return (
-      <div className="flex items-center gap-3 p-2 pr-3 rounded-xl bg-blue-500/15 border border-blue-400/60 animate-fade-in">
+      <div className="flex items-center gap-3 p-2 pr-3 rounded-xl bg-brand/10 border border-brand/60 animate-fade-in">
         {value.coverUrl
           ? <img src={value.coverUrl} alt="" className="w-10 h-14 object-cover rounded-md shrink-0" />
           : <div className="w-10 h-14 rounded-md bg-slate-800 shrink-0" />}
@@ -41,7 +41,7 @@ const GamePicker = ({ value, onChange, excludeIds = [], placeholder = 'Search a 
         onChange={(e) => setQuery(e.target.value)}
         placeholder={placeholder}
         aria-label={placeholder}
-        className="w-full bg-slate-950/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30"
+        className="w-full bg-slate-950/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-brand/60 focus:ring-1 focus:ring-brand/30"
       />
 
       {searchable && (
@@ -61,7 +61,7 @@ const GamePicker = ({ value, onChange, excludeIds = [], placeholder = 'Search a 
                 onChange({ id: g.id, title: g.title, coverUrl: g.coverUrl });
                 setQuery('');
               }}
-              className="w-full flex items-center gap-3 px-2.5 py-1.5 text-left hover:bg-blue-500/10 transition"
+              className="w-full flex items-center gap-3 px-2.5 py-1.5 text-left hover:bg-white/5 transition"
             >
               {g.coverUrl
                 ? <img src={g.coverUrl} alt="" loading="lazy" className="w-7 h-10 object-cover rounded shrink-0" />

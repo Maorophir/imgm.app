@@ -15,7 +15,7 @@ const MomentField = ({ label, art, placeholder, value, onChange }) => (
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       aria-label={label}
-      className="w-full bg-slate-950/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-blue-500/50 resize-none"
+      className="w-full bg-slate-950/60 border border-slate-700/50 rounded-xl px-4 py-3 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-brand/60 resize-none"
     />
     <p className="text-right text-xs text-slate-500 tabular-nums">{value.length}/{MAX_LENGTH}</p>
   </div>
