@@ -53,7 +53,9 @@ class NotForMe(BaseModel):
 
 
 class GuideRequest(BaseModel):
-    chat_id: str = Field(pattern=r"^[A-Za-z0-9-]{8,64}$")  # made by the page, one per chat
+    chat_id: str = Field(
+        pattern=r"^[A-Za-z0-9-]{8,64}$"
+    )  # made by the page, one per chat
     message: str | None = Field(default=None, min_length=1, max_length=1000)
     not_for_me: NotForMe | None = None
     preferences: Preferences = Field(default_factory=dict)
@@ -287,7 +289,10 @@ def guide_events(request: GuideRequest, user_id: str | None):
             # A card kept from an earlier turn has no tile from this run: look it up
             for card in recommendations.games:
                 if not games.get(card.game_id, {}).get("cover"):
-                    games[card.game_id] = {**game_tile_from_imgm(card.game_id), **games.get(card.game_id, {})}
+                    games[card.game_id] = {
+                        **game_tile_from_imgm(card.game_id),
+                        **games.get(card.game_id, {}),
+                    }
             cards = [
                 {**games.get(card.game_id, {}), **card.model_dump()}
                 for card in recommendations.games
@@ -303,7 +308,9 @@ def guide_events(request: GuideRequest, user_id: str | None):
         yield sse("done", {"problems": problems})
     except Exception:
         log.exception("Play Next run failed")
-        yield sse("error", {"message": "Play Next ran into a problem. Please try again."})
+        yield sse(
+            "error", {"message": "Play Next ran into a problem. Please try again."}
+        )
 
 
 # ── Routes ───────────────────────────────────────────────

@@ -11,8 +11,12 @@ class Preferences(
 ):  # total=False → every answer is optional (skippable)
     platforms: list[str]  # ["PC", "Nintendo Switch"]
     moods: list[str]  # ["cozy", "challenging"]
-    session_length: Literal["short", "medium", "long"]  # one sitting (not shown on the page yet)
-    game_length: list[Literal["short", "medium", "long"]]  # the whole game: <10h · 10-30h · 30h+ (any of them)
+    session_length: Literal[
+        "short", "medium", "long"
+    ]  # one sitting (not shown on the page yet)
+    game_length: list[
+        Literal["short", "medium", "long"]
+    ]  # the whole game: <10h · 10-30h · 30h+ (any of them)
     play_style: Literal["solo", "coop", "online"]
     difficulty: Literal["relaxed", "balanced", "hard"]
     loved_games: list[str]  # titles for now; later IGDB ids from the game picker
@@ -41,7 +45,11 @@ GAME_LENGTH_HOURS: dict[str, tuple[float | None, float | None]] = {
     "medium": (10, 30),
     "long": (30, None),
 }
-GAME_LENGTH_TEXT = {"short": "short (under 10h)", "medium": "medium (10-30h)", "long": "long (over 30h)"}
+GAME_LENGTH_TEXT = {
+    "short": "short (under 10h)",
+    "medium": "medium (10-30h)",
+    "long": "long (over 30h)",
+}
 
 
 def fits_length(hours: float, lengths: list[str]) -> bool:

@@ -11,7 +11,7 @@ The logged-in player is TEST_USER_ID from .env (leave it out to test a logged-ou
 import os
 import sys
 from uuid import uuid4
-from uuid import uuid4
+
 from imgm_ai.agent.graph import graph
 from imgm_ai.agent.state import Preferences, new_turn, not_for_me_turn
 
@@ -48,7 +48,9 @@ def main() -> None:
     # One thread_id = one conversation (a save slot). Same id on every turn,
     # so the checkpointer loads what was said before.
     config = {"configurable": {"user_id": user_id, "thread_id": str(uuid4())}}
-    print(f"Player: {user_id or 'not logged in'} · 'quit' to stop · '/no 2' = not for me\n")
+    print(
+        f"Player: {user_id or 'not logged in'} · 'quit' to stop · '/no 2' = not for me\n"
+    )
 
     first_question = " ".join(sys.argv[1:])
     first_turn = True
@@ -64,8 +66,14 @@ def main() -> None:
             # "Not for me" on one of the last cards: remember it and ask for a swap
             cards = graph.get_state(config).values.get("recommendations")
             number = question.removeprefix("/no").strip()
-            if not cards or not number.isdigit() or not 1 <= int(number) <= len(cards.games):
-                print("Use /no followed by a card number from the last answer, e.g. /no 2\n")
+            if (
+                not cards
+                or not number.isdigit()
+                or not 1 <= int(number) <= len(cards.games)
+            ):
+                print(
+                    "Use /no followed by a card number from the last answer, e.g. /no 2\n"
+                )
                 continue
             card = cards.games[int(number) - 1]
             print(f"→ Not for me: {card.title}")
