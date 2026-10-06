@@ -34,6 +34,15 @@ CHECK = "check"
 
 GAMES_PER_ANSWER = 5
 MAX_FIX_ATTEMPTS = 2  # how many times the agent may be sent back to fix its answer
+MIN_POPULARITY = 10  # IGDB ratings + hype below this = practically unknown
+
+# Which game platforms each Tune it choice can play (backward compatibility)
+PLAYS_ON = {
+    "PC": {"PC"},
+    "PlayStation 5": {"PlayStation 5", "PlayStation 4"},
+    "Xbox Series X|S": {"Xbox Series X|S", "Xbox One"},
+    "Nintendo Switch": {"Nintendo Switch"},
+}
 
 # The format node needs no tools: it only reshapes the answer into Recommendations
 formatter = get_model(lambda m: m.with_structured_output(Recommendations))
@@ -48,7 +57,9 @@ def call_model(state: RecommenderState) -> dict:
     The reply is either an answer or a request for tools (tool_calls).
     """
     system = SystemMessage(
-        content=build_system_prompt(state.get("preferences", {}), state.get("rejected", []))
+        content=build_system_prompt(
+            state.get("preferences", {}), state.get("rejected", [])
+        )
     )
     response = model.invoke([system] + model_context(state["messages"]))
     return {"messages": [response]}  # just the new message: add_messages appends it
@@ -71,7 +82,9 @@ def model_context(messages: list) -> list:
         turn = messages[begin:end]
         context.append(turn[0])  # the player's question
         answers = [
-            m for m in turn if isinstance(m, AIMessage) and not m.tool_calls and m.text.strip()
+            m
+            for m in turn
+            if isinstance(m, AIMessage) and not m.tool_calls and m.text.strip()
         ]
         if answers:
             context.append(answers[-1])  # the final (possibly fixed) answer
@@ -98,6 +111,25 @@ def game_hours(search_line: str) -> float | None:
     return float(match.group(1)) if match else None
 
 
+def game_platforms(search_line: str) -> set[str]:
+    """The platforms in a search_games line (its 3rd " · " part)."""
+    parts = search_line.split(" · ")
+    return set(parts[2].split(", ")) if len(parts) > 2 else set()
+
+
+def plays_on(platforms: set[str], wanted: list[str]) -> bool:
+    """Can the player play a game with these platforms on any of theirs?"""
+    return any(platforms & PLAYS_ON.get(choice, {choice}) for choice in wanted)
+
+
+def is_little_known(search_line: str) -> bool:
+    """Practically unknown on IGDB: almost no ratings and not hyped."""
+    match = re.search(r"· (\d+) IGDB ratings(, hyped)?", search_line)
+    if not match:
+        return False  # older lines without popularity: don't guess
+    return not match.group(2) and int(match.group(1)) < MIN_POPULARITY
+
+
 def format_answer(state: RecommenderState) -> dict:
     """The format node: the guide's written answer → structured cards (Recommendations).
 
@@ -108,8 +140,12 @@ def format_answer(state: RecommenderState) -> dict:
     verified = "\n".join(verified_games(state["messages"]).values()) or "(none)"
     # What the player asked for in this conversation (e.g. "shorter ones please"),
     # so the formatter can tell the check about a length limit
-    requests = "\n".join(f"- {m.text}" for m in state["messages"] if is_player_question(m))
-    prompt = FORMAT_PROMPT.format(answer=answer, verified_games=verified, requests=requests)
+    requests = "\n".join(
+        f"- {m.text}" for m in state["messages"] if is_player_question(m)
+    )
+    prompt = FORMAT_PROMPT.format(
+        answer=answer, verified_games=verified, requests=requests
+    )
     return {"recommendations": formatter.invoke([HumanMessage(content=prompt)])}
 
 
@@ -117,8 +153,10 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
     """The check node: plain code that enforces the rules a prompt can only ask for.
 
     5 different games, each verified by search_games, none already played, none the
-    player rejected, none longer than the player asked for (max_hours), and exactly
-    one Best Pick. Problems go back to the agent as a message to fix.
+    player rejected, none longer than the player asked for (max_hours), all playable on
+    the player's platforms, none practically unknown, none graded a weak fit by the
+    formatter (first check only), and exactly one Best Pick. Problems go back to the
+    agent as a message to fix.
     """
     recommendations = state.get("recommendations")
     games = recommendations.games if recommendations else []
@@ -126,11 +164,15 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
     user_id = config.get("configurable", {}).get("user_id")
     played = set(load_player_game_ids(user_id)) if user_id else set()
     rejected = {game["game_id"] for game in state.get("rejected", [])}
-    lengths = state.get("preferences", {}).get("game_length") or []  # their Tune it picks
+    lengths = (
+        state.get("preferences", {}).get("game_length") or []
+    )  # their Tune it picks
     if isinstance(lengths, str):  # chats saved before it became a list
         lengths = [lengths]
     wanted = " or ".join(GAME_LENGTH_TEXT[length] for length in lengths)
     max_hours = recommendations.max_hours if recommendations else None  # "shorter ones"
+    wanted_platforms = state.get("preferences", {}).get("platforms") or []
+    attempts = state.get("fix_attempts", 0)
 
     problems = []
     if len(games) != GAMES_PER_ANSWER:
@@ -146,7 +188,31 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
         if game.game_id in played:
             problems.append(f"The player already reviewed {game.title}: replace it.")
         if game.game_id in rejected:
-            problems.append(f"The player said 'Not for me' to {game.title}: replace it.")
+            problems.append(
+                f"The player said 'Not for me' to {game.title}: replace it."
+            )
+        line = verified.get(game.game_id, "")
+        if (
+            line
+            and wanted_platforms
+            and not plays_on(game_platforms(line), wanted_platforms)
+        ):
+            problems.append(
+                f"{game.title} isn't playable on the player's platforms "
+                f"({', '.join(wanted_platforms)}): replace it."
+            )
+        if line and is_little_known(line):
+            problems.append(
+                f"{game.title} is practically unknown (almost no ratings anywhere): "
+                "replace it with a better-known game."
+            )
+        # The formatter's severe self-grade. Only enforced on the first check, so this
+        # judgment costs at most one extra round
+        if attempts == 0 and game.fit == "weak":
+            problems.append(
+                f"{game.title} looks like a weak fit "
+                f"({game.fit_note or 'not what the player asked for'}): replace it."
+            )
         # Length: the player's limits (their game_length answers, or what they asked
         # for in words), checked against the real hours from search_games
         hours = game_hours(verified.get(game.game_id, ""))
@@ -163,13 +229,12 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
     if sum(game.best_pick for game in games) != 1:
         problems.append("Mark exactly one game as the Best Pick.")
 
-    attempts = state.get("fix_attempts", 0)
     if problems and attempts < MAX_FIX_ATTEMPTS:
         feedback = HumanMessage(
             name=CHECK_FEEDBACK,
             content="[Automatic check] Your answer has problems:\n- "
             + "\n- ".join(problems)
-            + "\nFix them (verify new games with search_games if needed), then write the full answer again."
+            + "\nFix them (verify new games with search_games if needed), then write the full answer again.",
         )
         return {
             "messages": [feedback],

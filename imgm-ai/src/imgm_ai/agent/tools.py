@@ -118,6 +118,11 @@ def get_my_taste(config: RunnableConfig) -> str:
     )
 
 
+def popularity_text(rating_count: int, hypes: int) -> str:
+    """How well-known a game is, from IGDB: "311 IGDB ratings" (+ ", hyped" for anticipated games)."""
+    return f"{rating_count} IGDB ratings" + (", hyped" if hypes >= 10 else "")
+
+
 def length_text(time_to_beat: dict | None) -> str:
     """How long a game takes, from IGDB player reports.
 
@@ -125,7 +130,9 @@ def length_text(time_to_beat: dict | None) -> str:
     """
     if not time_to_beat:
         return "length unknown"
-    normal, rushed, full = (time_to_beat.get(k) for k in ("normal", "rushed", "completionist"))
+    normal, rushed, full = (
+        time_to_beat.get(k) for k in ("normal", "rushed", "completionist")
+    )
     main = normal or rushed or full
     if not main:
         return "length unknown"
@@ -138,14 +145,15 @@ def length_text(time_to_beat: dict | None) -> str:
 
 
 def format_search_result(game: dict) -> str:
-    """→ "- [id 113112] Hades (2020) · Supergiant Games · PC, Switch · Roguelike · about 22h to beat · rated 9/10 by 1 IMGM player\" """
+    """→ "- [id 113112] Hades (2020) · Supergiant Games · PC, Switch · Roguelike · about 22h to beat · 1043 IGDB ratings · rated 9/10 by 1 IMGM player\" """
     year = game["releaseDate"][:4] if game.get("releaseDate") else "?"
     imgm = game.get("ratings", {}).get("imgm")
     rating = imgm_rating_text(imgm, game.get("reviewCount", 0))
     platforms = ", ".join(game["platforms"])
     genres = ", ".join(game["genres"][:2])
     length = length_text(game.get("timeToBeat"))
-    return f"- [id {game['id']}] {game['title']} ({year}) · {game.get('developer') or '?'} · {platforms} · {genres} · {length} · {rating}"
+    popularity = popularity_text(game.get("ratingCount", 0), game.get("hypes", 0))
+    return f"- [id {game['id']}] {game['title']} ({year}) · {game.get('developer') or '?'} · {platforms} · {genres} · {length} · {popularity} · {rating}"
 
 
 @tool
@@ -235,10 +243,21 @@ WEB_SEARCHES_PER_ANSWER = 2  # Tavily's free tier is 1,000 searches a month
 # Editorial sites, wikis and official stores: better facts, less spam, and less room
 # for a page to smuggle in instructions
 TRUSTED_SITES = [
-    "wikipedia.org", "ign.com", "gamespot.com", "polygon.com", "eurogamer.net",
-    "pcgamer.com", "rockpapershotgun.com", "gamesradar.com", "metacritic.com",
-    "opencritic.com", "howlongtobeat.com", "store.steampowered.com",
-    "playstation.com", "xbox.com", "nintendo.com",
+    "wikipedia.org",
+    "ign.com",
+    "gamespot.com",
+    "polygon.com",
+    "eurogamer.net",
+    "pcgamer.com",
+    "rockpapershotgun.com",
+    "gamesradar.com",
+    "metacritic.com",
+    "opencritic.com",
+    "howlongtobeat.com",
+    "store.steampowered.com",
+    "playstation.com",
+    "xbox.com",
+    "nintendo.com",
 ]
 
 web = TavilySearch(max_results=5, search_depth="basic", include_domains=TRUSTED_SITES)
@@ -259,7 +278,9 @@ def search_web(query: str, messages: Annotated[list, InjectedState("messages")])
     game you want to recommend with search_games. At most 2 web searches per answer."""
     # Enforced here, not just asked for in the prompt: each search costs a credit
     used = sum(
-        1 for m in current_turn(messages) if isinstance(m, ToolMessage) and m.name == "search_web"
+        1
+        for m in current_turn(messages)
+        if isinstance(m, ToolMessage) and m.name == "search_web"
     )
     if used >= WEB_SEARCHES_PER_ANSWER:
         return "Web search limit reached for this answer. Work with what you have."

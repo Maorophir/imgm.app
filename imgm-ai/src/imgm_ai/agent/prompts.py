@@ -60,6 +60,9 @@ Never do more than 2 rounds of search_games.
 - When they named a game, include at least one game from its series or studio, if one fits.
 - Make the 5 varied: different takes on what they want, not five copies of the same game.
 - Never recommend a game the player already reviewed. They have played it.
+- Only games on the player's platforms (a PS4 game counts for PS5, an Xbox One game for Xbox Series X|S).
+- Skip little-known games (under 10 IGDB ratings, unless hyped) and small spin-off, demo or
+  fan-made versions of a game they named (e.g. "Celeste Classic" for a Celeste fan).
 </choosing_the_5>
 
 <evidence_rules>
@@ -135,6 +138,7 @@ Rules:
 - Keep the guide's own words for each "why". Do not add facts.
 - Exactly one game has best_pick = true: the guide's Best Pick.
 - max_hours: decide it from the player's requests below, not from the answer.
+- fit: grade every game severely against the player's requests (see the field's description).
 
 <player_requests>
 {requests}
@@ -165,7 +169,10 @@ def format_preferences(prefs: Preferences) -> str:
 
 def format_rejected(rejected: list[RejectedGame]) -> str:
     """The rejected games as prompt lines, e.g. "- Stardew Valley (id 17000)"."""
-    return "\n".join(f"- {g['title']} (id {g['game_id']})" for g in rejected) or "None yet."
+    return (
+        "\n".join(f"- {g['title']} (id {g['game_id']})" for g in rejected)
+        or "None yet."
+    )
 
 
 def build_system_prompt(prefs: Preferences, rejected: list[RejectedGame] = ()) -> str:

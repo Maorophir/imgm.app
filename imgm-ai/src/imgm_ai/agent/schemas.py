@@ -5,6 +5,8 @@ Pydantic models do two jobs: they tell the model the exact shape to return
 (field descriptions are part of the prompt), and they validate what comes back.
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -19,6 +21,20 @@ class GameCard(BaseModel):
         description="Why this game fits THIS player, in the guide's own words (2-3 sentences)."
     )
     best_pick: bool = Field(description="True for the guide's Best Pick only.")
+    # A severe self-grade (Reflexion's idea, without an extra model call): the check node
+    # sends weak picks back once to be replaced
+    fit: Literal["strong", "weak"] = Field(
+        default="strong",
+        description=(
+            "Be a severe critic. 'weak' if the game does not match what the player asked for "
+            "(mood, difficulty, length, who they play with), or if it is a small spin-off, demo "
+            "or fan-made version of a game they named. Otherwise 'strong'."
+        ),
+    )
+    fit_note: str | None = Field(
+        default=None,
+        description="If weak: one short reason, e.g. 'too easy for \"not easy\"'.",
+    )
 
 
 class Recommendations(BaseModel):

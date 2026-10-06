@@ -279,7 +279,10 @@ export const searchGames = async (query, limit = 12) => {
 
   const body = `search "${escapeSearch(query.trim())}"; ${SEARCH_FIELDS} where cover != null & version_parent = null & game_type = (${REVIEWABLE_GAME_TYPES.join(',')}); limit ${SEARCH_CANDIDATES};`;
   const candidates = await igdbRequest('games', body);
-  const games = rankSearchResults(candidates, query).slice(0, limit).map(mapIgdbGame);
+  // Popularity rides along for Play Next, which uses it to skip tiny fan-made games
+  const games = rankSearchResults(candidates, query)
+    .slice(0, limit)
+    .map((raw) => ({ ...mapIgdbGame(raw), ratingCount: raw.total_rating_count ?? 0, hypes: raw.hypes ?? 0 }));
 
   // How long each one takes (Play Next uses it for "shorter ones please").
   // Search still works if this extra lookup fails.
