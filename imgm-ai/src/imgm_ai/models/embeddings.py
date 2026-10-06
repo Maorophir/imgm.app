@@ -19,6 +19,8 @@ from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_ollama import OllamaEmbeddings
 
+from imgm_ai.models.llm import gemini_tiers
+
 load_dotenv()
 
 # provider → the model it uses. Also used to name vector collections after their
@@ -65,14 +67,46 @@ def embedding_model_name() -> str:
     return EMBEDDING_MODELS[embeddings_provider()]
 
 
+class FallbackEmbeddings(Embeddings):
+    """Tries each client in order (the free key first, then the paid one).
+
+    Safe for embeddings because every client is the SAME model: the vectors are
+    identical whichever key produced them, so the index never mixes models.
+    """
+
+    def __init__(self, clients: list[Embeddings]):
+        self.clients = clients
+
+    def _first_that_works(self, method: str, value):
+        for client in self.clients[:-1]:
+            try:
+                return getattr(client, method)(value)
+            except Exception:  # quota or overload: try the next key
+                continue
+        return getattr(self.clients[-1], method)(value)  # the last one's error is real
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return self._first_that_works("embed_documents", texts)
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._first_that_works("embed_query", text)
+
+
 def get_embeddings() -> Embeddings:
     """The configured embedding model, ready to use."""
     if embeddings_provider() == "gemini":
         # 768 of its 3,072 possible numbers: a recommended size that keeps storage small.
         # TODO (production): gemini-embedding-2 takes task instructions inside the text
         # instead of a task_type; check the docs for the exact format when we switch.
-        return GoogleGenerativeAIEmbeddings(
-            model=EMBEDDING_MODELS["gemini"], output_dimensionality=768
+        return FallbackEmbeddings(
+            [
+                GoogleGenerativeAIEmbeddings(
+                    model=EMBEDDING_MODELS["gemini"],
+                    output_dimensionality=768,
+                    google_api_key=key,
+                )
+                for _tier, key, _models in gemini_tiers()
+            ]
         )
     return PrefixedEmbeddings(
         OllamaEmbeddings(model=EMBEDDING_MODELS["ollama"]),
