@@ -30,3 +30,12 @@ class Recommendations(BaseModel):
         default=None,
         description="The guide's closing question to the player, if it asked one.",
     )
+    # Read from the player's requests (not the answer): the check node enforces it
+    max_hours: float | None = Field(
+        default=None,
+        description=(
+            "Only if the player asked for short or shorter games (e.g. 'shorter ones', "
+            "'something quick', 'I can finish this weekend'): the most hours a game may take "
+            "to beat. Use their number if they gave one, otherwise 10. Otherwise null."
+        ),
+    )

@@ -18,3 +18,12 @@ def search_games(query: str) -> list[dict]:
     response = httpx.get(f"{API_URL}/api/games/search", params={"q": query}, timeout=15)
     response.raise_for_status()  # a 4xx/5xx becomes an exception, which ToolNode reports to the model
     return response.json()
+
+
+def get_game(game_id: int) -> dict | None:
+    """One game with its IMGM rating, through Express (None if it can't be found)."""
+    response = httpx.get(f"{API_URL}/api/games/{game_id}", timeout=15)
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    return response.json()

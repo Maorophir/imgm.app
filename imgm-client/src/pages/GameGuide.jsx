@@ -16,7 +16,7 @@ import RichText from '../components/guide/RichText';
 import { PowerIcon } from '../components/Logo';
 
 
-const GuideTurn = ({ turn, isLatest }) => {
+const GuideTurn = ({ turn, isLatest, onNotForMe, running }) => {
   const [showFull, setShowFull] = useState(false);
   const streaming = turn.status === 'running' && turn.answer;
 
@@ -67,7 +67,7 @@ const GuideTurn = ({ turn, isLatest }) => {
           {/* Small screens: the picks right here, under the answer */}
           {isLatest && (turn.cards || turn.games.length > 0) && (
             <div className="lg:hidden">
-              <GuidePanel turn={turn} />
+              <GuidePanel turn={turn} onNotForMe={onNotForMe} disabled={running} />
             </div>
           )}
         </div>
@@ -78,9 +78,13 @@ const GuideTurn = ({ turn, isLatest }) => {
 
 function GameGuide() {
   const { data: session, isPending } = useSession();
-  const { turns, current, running, ask } = useGameGuide();
-  const [platforms, setPlatforms] = useState([]);
+  const { turns, current, running, ask, notForMe, newChat } = useGameGuide();
+  const [prefs, setPrefs] = useState({}); // the "Tune it" answers (all optional)
   const bottomRef = useRef(null);
+  // Only the questions actually answered are sent (empty lists and un-picks dropped)
+  const preferences = Object.fromEntries(
+    Object.entries(prefs).filter(([, v]) => (Array.isArray(v) ? v.length > 0 : Boolean(v)))
+  );
 
   // Keep the newest activity in view as the guide works
   const activity = current ? `${current.steps.length}-${current.answer.length}-${Boolean(current.cards)}` : '';
@@ -111,36 +115,57 @@ function GameGuide() {
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid lg:grid-cols-[minmax(0,1fr)_420px] gap-8 items-start">
       {/* Chat */}
       <section className="flex flex-col gap-6 min-h-[70vh]">
-        <header>
-          <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
-            Play Next<span className="text-brand">.</span>
-          </h1>
-          <p className="text-slate-400 mt-1">
-            Tell it what you're in the mood for. Watch it dig through your reviews and the IMGM community, live.
-          </p>
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
+              Play Next<span className="text-brand">.</span>
+            </h1>
+            <p className="text-slate-400 mt-1">
+              Tell it what you're in the mood for. Watch it dig through your reviews and the IMGM community, live.
+            </p>
+          </div>
+          {turns.length > 0 && (
+            <button
+              type="button"
+              onClick={newChat}
+              disabled={running}
+              className="px-4 py-2 rounded-xl text-sm font-bold text-white border border-slate-700 hover:border-slate-500 hover:bg-white/5 transition disabled:opacity-40"
+            >
+              + New chat
+            </button>
+          )}
         </header>
 
         <div className="flex-1 flex flex-col gap-8">
           {turns.map((turn) => (
-            <GuideTurn key={turn.id} turn={turn} isLatest={turn === current} />
+            <GuideTurn
+              key={turn.id}
+              turn={turn}
+              isLatest={turn === current}
+              running={running}
+              onNotForMe={(pick) => notForMe(pick, preferences)}
+            />
           ))}
           <div ref={bottomRef} />
         </div>
 
         <div className="sticky bottom-4 rounded-3xl bg-slate-950/90 backdrop-blur p-3 border border-slate-800 shadow-2xl shadow-black/50">
+          {/* key: a fresh chat remounts it, so "Tune it" opens again for the new chat */}
           <GuideComposer
-            onAsk={(question) => ask(question, platforms.length ? { platforms } : {})}
+            key={turns.length === 0 ? 'fresh-chat' : 'chatting'}
+            onAsk={(question) => ask(question, preferences)}
             disabled={running}
-            platforms={platforms}
-            onPlatformsChange={setPlatforms}
+            prefs={prefs}
+            onPrefsChange={setPrefs}
             showStarters={turns.length === 0}
+            followUp={turns.length > 0}
           />
         </div>
       </section>
 
       {/* Side panel (large screens) */}
       <aside className="hidden lg:block sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
-        <GuidePanel turn={current} />
+        <GuidePanel turn={current} onNotForMe={(pick) => notForMe(pick, preferences)} disabled={running} />
       </aside>
     </div>
   );

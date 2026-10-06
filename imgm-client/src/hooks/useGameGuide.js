@@ -1,5 +1,9 @@
 /**
- * useGameGuide — runs Game Guide requests and turns their live events into state.
+ * useGameGuide — runs Play Next requests and turns their live events into state.
+ *
+ * A conversation has one chatId (a random id made here). Every question in it sends
+ * the same id, so the AI remembers what was said: follow-ups and "Not for me" work.
+ * newChat() starts over with a fresh id.
  *
  * Each question is a "turn": { question, steps, games, answer, cards, status, error }.
  *   steps  the timeline ("Asking IMGM players…" → "5 games match")
@@ -12,9 +16,10 @@ import { streamGuide } from '../lib/api';
 
 const STREAM_EVENTS = new Set(['step', 'games', 'token', 'cards', 'done']);
 
-const newTurn = (question) => ({
+const newTurn = (question, kind) => ({
   id: crypto.randomUUID(),
   question,
+  kind, // "ask" or "not_for_me"
   steps: [],
   games: [],
   answer: '',
@@ -30,7 +35,9 @@ const updateLast = (turns, change) => [...turns.slice(0, -1), change(turns.at(-1
 function reducer(turns, action) {
   switch (action.type) {
     case 'start':
-      return [...turns, newTurn(action.question)];
+      return [...turns, newTurn(action.question, action.kind)];
+    case 'reset':
+      return [];
     case 'step':
       return updateLast(turns, (turn) => {
         const exists = turn.steps.some((s) => s.id === action.data.id);
@@ -75,18 +82,20 @@ function reducer(turns, action) {
 export function useGameGuide() {
   const [turns, dispatch] = useReducer(reducer, []);
   const abortRef = useRef(null);
+  const chatIdRef = useRef(crypto.randomUUID());
 
   // Leaving the page stops the request (and the AI run behind it)
   useEffect(() => () => abortRef.current?.abort(), []);
 
-  const ask = useCallback(async (question, preferences = {}) => {
+  // Sends one turn of this chat and feeds its live events into the turns list
+  const run = useCallback(async (label, kind, body) => {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    dispatch({ type: 'start', question });
+    dispatch({ type: 'start', question: label, kind });
     try {
       await streamGuide(
-        { message: question, preferences },
+        { chat_id: chatIdRef.current, ...body },
         {
           signal: controller.signal,
           onEvent: (event, data) => {
@@ -101,6 +110,29 @@ export function useGameGuide() {
     }
   }, []);
 
+  // A question (the first one, or a follow-up like "shorter ones please")
+  const ask = useCallback(
+    (question, preferences = {}) => run(question, 'ask', { message: question, preferences }),
+    [run]
+  );
+
+  // "Not for me" on one card: the AI remembers it for the rest of the chat and swaps it
+  const notForMe = useCallback(
+    (pick, preferences = {}) =>
+      run(`Not for me: ${pick.title}`, 'not_for_me', {
+        not_for_me: { game_id: pick.game_id, title: pick.title },
+        preferences,
+      }),
+    [run]
+  );
+
+  // A fresh conversation: new chat id, empty page
+  const newChat = useCallback(() => {
+    abortRef.current?.abort();
+    chatIdRef.current = crypto.randomUUID();
+    dispatch({ type: 'reset' });
+  }, []);
+
   const current = turns.at(-1) ?? null;
-  return { turns, current, running: current?.status === 'running', ask };
+  return { turns, current, running: current?.status === 'running', ask, notForMe, newChat };
 }

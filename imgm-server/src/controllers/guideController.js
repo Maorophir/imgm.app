@@ -1,5 +1,5 @@
 /**
- * Game Guide — the AI recommendation chat. Express is the gatekeeper: it checks the
+ * Play Next — the AI recommendation chat. Express is the gatekeeper: it checks the
  * login, then forwards the request to the AI service with the player's id and the
  * shared secret, and streams the AI's live events straight back to the browser.
  */
@@ -7,11 +7,18 @@ import { Readable } from 'node:stream';
 import { z } from 'zod';
 import { aiServiceUrl, internalApiKey } from '../lib/config.js';
 
-const guideSchema = z.object({
-  message: z.string().trim().min(1).max(1000),
-  // The AI service validates the exact shape (platforms, moods, …)
-  preferences: z.record(z.string(), z.any()).default({}),
-});
+const guideSchema = z
+  .object({
+    // The page's id for this conversation. The AI service files the chat under the
+    // logged-in player's id + this, so it can only ever reach the player's own chats.
+    chat_id: z.string().regex(/^[A-Za-z0-9-]{8,64}$/),
+    message: z.string().trim().min(1).max(1000).optional(),
+    // "Not for me" on one card: it's remembered for the rest of the chat
+    not_for_me: z.object({ game_id: z.int().positive(), title: z.string().trim().min(1).max(200) }).optional(),
+    // The AI service validates the exact shape (platforms, moods, …)
+    preferences: z.record(z.string(), z.any()).default({}),
+  })
+  .refine((body) => body.message || body.not_for_me, { message: 'Send a message or a "not for me".' });
 
 // POST /api/guide/stream — answers with Server-Sent Events (see imgm-ai/src/imgm_ai/server.py)
 export const streamGuide = async (req, res) => {
@@ -39,12 +46,12 @@ export const streamGuide = async (req, res) => {
     });
   } catch (error) {
     if (upstreamAbort.signal.aborted) return;
-    console.error('Game Guide service unreachable:', error.message);
+    console.error('Play Next service unreachable:', error.message);
     return res.status(503).json({ error: 'Play Next is offline right now. Please try again later.' });
   }
 
   if (!upstream.ok || !upstream.body) {
-    console.error('Game Guide service error:', upstream.status);
+    console.error('Play Next service error:', upstream.status);
     return res.status(502).json({ error: 'Play Next is unavailable right now. Please try again later.' });
   }
 

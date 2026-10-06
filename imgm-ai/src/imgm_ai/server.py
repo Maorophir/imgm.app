@@ -1,9 +1,13 @@
 """
-The IMGM AI web service: streams the Game Guide's work to the website, live.
+The IMGM AI web service: streams Play Next's work to the website, live.
 
 Only Express calls this service. Express checks the login and passes the player's
 id in X-User-Id, together with the shared secret INTERNAL_API_KEY in X-Internal-Key.
 The browser never talks to it directly, so it can never choose whose data is used.
+
+Conversations: the page sends a chat_id (a random id it made). The saved chat is
+filed under "<user id>:<chat_id>", and the user id comes from Express (the login),
+so a player can only ever reach their own chats, even with someone else's chat_id.
 
 Run from imgm-ai/:
     uv run uvicorn imgm_ai.server:app --port 8000 --reload
@@ -15,7 +19,7 @@ POST /guide/stream answers with Server-Sent Events (SSE), in this order:
     token    {message_id, text}           the answer streaming in, word by word
     cards    {intro, games, follow_up}    the final 5 picks, ready to show
     done     {problems}                   the run finished
-    error    {message}                    something broke
+    error    {message, code?}             something broke (code "chat_full": start a new chat)
 """
 
 import json
@@ -25,20 +29,40 @@ import secrets
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
-from langchain_core.messages import AIMessageChunk, HumanMessage
-from pydantic import BaseModel, Field
+from langchain_core.messages import AIMessageChunk
+from pydantic import BaseModel, Field, model_validator
 
 from imgm_ai.agent.graph import graph
-from imgm_ai.agent.state import Preferences
-from imgm_ai.models.llm import get_model
+from imgm_ai.agent.nodes import is_player_question
+from imgm_ai.agent.state import Preferences, new_turn, not_for_me_turn
+from imgm_ai.data import imgm_api
+from imgm_ai.models.llm import model_names
 
 log = logging.getLogger("imgm_ai.server")
 app = FastAPI(title="IMGM AI")
 
 
+MAX_QUESTIONS_PER_CHAT = 20  # then the player starts a new chat (keeps memory bounded)
+
+
+class NotForMe(BaseModel):
+    """The player rejected one card."""
+
+    game_id: int = Field(gt=0)
+    title: str = Field(min_length=1, max_length=200)
+
+
 class GuideRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=1000)
+    chat_id: str = Field(pattern=r"^[A-Za-z0-9-]{8,64}$")  # made by the page, one per chat
+    message: str | None = Field(default=None, min_length=1, max_length=1000)
+    not_for_me: NotForMe | None = None
     preferences: Preferences = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def needs_a_message_or_a_rejection(self) -> "GuideRequest":
+        if not self.message and not self.not_for_me:
+            raise ValueError("Send a message or a 'not for me'.")
+        return self
 
 
 def check_internal_key(key: str | None) -> None:
@@ -62,6 +86,7 @@ def step_label(call: dict) -> str:
         "search_imgm_reviews": f"Asking IMGM players about “{query}”",
         "search_games": f"Checking {query}",
         "get_game_profile": "Reading what IMGM players think",
+        "search_web": f"Searching the web for “{query}”",
     }.get(call["name"], "Working")
 
 
@@ -72,12 +97,35 @@ def step_detail(tool: str, result: str) -> str:
         return f"Read {len(hits)} of your reviews" if hits else "No reviews to read yet"
     if tool == "search_imgm_reviews":
         return f"{len(hits)} games match" if hits else "No matching reviews yet"
+    if tool == "search_web":
+        if "limit reached" in result:
+            return "Web search limit reached"
+        return f"Read {len(hits)} pages" if hits else "Nothing useful found"
     if tool == "search_games":
         if not hits:
             return "Not found"
         # "- [id 113112] Hades (2020) · Supergiant ..." → "Found Hades (2020)"
         return "Found " + hits[0].split("] ", 1)[1].split(" · ")[0]
     return result.splitlines()[0] if result else "Done"
+
+
+def game_tile_from_imgm(game_id: int) -> dict:
+    """Cover, year, platforms and IMGM rating for a card, from Express ({} if unavailable)."""
+    try:
+        game = imgm_api.get_game(game_id)
+    except Exception:
+        log.warning("Couldn't load game %s for its card", game_id)
+        return {}
+    if not game:
+        return {}
+    rating = (game.get("ratings") or {}).get("imgm")
+    return {
+        "cover": game.get("coverUrl"),
+        "year": (game.get("releaseDate") or "")[:4] or None,
+        "platforms": game.get("platforms", []),
+        "rating": rating,
+        "review_count": len(game.get("reviews", [])),
+    }
 
 
 def sse(event: str, data: dict) -> str:
@@ -90,11 +138,34 @@ def sse(event: str, data: dict) -> str:
 
 def guide_events(request: GuideRequest, user_id: str | None):
     """Run the agent and yield its work as SSE events, as it happens."""
-    config = {"configurable": {"user_id": user_id}, "recursion_limit": 40}
-    inputs = {
-        "messages": [HumanMessage(content=request.message)],
-        "preferences": request.preferences,
+    # The saved chat is filed under the logged-in player's id + the page's chat id,
+    # so nobody can load another player's conversation (see the module docstring)
+    config = {
+        "configurable": {
+            "user_id": user_id,
+            "thread_id": f"{user_id or 'guest'}:{request.chat_id}",
+        },
+        "recursion_limit": 40,
     }
+
+    # Long chats are cut off: memory and context stay bounded
+    saved = graph.get_state(config).values.get("messages", [])
+    if sum(is_player_question(m) for m in saved) >= MAX_QUESTIONS_PER_CHAT:
+        yield sse("start", {})
+        yield sse(
+            "error",
+            {
+                "message": f"This chat is full ({MAX_QUESTIONS_PER_CHAT} questions). Start a new chat to keep going.",
+                "code": "chat_full",
+            },
+        )
+        return
+
+    if request.not_for_me:
+        inputs = not_for_me_turn(request.not_for_me.game_id, request.not_for_me.title)
+        inputs["preferences"] = request.preferences
+    else:
+        inputs = new_turn(request.message, request.preferences)
 
     tools_by_call = {}  # tool_call_id → tool name, to label the "done" step
     games = {}  # game id → tile info (cover, platforms, rating), for the final cards
@@ -213,6 +284,10 @@ def guide_events(request: GuideRequest, user_id: str | None):
                         )
 
         if recommendations:
+            # A card kept from an earlier turn has no tile from this run: look it up
+            for card in recommendations.games:
+                if not games.get(card.game_id, {}).get("cover"):
+                    games[card.game_id] = {**game_tile_from_imgm(card.game_id), **games.get(card.game_id, {})}
             cards = [
                 {**games.get(card.game_id, {}), **card.model_dump()}
                 for card in recommendations.games
@@ -227,10 +302,8 @@ def guide_events(request: GuideRequest, user_id: str | None):
             )
         yield sse("done", {"problems": problems})
     except Exception:
-        log.exception("Game Guide run failed")
-        yield sse(
-            "error", {"message": "The guide ran into a problem. Please try again."}
-        )
+        log.exception("Play Next run failed")
+        yield sse("error", {"message": "Play Next ran into a problem. Please try again."})
 
 
 # ── Routes ───────────────────────────────────────────────
@@ -239,7 +312,8 @@ def guide_events(request: GuideRequest, user_id: str | None):
 @app.get("/health")
 def health() -> dict:
     """For uptime checks."""
-    return {"ok": True, "model": getattr(get_model(), "model", "?")}
+    main, *fallbacks = model_names()
+    return {"ok": True, "model": main, "fallbacks": fallbacks}
 
 
 @app.post("/guide/stream")
@@ -248,7 +322,7 @@ def guide_stream(
     x_user_id: str | None = Header(default=None),
     x_internal_key: str | None = Header(default=None),
 ) -> StreamingResponse:
-    """Run the Game Guide for one message and stream its work (see the module docstring)."""
+    """Run Play Next for one message and stream its work (see the module docstring)."""
     check_internal_key(x_internal_key)
     return StreamingResponse(
         guide_events(request, x_user_id),

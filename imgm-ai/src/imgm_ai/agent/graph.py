@@ -14,6 +14,7 @@ State (state.py): messages, preferences, recommendations, check_problems, fix_at
 from langgraph.graph import END, START, StateGraph
 from langgraph.prebuilt import ToolNode, tools_condition
 
+from imgm_ai.agent.memory import make_checkpointer
 from imgm_ai.agent.nodes import (
     AGENT,
     CHECK,
@@ -44,4 +45,5 @@ builder.add_edge(TOOLS_NODE, AGENT)  # the loop: after the tools, the agent look
 builder.add_edge(FORMAT, CHECK)
 builder.add_conditional_edges(CHECK, route_after_check, [AGENT, END])
 
-graph = builder.compile()
+# Memory: the checkpointer saves the state after every step, per thread_id (memory.py)
+graph = builder.compile(checkpointer=make_checkpointer())

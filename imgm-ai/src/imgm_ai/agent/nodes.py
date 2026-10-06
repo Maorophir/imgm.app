@@ -5,20 +5,26 @@ the checker (plain code that enforces the rules a prompt can only ask for).
 
 import re
 
-from langchain_core.messages import HumanMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END
 
 from imgm_ai.agent.prompts import FORMAT_PROMPT, build_system_prompt
 from imgm_ai.agent.schemas import Recommendations
-from imgm_ai.agent.state import RecommenderState
+from imgm_ai.agent.state import (
+    CHECK_FEEDBACK,
+    GAME_LENGTH_TEXT,
+    RecommenderState,
+    fits_length,
+    is_player_question,
+)
 from imgm_ai.agent.tools import TOOLS
 from imgm_ai.data.db import load_player_game_ids
 from imgm_ai.models.llm import get_model
 
 # Created once, and told which tools exist. Without bind_tools the model
 # can't ask for them.
-model = get_model().bind_tools(TOOLS)
+model = get_model(lambda m: m.bind_tools(TOOLS))
 
 AGENT = "agent"
 # Must be exactly "tools": that's the name tools_condition routes to
@@ -30,7 +36,7 @@ GAMES_PER_ANSWER = 5
 MAX_FIX_ATTEMPTS = 2  # how many times the agent may be sent back to fix its answer
 
 # The format node needs no tools: it only reshapes the answer into Recommendations
-formatter = get_model().with_structured_output(Recommendations)
+formatter = get_model(lambda m: m.with_structured_output(Recommendations))
 
 
 def call_model(state: RecommenderState) -> dict:
@@ -41,9 +47,35 @@ def call_model(state: RecommenderState) -> dict:
     conversation and the prompt can change without touching old chats.
     The reply is either an answer or a request for tools (tool_calls).
     """
-    system = SystemMessage(content=build_system_prompt(state.get("preferences", {})))
-    response = model.invoke([system] + state["messages"])
+    system = SystemMessage(
+        content=build_system_prompt(state.get("preferences", {}), state.get("rejected", []))
+    )
+    response = model.invoke([system] + model_context(state["messages"]))
     return {"messages": [response]}  # just the new message: add_messages appends it
+
+
+def model_context(messages: list) -> list:
+    """What the agent sees: past turns condensed, the current turn in full.
+
+    The state keeps everything (the checkpointer saves it all), but old tool calls,
+    tool results and check feedback are clutter for the next question: they slow
+    every model call down and pull a small model off topic. So each past turn is
+    shown as just the player's question + the agent's final answer.
+    """
+    starts = [i for i, message in enumerate(messages) if is_player_question(message)]
+    if len(starts) <= 1:
+        return messages  # first turn: nothing to condense
+
+    context = []
+    for begin, end in zip(starts, starts[1:]):  # every finished turn
+        turn = messages[begin:end]
+        context.append(turn[0])  # the player's question
+        answers = [
+            m for m in turn if isinstance(m, AIMessage) and not m.tool_calls and m.text.strip()
+        ]
+        if answers:
+            context.append(answers[-1])  # the final (possibly fixed) answer
+    return context + messages[starts[-1] :]  # the current turn, untouched
 
 
 def verified_games(messages: list) -> dict[int, str]:
@@ -60,6 +92,12 @@ def verified_games(messages: list) -> dict[int, str]:
     return games
 
 
+def game_hours(search_line: str) -> float | None:
+    """The hours to beat in a search_games line ("… about 2.5h to beat …"), or None."""
+    match = re.search(r"about ([\d.]+)h to beat", search_line)
+    return float(match.group(1)) if match else None
+
+
 def format_answer(state: RecommenderState) -> dict:
     """The format node: the guide's written answer → structured cards (Recommendations).
 
@@ -68,21 +106,31 @@ def format_answer(state: RecommenderState) -> dict:
     """
     answer = state["messages"][-1].text
     verified = "\n".join(verified_games(state["messages"]).values()) or "(none)"
-    prompt = FORMAT_PROMPT.format(answer=answer, verified_games=verified)
+    # What the player asked for in this conversation (e.g. "shorter ones please"),
+    # so the formatter can tell the check about a length limit
+    requests = "\n".join(f"- {m.text}" for m in state["messages"] if is_player_question(m))
+    prompt = FORMAT_PROMPT.format(answer=answer, verified_games=verified, requests=requests)
     return {"recommendations": formatter.invoke([HumanMessage(content=prompt)])}
 
 
 def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
     """The check node: plain code that enforces the rules a prompt can only ask for.
 
-    5 different games, each verified by search_games, none already played, and
-    exactly one Best Pick. Problems go back to the agent as a message to fix.
+    5 different games, each verified by search_games, none already played, none the
+    player rejected, none longer than the player asked for (max_hours), and exactly
+    one Best Pick. Problems go back to the agent as a message to fix.
     """
     recommendations = state.get("recommendations")
     games = recommendations.games if recommendations else []
     verified = verified_games(state["messages"])
     user_id = config.get("configurable", {}).get("user_id")
     played = set(load_player_game_ids(user_id)) if user_id else set()
+    rejected = {game["game_id"] for game in state.get("rejected", [])}
+    lengths = state.get("preferences", {}).get("game_length") or []  # their Tune it picks
+    if isinstance(lengths, str):  # chats saved before it became a list
+        lengths = [lengths]
+    wanted = " or ".join(GAME_LENGTH_TEXT[length] for length in lengths)
+    max_hours = recommendations.max_hours if recommendations else None  # "shorter ones"
 
     problems = []
     if len(games) != GAMES_PER_ANSWER:
@@ -97,12 +145,28 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
             problems.append(f"{game.title} was not verified with search_games.")
         if game.game_id in played:
             problems.append(f"The player already reviewed {game.title}: replace it.")
+        if game.game_id in rejected:
+            problems.append(f"The player said 'Not for me' to {game.title}: replace it.")
+        # Length: the player's limits (their game_length answers, or what they asked
+        # for in words), checked against the real hours from search_games
+        hours = game_hours(verified.get(game.game_id, ""))
+        if hours and not fits_length(hours, lengths):
+            problems.append(
+                f"{game.title} takes about {hours:g}h to beat, but the player wants "
+                f"{wanted} games: replace it with one that fits."
+            )
+        if hours and max_hours and hours > max_hours:
+            problems.append(
+                f"{game.title} takes about {hours:g}h to beat, but the player wants games "
+                f"under {max_hours:g}h: replace it with a shorter one."
+            )
     if sum(game.best_pick for game in games) != 1:
         problems.append("Mark exactly one game as the Best Pick.")
 
     attempts = state.get("fix_attempts", 0)
     if problems and attempts < MAX_FIX_ATTEMPTS:
         feedback = HumanMessage(
+            name=CHECK_FEEDBACK,
             content="[Automatic check] Your answer has problems:\n- "
             + "\n- ".join(problems)
             + "\nFix them (verify new games with search_games if needed), then write the full answer again."

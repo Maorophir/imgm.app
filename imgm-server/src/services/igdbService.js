@@ -248,6 +248,28 @@ const rankSearchResults = (games, query) => {
     .map(({ game }) => game);
 };
 
+// IGDB stores times in seconds; we show hours with one decimal (9000 → 2.5)
+const toHours = (seconds) => (seconds ? Math.round(seconds / 360) / 10 : null);
+
+/**
+ * How long games take to beat, from IGDB players' reports, for many games in ONE
+ * request: Map id → { normal, rushed, completionist, reports } (hours). Games nobody
+ * has reported are simply missing from the map.
+ */
+export const getTimesToBeat = async (ids) => {
+  if (ids.length === 0) return new Map();
+  const rows = await igdbRequest(
+    'game_time_to_beats',
+    `fields game_id, hastily, normally, completely, count; where game_id = (${ids.join(',')}); limit ${ids.length};`
+  );
+  return new Map(
+    rows.map((row) => [
+      row.game_id,
+      { normal: toHours(row.normally), rushed: toHours(row.hastily), completionist: toHours(row.completely), reports: row.count ?? 0 },
+    ])
+  );
+};
+
 export const searchGames = async (query, limit = 12) => {
   const key = `${query.trim().toLowerCase()}|${limit}`;
   const cached = searchCache.get(key);
@@ -257,7 +279,15 @@ export const searchGames = async (query, limit = 12) => {
 
   const body = `search "${escapeSearch(query.trim())}"; ${SEARCH_FIELDS} where cover != null & version_parent = null & game_type = (${REVIEWABLE_GAME_TYPES.join(',')}); limit ${SEARCH_CANDIDATES};`;
   const candidates = await igdbRequest('games', body);
-  const results = rankSearchResults(candidates, query).slice(0, limit).map(mapIgdbGame);
+  const games = rankSearchResults(candidates, query).slice(0, limit).map(mapIgdbGame);
+
+  // How long each one takes (Play Next uses it for "shorter ones please").
+  // Search still works if this extra lookup fails.
+  const times = await getTimesToBeat(games.map((game) => game.id)).catch((error) => {
+    console.error('Time-to-beat lookup failed:', error.message);
+    return new Map();
+  });
+  const results = games.map((game) => ({ ...game, timeToBeat: times.get(game.id) ?? null }));
 
   searchCache.set(key, { expiresAt: Date.now() + SEARCH_CACHE_TTL, results });
   return results;

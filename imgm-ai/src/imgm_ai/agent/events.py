@@ -30,5 +30,6 @@ def game_tile(game: dict, *, source: str) -> dict:
         # Unknown values stay None (not 0), so merging tiles never overwrites a real count
         "rating": game.get("rating"),  # IMGM average
         "review_count": game.get("review_count"),
+        "hours": game.get("hours"),  # normal time to beat, from IGDB (None = unknown)
         "source": source,  # "reviews" (found through IMGM reviews) or "catalog" (checked in IGDB)
     }

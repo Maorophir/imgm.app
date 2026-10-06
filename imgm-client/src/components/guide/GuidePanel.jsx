@@ -21,12 +21,11 @@ const ConsideringTile = ({ game }) => (
   </div>
 );
 
-const GuidePanel = ({ turn }) => {
+const GuidePanel = ({ turn, onNotForMe, disabled }) => {
   // Nothing asked yet: a quiet preview of what will appear here
   if (!turn) {
     return (
       <div className="rounded-3xl border border-dashed border-slate-700 p-6 text-center">
-        <p className="text-4xl mb-3" aria-hidden="true">🎯</p>
         <p className="font-bold text-white">Your picks will appear here</p>
         <p className="text-sm text-slate-400 mt-1">
           Five games chosen for you, with a Best Pick and exactly why each one fits.
@@ -41,7 +40,7 @@ const GuidePanel = ({ turn }) => {
       <div className="flex flex-col gap-3">
         <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Your 5 picks</h2>
         {picks.map((pick, i) => (
-          <PickCard key={pick.game_id} pick={pick} rank={i + 1} />
+          <PickCard key={pick.game_id} pick={pick} rank={i + 1} onNotForMe={onNotForMe} disabled={disabled} />
         ))}
       </div>
     );

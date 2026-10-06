@@ -104,7 +104,7 @@ const Home = () => {
         </h2>
         
         <p className="text-2xl text-slate-200 mb-8 max-w-2xl font-light drop-shadow-md">
-          The next-generation game database. 
+          Rate what you play. Discover what's next. 
         </p>
 
         {/* Small preview card for the currently featured game */}

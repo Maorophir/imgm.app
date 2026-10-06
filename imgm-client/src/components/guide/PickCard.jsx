@@ -1,6 +1,7 @@
 /**
  * PickCard — one recommended game. The Best Pick gets the big Legendary-style card;
  * the other four are compact rows. Every card links to the game's IMGM page.
+ * With onNotForMe, each card also gets a "Not for me" button (swaps that game out).
  */
 import { Link } from 'react-router-dom';
 import { getRarity } from '../reviewQuest/questOptions';
@@ -24,20 +25,43 @@ const Cover = ({ src, title, className }) =>
   src ? (
     <img src={src} alt={`${title} cover`} loading="lazy" className={`object-cover bg-slate-800 ${className}`} />
   ) : (
-    <div className={`bg-slate-800 flex items-center justify-center text-2xl ${className}`} aria-hidden="true">🎮</div>
+    <div className={`bg-slate-800 ${className}`} aria-hidden="true" />
   );
+
+// "~2.5h to beat" (normal playthrough, from IGDB player reports)
+const hoursText = (hours) => (hours ? `~${hours}h to beat` : null);
 
 const platformsText = (platforms = []) =>
   platforms.length > 3 ? `${platforms.slice(0, 3).join(' · ')} +${platforms.length - 3}` : platforms.join(' · ');
 
-const PickCard = ({ pick, rank }) => {
+// Sits on top of the card's link, so it must stop the click from opening the game
+const NotForMeButton = ({ pick, onNotForMe, disabled }) => (
+  <button
+    type="button"
+    disabled={disabled}
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onNotForMe(pick);
+    }}
+    title={`Not for me: swap ${pick.title} for something else`}
+    className="absolute top-2 right-2 z-10 px-2 py-1 rounded-lg text-[11px] font-bold text-slate-300 bg-slate-950/80 border border-slate-700 hover:text-white hover:border-red-400/70 transition disabled:opacity-40 disabled:cursor-not-allowed"
+  >
+    ✕ Not for me
+  </button>
+);
+
+const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
+  const notForMe = onNotForMe && <NotForMeButton pick={pick} onNotForMe={onNotForMe} disabled={disabled} />;
+
   if (pick.best_pick) {
     return (
       <Link
         to={`/game/${pick.game_id}`}
-        className="rarity-frame is-legendary block animate-fade-in hover:scale-[1.01] transition"
+        className="relative rarity-frame is-legendary block animate-fade-in hover:scale-[1.01] transition"
         style={{ '--rc': '#fbbf24' }}
       >
+        {notForMe}
         <article className="rounded-[17px] bg-slate-900 overflow-hidden flex gap-4 p-4">
           <Cover src={pick.cover} title={pick.title} className="w-28 h-40 rounded-xl shrink-0" />
           <div className="min-w-0 flex flex-col gap-1.5">
@@ -46,7 +70,7 @@ const PickCard = ({ pick, rank }) => {
             </span>
             <h3 className="text-xl font-black text-white leading-tight">{pick.title}</h3>
             <p className="text-xs text-slate-400">
-              {[pick.year, platformsText(pick.platforms)].filter(Boolean).join(' · ')}
+              {[pick.year, hoursText(pick.hours), platformsText(pick.platforms)].filter(Boolean).join(' · ')}
             </p>
             <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
             <p className="text-sm text-slate-200 leading-relaxed mt-1"><RichText text={pick.why} /></p>
@@ -59,15 +83,20 @@ const PickCard = ({ pick, rank }) => {
   return (
     <Link
       to={`/game/${pick.game_id}`}
-      className="flex gap-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-brand/60 transition animate-fade-in"
+      className="relative flex gap-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-brand/60 transition animate-fade-in"
     >
+      {notForMe}
       <Cover src={pick.cover} title={pick.title} className="w-14 h-20 rounded-lg shrink-0" />
       <div className="min-w-0 flex flex-col gap-1">
-        <h3 className="font-bold text-white leading-tight">
+        {/* pr-24 keeps long titles clear of the "Not for me" button */}
+        <h3 className={`font-bold text-white leading-tight ${onNotForMe ? 'pr-24' : ''}`}>
           <span className="text-slate-500 mr-1.5 tabular-nums">{rank}.</span>
           {pick.title}
         </h3>
-        <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
+        <span className="flex flex-wrap items-center gap-x-2">
+          <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
+          {hoursText(pick.hours) && <span className="text-xs text-slate-400">· {hoursText(pick.hours)}</span>}
+        </span>
         <p className="text-sm text-slate-300 leading-snug line-clamp-3"><RichText text={pick.why} /></p>
       </div>
     </Link>
