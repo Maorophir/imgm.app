@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 
 // Layout components
 import Navbar from './components/Navbar';
@@ -62,6 +63,8 @@ function App() {
         </Routes>
         </GamerTagGate>
       </div>
+      {/* Vercel Web Analytics: visitors and page views, cookieless (only counts on Vercel) */}
+      <Analytics />
     </Router>
   );
 }
