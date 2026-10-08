@@ -8,11 +8,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
-import { useGameGuide } from '../hooks/useGameGuide';
+import { useGameGuide, MAX_QUESTIONS } from '../hooks/useGameGuide';
 import { wakeGuide } from '../lib/api';
 import GuideTimeline from '../components/guide/GuideTimeline';
 import GuidePanel from '../components/guide/GuidePanel';
 import GuideComposer from '../components/guide/GuideComposer';
+import ChatHistory from '../components/guide/ChatHistory';
 import RichText from '../components/guide/RichText';
 import { PowerIcon } from '../components/Logo';
 
@@ -117,18 +118,10 @@ function GameGuide() {
   return <PlayNextChat key={session.user.id} userId={session.user.id} />;
 }
 
-// The "Tune it" answers, kept in the tab next to the chat (see useGameGuide)
-const loadPrefs = (userId) => {
-  try {
-    return JSON.parse(sessionStorage.getItem(`imgm:play-next:${userId}:prefs`)) || {};
-  } catch {
-    return {};
-  }
-};
-
 function PlayNextChat({ userId }) {
-  const { turns, current, running, ask, notForMe, newChat } = useGameGuide(userId);
-  const [prefs, setPrefs] = useState(() => loadPrefs(userId)); // the "Tune it" answers (all optional)
+  const guide = useGameGuide(userId);
+  const { chatId, turns, current, running, full, prefs, setPrefs, ask, notForMe, newChat } = guide;
+  const [historyOpen, setHistoryOpen] = useState(false); // smaller screens: the chats list
   const bottomRef = useRef(null);
   // Only the questions actually answered are sent (empty lists and un-picks dropped)
   const preferences = Object.fromEntries(
@@ -140,22 +133,34 @@ function PlayNextChat({ userId }) {
     wakeGuide();
   }, []);
 
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(`imgm:play-next:${userId}:prefs`, JSON.stringify(prefs));
-    } catch {
-      // Blocked storage: the answers just won't survive leaving the page
-    }
-  }, [userId, prefs]);
-
   // Keep the newest activity in view as the guide works
   const activity = current ? `${current.steps.length}-${current.answer.length}-${Boolean(current.cards)}` : '';
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [activity]);
 
+  const history = (
+    <ChatHistory
+      chats={guide.chats}
+      activeId={chatId}
+      disabled={running}
+      onNew={() => {
+        newChat();
+        setHistoryOpen(false);
+      }}
+      onOpen={(id) => {
+        guide.openChat(id).catch(() => {});
+        setHistoryOpen(false);
+      }}
+      onDelete={guide.deleteChat}
+    />
+  );
+
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid lg:grid-cols-[minmax(0,1fr)_420px] gap-8 items-start">
+    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-8 grid lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-8 items-start">
+      {/* Chat history (wide screens) */}
+      <aside className="hidden xl:block sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">{history}</aside>
+
       {/* Chat */}
       <section className="flex flex-col gap-6 min-h-[70vh]">
         <header className="flex flex-wrap items-start justify-between gap-3">
@@ -167,17 +172,19 @@ function PlayNextChat({ userId }) {
               Tell it what you're in the mood for. Watch it dig through your reviews and the IMGM community, live.
             </p>
           </div>
-          {turns.length > 0 && (
-            <button
-              type="button"
-              onClick={newChat}
-              disabled={running}
-              className="px-4 py-2 rounded-xl text-sm font-bold text-white border border-slate-700 hover:border-slate-500 hover:bg-white/5 transition disabled:opacity-40"
-            >
-              + New chat
-            </button>
-          )}
+          {/* Smaller screens: the chats list opens here */}
+          <button
+            type="button"
+            onClick={() => setHistoryOpen((open) => !open)}
+            aria-expanded={historyOpen}
+            className="xl:hidden px-4 py-2 rounded-xl text-sm font-bold text-white border border-slate-700 hover:border-slate-500 hover:bg-white/5 transition"
+          >
+            Your chats {historyOpen ? '▴' : '▾'}
+          </button>
         </header>
+        {historyOpen && (
+          <div className="xl:hidden rounded-2xl border border-slate-800 bg-slate-900/60 p-3 animate-fade-in">{history}</div>
+        )}
 
         <div className="flex-1 flex flex-col gap-8">
           {turns.map((turn) => (
@@ -193,11 +200,20 @@ function PlayNextChat({ userId }) {
         </div>
 
         <div className="sticky bottom-4 rounded-3xl bg-slate-950/90 backdrop-blur p-3 border border-slate-800 shadow-2xl shadow-black/50">
-          {/* key: a fresh chat remounts it, so "Tune it" opens again for the new chat */}
+          {full && (
+            <p className="px-2 pb-3 text-sm text-slate-300">
+              This chat is full ({MAX_QUESTIONS} questions).{' '}
+              <button type="button" onClick={newChat} className="font-bold text-brand hover:underline">
+                Start a new chat
+              </button>{' '}
+              to keep going.
+            </p>
+          )}
+          {/* key: another chat (or a fresh one) remounts it, so "Tune it" shows that chat's state */}
           <GuideComposer
-            key={turns.length === 0 ? 'fresh-chat' : 'chatting'}
+            key={`${chatId}-${turns.length === 0 ? 'fresh' : 'chatting'}`}
             onAsk={(question) => ask(question, preferences)}
-            disabled={running}
+            disabled={running || full}
             prefs={prefs}
             onPrefsChange={setPrefs}
             showStarters={turns.length === 0}

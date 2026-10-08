@@ -65,6 +65,12 @@ export const getMyProgress = (signal) => fetchJson('/api/users/me/progress', { s
  * Events; each one is handed to onEvent(name, data) the moment it arrives.
  * (The browser's EventSource can't send a POST body, so the stream is read by hand.)
  */
+// Play Next chat history (the player's own chats; see playNextChatsController.js)
+export const listGuideChats = (signal) => fetchJson('/api/guide/chats', { signal });
+export const getGuideChat = (id) => fetchJson(`/api/guide/chats/${id}`);
+export const saveGuideChat = (id, chat) => fetchJson(`/api/guide/chats/${id}`, { method: 'PUT', body: chat });
+export const deleteGuideChat = (id) => fetchJson(`/api/guide/chats/${id}`, { method: 'DELETE' });
+
 // Play Next page opened: wake the AI service so the first answer starts sooner
 export const wakeGuide = () => fetchJson('/api/guide/wake', { method: 'POST' }).catch(() => {});
 

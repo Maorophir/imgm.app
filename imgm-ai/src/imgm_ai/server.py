@@ -78,7 +78,7 @@ async def lifespan(_app):
 app = FastAPI(title="IMGM AI", lifespan=lifespan)
 
 
-MAX_QUESTIONS_PER_CHAT = 20  # then the player starts a new chat (keeps memory bounded)
+MAX_QUESTIONS_PER_CHAT = 10  # then the player starts a new chat (keeps memory bounded)
 
 
 class NotForMe(BaseModel):
@@ -394,6 +394,26 @@ def guide_stream(
         # No caching or proxy buffering: each event must reach the browser immediately
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Chat history (called by Express, never by browsers) ──
+
+CHAT_ID = re.compile(r"^[A-Za-z0-9-]{8,64}$")
+
+
+@app.delete("/chats/{chat_id}")
+def forget_chat(
+    chat_id: str,
+    x_user_id: str | None = Header(default=None),
+    x_internal_key: str | None = Header(default=None),
+) -> dict:
+    """The player deleted a chat (or it fell out of their 20): forget it here too."""
+    check_internal_key(x_internal_key)
+    if not x_user_id or not CHAT_ID.match(chat_id):
+        raise HTTPException(status_code=400, detail="Invalid chat")
+    # The same thread id guide_events files the chat under
+    graph.checkpointer.delete_thread(f"{x_user_id}:{chat_id}")
+    return {"deleted": chat_id}
 
 
 # ── Review index (called by Express, never by browsers) ──

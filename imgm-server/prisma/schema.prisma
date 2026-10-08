@@ -32,6 +32,7 @@ model User {
   
   // Custom IMGM relations
   reviews       Review[]
+  playNextChats PlayNextChat[]
 }
 
 model Session {
@@ -196,4 +197,23 @@ model GameAISummary {
   game                   Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
   
   generatedAt            DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// Play Next chat history (what the page shows; the AI service keeps its own memory
+// of each chat under the same ids). 20 per player, deleted after 30 days.
+// -----------------------------------------------------------------------------
+
+model PlayNextChat {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   // the page's chat id; unique per player, so ids can't collide across players
+  title     String   // the chat's first question
+  turns     Json     // the turns as the page shows them (question, steps, answer, cards)
+  prefs     Json     @default("{}") // this chat's "Tune it" answers, restored when it's reopened
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, id])
+  @@index([userId, updatedAt])
 }

@@ -17,6 +17,8 @@ app.use(cors({
   origin: clientOrigins,
   credentials: true
 }));
+// A saved Play Next chat (up to 10 answers with their picks) can pass the default 100 KB
+app.use('/api/guide/chats', express.json({ limit: '400kb' }));
 app.use(express.json());
 
 // Import routes

@@ -1,13 +1,17 @@
 /**
  * useGameGuide — runs Play Next requests and turns their live events into state.
  *
- * A conversation has one chatId (a random id made here). Every question in it sends
- * the same id, so the AI remembers what was said: follow-ups and "Not for me" work.
- * newChat() starts over with a fresh id.
+ * A chat is { chatId, turns, prefs }: a random id made here, its questions and
+ * answers, and its own "Tune it" answers. Every question sends the same id, so the
+ * AI remembers what was said: follow-ups and "Not for me" work.
+ *   newChat()    a fresh id, no turns, no tuning
+ *   openChat(id) a past chat from the history, with the tuning it had
  *
- * The chat is kept in this browser tab (sessionStorage, per player), so opening a
- * picked game and coming back finds it where you left it. The AI remembers it too
- * (by the same chatId), so follow-ups keep working. Closing the tab forgets it.
+ * Where it's kept:
+ *   this browser tab (sessionStorage): the open chat, so visiting a picked game and
+ *     coming back finds it exactly where you left it, even mid-answer
+ *   the server (chat history): every chat after each answer, to reopen any time
+ *     (20 per player, 10 questions each, 30 days)
  *
  * Each question is a "turn": { question, steps, games, answer, cards, status, error }.
  *   steps  the timeline ("Asking IMGM players…" → "5 games match")
@@ -16,7 +20,7 @@
  *   cards  the final 5 picks (with one Best Pick)
  */
 import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { streamGuide } from '../lib/api';
+import { deleteGuideChat, getGuideChat, listGuideChats, saveGuideChat, streamGuide } from '../lib/api';
 
 const STREAM_EVENTS = new Set(['step', 'games', 'token', 'cards', 'done']);
 
@@ -33,7 +37,9 @@ const newTurn = (question, kind) => ({
   error: null,
 });
 
-// The tab's saved chat for this player: { chatId, turns }
+export const MAX_QUESTIONS = 10; // per chat; the AI service refuses more (server.py)
+
+// The tab's saved chat for this player: { chatId, turns, prefs }
 const storageKey = (userId) => `imgm:play-next:${userId}`;
 
 function loadChat(userId) {
@@ -46,15 +52,15 @@ function loadChat(userId) {
           ? { ...turn, status: 'error', error: 'Stopped when you left the page. Ask again to pick it back up.' }
           : turn
       );
-      return { chatId: saved.chatId, turns };
+      return { chatId: saved.chatId, turns, prefs: saved.prefs ?? {} };
     }
   } catch {
     // No storage (private window) or an unreadable entry: start fresh
   }
-  return { chatId: crypto.randomUUID(), turns: [] };
+  return { chatId: crypto.randomUUID(), turns: [], prefs: {} };
 }
 
-function saveChat(userId, chat) {
+function keepInTab(userId, chat) {
   try {
     sessionStorage.setItem(storageKey(userId), JSON.stringify(chat));
   } catch {
@@ -71,6 +77,8 @@ function reducer(turns, action) {
       return [...turns, newTurn(action.question, action.kind)];
     case 'reset':
       return [];
+    case 'load':
+      return action.turns;
     case 'step':
       return updateLast(turns, (turn) => {
         const exists = turn.steps.some((s) => s.id === action.data.id);
@@ -117,16 +125,40 @@ function reducer(turns, action) {
   }
 }
 
+// What the history keeps of a turn: the panel only shows the latest turn's games
+// when it has no cards, so finished turns drop them (keeps saved chats small)
+const forHistory = (turns) => turns.map((turn) => (turn.cards ? { ...turn, games: [] } : turn));
+
 export function useGameGuide(userId) {
   const [saved] = useState(() => loadChat(userId)); // read once, when the page opens
   const [turns, dispatch] = useReducer(reducer, saved.turns);
+  const [prefs, setPrefs] = useState(saved.prefs);
+  const [chatId, setChatId] = useState(saved.chatId);
+  const [chats, setChats] = useState([]); // the history: [{ id, title, updatedAt }]
   const abortRef = useRef(null);
-  const chatIdRef = useRef(saved.chatId);
+  const chatIdRef = useRef(saved.chatId); // the id a running request belongs to
+  const finishedRef = useRef(false); // an answer just finished: save the chat
 
-  // Every change is saved, so the chat is still here after visiting a game
+  const refreshChats = useCallback(() => {
+    listGuideChats()
+      .then((data) => setChats(data.chats))
+      .catch(() => {}); // the history is a convenience: the chat works without it
+  }, []);
+  useEffect(refreshChats, [refreshChats]);
+
+  // Every change is kept in the tab, so the chat is still here after visiting a game
   useEffect(() => {
-    saveChat(userId, { chatId: chatIdRef.current, turns });
-  }, [userId, turns]);
+    keepInTab(userId, { chatId, turns, prefs });
+  }, [userId, chatId, turns, prefs]);
+
+  // After each answer, the chat goes to the history
+  useEffect(() => {
+    if (!finishedRef.current || turns.length === 0 || turns.at(-1).status === 'running') return;
+    finishedRef.current = false;
+    saveGuideChat(chatId, { turns: forHistory(turns), prefs })
+      .then(refreshChats)
+      .catch(() => {});
+  }, [turns, chatId, prefs, refreshChats]);
 
   // Leaving the page stops the request (and the AI run behind it)
   useEffect(() => () => abortRef.current?.abort(), []);
@@ -153,6 +185,7 @@ export function useGameGuide(userId) {
     } catch (error) {
       if (!controller.signal.aborted) dispatch({ type: 'error', message: error.message });
     }
+    if (!controller.signal.aborted) finishedRef.current = true;
   }, []);
 
   // A question (the first one, or a follow-up like "shorter ones please")
@@ -171,13 +204,50 @@ export function useGameGuide(userId) {
     [run]
   );
 
-  // A fresh conversation: new chat id, empty page
-  const newChat = useCallback(() => {
+  // Switches the page to another chat (stopping any answer in progress)
+  const show = useCallback((id, chatTurns, chatPrefs) => {
     abortRef.current?.abort();
-    chatIdRef.current = crypto.randomUUID();
-    dispatch({ type: 'reset' });
+    chatIdRef.current = id;
+    setChatId(id);
+    dispatch({ type: 'load', turns: chatTurns });
+    setPrefs(chatPrefs);
   }, []);
 
+  // A fresh conversation: new chat id, empty page, no tuning
+  const newChat = useCallback(() => show(crypto.randomUUID(), [], {}), [show]);
+
+  // A chat from the history, with the tuning it had
+  const openChat = useCallback(
+    async (id) => {
+      const chat = await getGuideChat(id);
+      show(chat.id, chat.turns, chat.prefs ?? {});
+    },
+    [show]
+  );
+
+  const deleteChat = useCallback(
+    async (id) => {
+      await deleteGuideChat(id).catch(() => {});
+      if (id === chatIdRef.current) newChat();
+      refreshChats();
+    },
+    [newChat, refreshChats]
+  );
+
   const current = turns.at(-1) ?? null;
-  return { turns, current, running: current?.status === 'running', ask, notForMe, newChat };
+  return {
+    chatId,
+    turns,
+    current,
+    running: current?.status === 'running',
+    full: turns.length >= MAX_QUESTIONS,
+    prefs,
+    setPrefs,
+    chats,
+    ask,
+    notForMe,
+    newChat,
+    openChat,
+    deleteChat,
+  };
 }
