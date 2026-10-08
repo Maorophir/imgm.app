@@ -5,6 +5,7 @@ import { EMPTY_ANSWERS, reviewXp, awardBadges } from '../lib/reviewScoring.js';
 import { ensureGame } from '../services/gameStore.js';
 import { findSlurField, withMaskedText } from '../lib/reviewText.js';
 import { getPlayerXp, withAuthorXp } from '../lib/playerXp.js';
+import { notifyReviewChanged } from '../lib/aiIndex.js';
 
 // What we send back for each review: the author and the "X meets Y" games
 const REVIEW_INCLUDE = {
@@ -125,6 +126,7 @@ export const saveReview = async (req, res) => {
       update: data,
       include: REVIEW_INCLUDE,
     });
+    notifyReviewChanged(review.id); // Play Next's search picks up the new words
 
     // AI review analysis comes later (Phase 6), built on services/ai/ — until then
     // no sentiment at all, because a fake "Positive" is worse than none.
@@ -154,10 +156,15 @@ export const deleteMyReview = async (req, res) => {
     }
 
     // Filtering by userId means you can only ever delete your own review
-    const { count } = await prisma.review.deleteMany({ where: { userId: user.id, gameId } });
-    if (count === 0) {
+    const review = await prisma.review.findUnique({
+      where: { userId_gameId: { userId: user.id, gameId } },
+      select: { id: true },
+    });
+    if (!review) {
       return res.status(404).json({ error: "You haven't reviewed this game." });
     }
+    await prisma.review.delete({ where: { id: review.id } });
+    notifyReviewChanged(review.id); // and Play Next's search forgets it
 
     res.status(204).end(); // 204 = done, nothing to send back
   } catch (error) {

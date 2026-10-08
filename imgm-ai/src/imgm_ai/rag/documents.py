@@ -73,9 +73,9 @@ def review_to_document(review: dict) -> Document:
     )
 
 
-def load_review_documents() -> list[Document]:
-    """Every IMGM review as a Document, ready for the vector store."""
-    return [review_to_document(review) for review in load_reviews_for_index()]
+def load_review_documents(ids: list[str] | None = None) -> list[Document]:
+    """IMGM reviews as Documents, ready for the vector store: all, or only these ids."""
+    return [review_to_document(review) for review in load_reviews_for_index(ids)]
 
 
 def review_excerpt(document: Document, max_chars: int = 200) -> str:

@@ -230,11 +230,26 @@ JOIN "Game" g ON g.id = r."gameId"
 """
 
 
-def load_reviews_for_index() -> list[dict]:
-    """Every review, with its game's title and genres, ready to become a RAG document."""
+def load_reviews_for_index(ids: list[str] | None = None) -> list[dict]:
+    """Reviews with their game's title and genres, ready to become RAG documents.
+
+    All of them, or only the given review ids (for keeping the index in sync).
+    """
     with connect() as conn, conn.cursor() as cur:
-        cur.execute(INDEX_REVIEWS_QUERY)  # no placeholders: it reads every review
+        if ids is None:
+            cur.execute(INDEX_REVIEWS_QUERY)
+        else:
+            cur.execute(
+                INDEX_REVIEWS_QUERY + " WHERE r.id = ANY(%(ids)s)", {"ids": ids}
+            )
         return cur.fetchall()
+
+
+def load_review_versions() -> dict[str, str]:
+    """Every review's id and when it was last edited: {review id: updatedAt (ISO text)}."""
+    with connect() as conn, conn.cursor() as cur:
+        cur.execute('SELECT id, "updatedAt" AS updated_at FROM "Review"')
+        return {row["id"]: row["updated_at"].isoformat() for row in cur.fetchall()}
 
 
 if __name__ == "__main__":

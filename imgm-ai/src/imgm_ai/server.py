@@ -25,7 +25,10 @@ POST /guide/stream answers with Server-Sent Events (SSE), in this order:
 import json
 import logging
 import os
+import re
 import secrets
+import threading
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
@@ -37,9 +40,29 @@ from imgm_ai.agent.nodes import is_player_question
 from imgm_ai.agent.state import Preferences, new_turn, not_for_me_turn
 from imgm_ai.data import imgm_api
 from imgm_ai.models.llm import model_names
+from imgm_ai.rag.store import index_review, sync_reviews
 
 log = logging.getLogger("imgm_ai.server")
-app = FastAPI(title="IMGM AI")
+
+
+@asynccontextmanager
+async def lifespan(_app):
+    """On startup, catch up the review index in the background (startup isn't delayed).
+
+    Covers reviews saved or deleted while this service was down or asleep.
+    """
+
+    def catch_up():
+        try:
+            log.info("Review index catch-up: %s", sync_reviews())
+        except Exception:
+            log.exception("Review index catch-up failed")
+
+    threading.Thread(target=catch_up, daemon=True).start()
+    yield
+
+
+app = FastAPI(title="IMGM AI", lifespan=lifespan)
 
 
 MAX_QUESTIONS_PER_CHAT = 20  # then the player starts a new chat (keeps memory bounded)
@@ -337,3 +360,26 @@ def guide_stream(
         # No caching or proxy buffering: each event must reach the browser immediately
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )
+
+
+# ── Review index (called by Express, never by browsers) ──
+
+REVIEW_ID = re.compile(r"^[A-Za-z0-9_-]{1,64}$")
+
+
+@app.post("/index/reviews/{review_id}")
+def reindex_review(
+    review_id: str, x_internal_key: str | None = Header(default=None)
+) -> dict:
+    """A review was saved or deleted: update its entry in the search index."""
+    check_internal_key(x_internal_key)
+    if not REVIEW_ID.match(review_id):
+        raise HTTPException(status_code=400, detail="Invalid review id")
+    return {"review_id": review_id, "result": index_review(review_id)}
+
+
+@app.post("/index/sync")
+def resync_reviews(x_internal_key: str | None = Header(default=None)) -> dict:
+    """Catch the whole index up with the reviews (e.g. after seeding)."""
+    check_internal_key(x_internal_key)
+    return sync_reviews()

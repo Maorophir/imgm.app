@@ -4,14 +4,17 @@ The vector store: review vectors in pgvector, in the separate `imgm_ai` database
 "reviews__nomic-embed-text", so vectors from two models never mix.
 """
 
+import logging
 import os
 import threading
 from functools import lru_cache
 
+import psycopg
+
 from langchain_core.documents import Document
 from langchain_postgres import PGVector
 
-from imgm_ai.data.db import load_game_covers
+from imgm_ai.data.db import load_game_covers, load_review_versions
 from imgm_ai.models.embeddings import embedding_model_name, get_embeddings
 from imgm_ai.rag.documents import load_review_documents, review_excerpt
 
@@ -81,6 +84,74 @@ def index_reviews() -> int:
             documents, ids=[stored_id(document.id) for document in documents]
         )
     return len(documents)
+
+
+# ── Keeping the index in sync with the reviews ───────────
+# Express calls index_review() whenever a review is saved or deleted; sync_reviews()
+# runs when the service starts and catches anything a notification missed.
+
+log = logging.getLogger("imgm_ai.rag")
+
+
+def index_review(review_id: str) -> str:
+    """Bring one review's entry up to date: re-embed it, or remove it if it was deleted.
+
+    Returns "indexed" or "removed".
+    """
+    store = get_review_store()
+    store.delete(
+        ids=[stored_id(review_id)], collection_only=True
+    )  # the old version, if any
+    documents = load_review_documents(ids=[review_id])
+    if not documents:
+        return "removed"  # the review no longer exists
+    store.add_documents(documents, ids=[stored_id(review_id)])
+    return "indexed"
+
+
+def indexed_versions() -> dict[str, str]:
+    """What the index holds: {review id: the updatedAt it was embedded from}."""
+    with psycopg.connect(
+        os.environ["VECTOR_DATABASE_URL"]
+    ) as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT e.cmetadata ->> 'review_id', e.cmetadata ->> 'updated_at'
+            FROM langchain_pg_embedding e
+            JOIN langchain_pg_collection c ON c.uuid = e.collection_id
+            WHERE c.name = %(collection)s
+            """,
+            {"collection": review_collection_name()},
+        )
+        return dict(cur.fetchall())
+
+
+def sync_reviews() -> dict:
+    """Fix only what differs between the reviews and the index (cheap when nothing changed).
+
+    New or edited reviews (a different updatedAt) are embedded again, reviews that
+    were deleted are removed. Returns {"updated": n, "removed": n}.
+    """
+    get_review_store()  # makes sure the collection exists before reading it
+    in_database = load_review_versions()
+    in_index = indexed_versions()
+    changed = [
+        rid for rid, version in in_database.items() if in_index.get(rid) != version
+    ]
+    deleted = [rid for rid in in_index if rid not in in_database]
+
+    store = get_review_store()
+    if deleted:
+        store.delete(ids=[stored_id(rid) for rid in deleted], collection_only=True)
+    if changed:
+        store.delete(ids=[stored_id(rid) for rid in changed], collection_only=True)
+        documents = load_review_documents(ids=changed)
+        store.add_documents(documents, ids=[stored_id(d.id) for d in documents])
+    if changed or deleted:
+        log.info(
+            "Review index synced: %d updated, %d removed", len(changed), len(deleted)
+        )
+    return {"updated": len(changed), "removed": len(deleted)}
 
 
 def search_reviews(
