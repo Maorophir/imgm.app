@@ -19,7 +19,7 @@ from langchain_core.embeddings import Embeddings
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_ollama import OllamaEmbeddings
 
-from imgm_ai.models.llm import gemini_tiers
+from imgm_ai.models.llm import gemini_access, gemini_tiers
 
 load_dotenv()
 
@@ -103,16 +103,15 @@ def get_embeddings() -> Embeddings:
         # first line of every document, so the title field is "none".
         # 768 of its 3,072 possible numbers: a recommended size that keeps storage small
         # (Google normalizes shortened vectors automatically).
-        keys = [key for _tier, key, _models in gemini_tiers()]
         return PrefixedEmbeddings(
             FallbackEmbeddings(
                 [
                     GoogleGenerativeAIEmbeddings(
                         model=EMBEDDING_MODELS["gemini"],
                         output_dimensionality=768,
-                        google_api_key=key,
+                        **gemini_access(tier, key),
                     )
-                    for key in keys
+                    for tier, key, _models in gemini_tiers()
                 ]
             ),
             document_prefix="title: none | text: ",

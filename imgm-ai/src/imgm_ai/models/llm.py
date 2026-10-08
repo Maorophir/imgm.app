@@ -4,7 +4,10 @@ The chat model: Ollama locally, Gemini on the live site (LLM_PROVIDER=gemini).
 Gemini runs as a chain of fallbacks, cheapest first. A model is only used if every
 model before it failed:
     1. The FREE key (GEMINI_DEV_API_KEY in development, else GEMINI_FREE_API_KEY):  four Flash models, then two Flash-Lite
-    2. The PAID key (GEMINI_PAID_API_KEY, optional):          the full list, strongest first
+    2. VERTEX AI (VERTEX_PROJECT, optional):                  Google Cloud's Gemini, billed to the
+                                                              project's billing account (its $300
+                                                              free credit until Jan 5, 2027)
+    3. The PAID key (GEMINI_PAID_API_KEY, optional):          AI Studio prepay, the last resort
 So normal days cost nothing, and the paid key only answers when the free quota is
 used up (429) or Google is overloaded (503).
 
@@ -59,6 +62,10 @@ PAID_TIER_MODELS = [
     "gemini-3.5-flash-lite",  # last resort: cheap and fast, still better than an error
 ]
 
+# Vertex AI: the same models through Google Cloud. No API key: it signs in as the
+# Cloud Run service (locally: `gcloud auth application-default login`).
+VERTEX_MODELS = PAID_TIER_MODELS
+
 QUOTA_COOLDOWN = 60 * 60  # 429 without a retry time from Google: skip for an hour
 MAX_QUOTA_COOLDOWN = 24 * 60 * 60  # never skip longer than a day
 BUSY_COOLDOWN = 2 * 60  # seconds a model is skipped after an overload (503) or timeout
@@ -87,20 +94,18 @@ def gemini_tiers() -> list[tuple[str, str, list[str]]]:
       GEMINI_FREE_API_KEY  the production free key
       GOOGLE_API_KEY       older .env files
     """
-    free_key = (
-        os.getenv("GEMINI_DEV_API_KEY")
-        or os.getenv("GEMINI_FREE_API_KEY")
-        or os.getenv("GOOGLE_API_KEY")
-    )
+    free_key = os.getenv("GEMINI_DEV_API_KEY") or os.getenv("GEMINI_FREE_API_KEY")
     paid_key = os.getenv("GEMINI_PAID_API_KEY")
     tiers = []
     if free_key:
         tiers.append(("free", free_key, FREE_TIER_MODELS))
+    if os.getenv("VERTEX_PROJECT"):
+        tiers.append(("vertex", None, VERTEX_MODELS))  # signs in without a key
     if paid_key:
         tiers.append(("paid", paid_key, PAID_TIER_MODELS))
     if not tiers:
         raise RuntimeError(
-            "No Gemini key: set GEMINI_FREE_API_KEY and/or GEMINI_PAID_API_KEY"
+            "No Gemini access: set GEMINI_FREE_API_KEY, VERTEX_PROJECT and/or GEMINI_PAID_API_KEY"
         )
     return tiers
 
@@ -167,6 +172,17 @@ def skip_while_cooling_down(model: Runnable, label: str) -> Runnable:
     return RunnableLambda(call, name=label)
 
 
+def gemini_access(tier: str, key: str | None) -> dict:
+    """How a model signs in: an API key, or (Vertex) the Google Cloud project."""
+    if tier == "vertex":
+        return {
+            "vertexai": True,
+            "project": os.environ["VERTEX_PROJECT"],
+            "location": os.getenv("VERTEX_LOCATION", "global"),
+        }
+    return {"google_api_key": key}
+
+
 def get_model(prepare=None):
     """The model, ready for one job: on Gemini, the whole free → paid fallback chain.
 
@@ -186,7 +202,7 @@ def get_model(prepare=None):
             model = prepare(
                 ChatGoogleGenerativeAI(
                     model=name,
-                    google_api_key=key,
+                    **gemini_access(tier, key),
                     thinking_level="low",
                     # Free: a shorter wait and no retry, since another model is next.
                     # Paid: the last line of defence, so more patience.
