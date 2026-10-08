@@ -6,7 +6,7 @@ import { Navigate, useLocation } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
 
 // Pages that must work before a tag exists
-const OPEN_PATHS = ['/welcome', '/login', '/oauth-success'];
+const OPEN_PATHS = ['/welcome', '/login', '/oauth-success', '/forgot-password', '/reset-password'];
 
 const GamerTagGate = ({ children }) => {
   const { data: session, isPending } = useSession();

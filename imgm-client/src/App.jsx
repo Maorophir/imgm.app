@@ -12,6 +12,8 @@ import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
 import Search from './pages/Search';
 import Welcome from './pages/Welcome';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
@@ -53,6 +55,8 @@ function App() {
           <Route path="/guide" element={<Navigate to={PLAY_NEXT_ENABLED ? '/play-next' : '/'} replace />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/welcome" element={<Welcome />} />
         </Routes>

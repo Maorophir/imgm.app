@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { signIn, signUp, authClient } from '../lib/authClient';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getFeaturedGames } from '../lib/api';
 import { safeRedirect } from '../lib/safeRedirect';
 
@@ -147,7 +147,14 @@ function Auth() {
           </div>
 
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1">Password</label>
+            <div className="flex items-baseline justify-between mb-1">
+              <label className="block text-sm font-semibold text-slate-300">Password</label>
+              {isLogin && (
+                <Link to="/forgot-password" className="text-xs font-semibold text-slate-400 hover:text-brand">
+                  Forgot password?
+                </Link>
+              )}
+            </div>
             <input
               type="password"
               required

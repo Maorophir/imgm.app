@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
 import { clientOrigins } from "./config.js";
+import { resetPasswordEmail, sendEmail } from "./email.js";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000",
@@ -11,6 +12,16 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    // "Forgot your password?": Better Auth makes the one-hour link, we deliver it.
+    // Not awaited, so the reply takes the same time whether or not the email has an
+    // account (otherwise the timing would reveal who is registered).
+    sendResetPassword: async ({ user, url }) => {
+      sendEmail({ to: user.email, ...resetPasswordEmail(url) }).catch((error) =>
+        console.error('Password reset email failed:', error.message)
+      );
+    },
+    // A new password logs the account out everywhere else
+    revokeSessionsOnPasswordReset: true,
   },
   socialProviders: {
     google: {
