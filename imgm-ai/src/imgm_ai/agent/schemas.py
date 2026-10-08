@@ -46,6 +46,14 @@ class Recommendations(BaseModel):
         default=None,
         description="The guide's closing question to the player, if it asked one.",
     )
+    # The check node stops enforcing the game-length answer when the guide set it aside
+    length_set_aside: bool = Field(
+        default=False,
+        description=(
+            "True only if the answer says it set aside the player's game-length answer "
+            "(short/long) because their message asked for something else. Otherwise false."
+        ),
+    )
     # Read from the player's requests (not the answer): the check node enforces it
     max_hours: float | None = Field(
         default=None,

@@ -4,6 +4,7 @@ the checker (plain code that enforces the rules a prompt can only ask for).
 """
 
 import re
+import time
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -15,6 +16,7 @@ from imgm_ai.agent.state import (
     CHECK_FEEDBACK,
     GAME_LENGTH_TEXT,
     RecommenderState,
+    current_turn,
     fits_length,
     is_player_question,
 )
@@ -25,6 +27,10 @@ from imgm_ai.models.llm import get_model
 # Created once, and told which tools exist. Without bind_tools the model
 # can't ask for them.
 model = get_model(lambda m: m.bind_tools(TOOLS))
+# The same model with the tools switched off (tool_choice="none"): once an answer's
+# budget is spent, it must write with what it has. The tools stay declared, because
+# the conversation already contains tool calls.
+writer = get_model(lambda m: m.bind_tools(TOOLS, tool_choice="none"))
 
 AGENT = "agent"
 # Must be exactly "tools": that's the name tools_condition routes to
@@ -34,6 +40,19 @@ CHECK = "check"
 
 GAMES_PER_ANSWER = 5
 MAX_FIX_ATTEMPTS = 2  # how many times the agent may be sent back to fix its answer
+
+# Budgets per answer, so an impossible request ends with the best answer so far
+# instead of searching until the server cuts it off (normal answers: 7-15 lookups)
+LOOKUP_BUDGET = 16  # tool calls (searches, review lookups…)
+ANSWER_DEADLINE = 150  # seconds: past this, no more lookups, write the answer now
+FIX_DEADLINE = 120  # seconds: past this, the check stops sending answers back
+OUT_OF_BUDGET = """
+
+<budget>
+You've used this answer's lookup budget. Don't look anything else up: write your
+answer now with the games you already verified with search_games. If fewer than
+5 of them fit, recommend the ones that do and say so honestly.
+</budget>"""
 MIN_POPULARITY = 10  # IGDB ratings + hype below this = practically unknown
 
 # Which game platforms each Tune it choice can play (backward compatibility)
@@ -56,13 +75,28 @@ def call_model(state: RecommenderState) -> dict:
     conversation and the prompt can change without touching old chats.
     The reply is either an answer or a request for tools (tool_calls).
     """
-    system = SystemMessage(
-        content=build_system_prompt(
-            state.get("preferences", {}), state.get("rejected", [])
-        )
+    prompt = build_system_prompt(
+        state.get("preferences", {}), state.get("rejected", [])
     )
-    response = model.invoke([system] + model_context(state["messages"]))
+    spent = out_of_budget(state)
+    if spent:
+        prompt += OUT_OF_BUDGET
+    chosen = writer if spent else model  # no tools once the budget is spent
+    response = chosen.invoke([SystemMessage(prompt)] + model_context(state["messages"]))
     return {"messages": [response]}  # just the new message: add_messages appends it
+
+
+def seconds_into_answer(state: RecommenderState) -> float:
+    """How long this answer has been running (0 for chats saved before the budget)."""
+    started = state.get("started_at")
+    return time.time() - started if started else 0.0
+
+
+def out_of_budget(state: RecommenderState) -> bool:
+    """Has this answer used up its lookups or its time? (see LOOKUP_BUDGET)"""
+    turn = current_turn(state["messages"])
+    lookups = sum(len(m.tool_calls) for m in turn if isinstance(m, AIMessage))
+    return lookups >= LOOKUP_BUDGET or seconds_into_answer(state) > ANSWER_DEADLINE
 
 
 def model_context(messages: list) -> list:
@@ -169,6 +203,8 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
     )  # their Tune it picks
     if isinstance(lengths, str):  # chats saved before it became a list
         lengths = [lengths]
+    if recommendations and recommendations.length_set_aside:
+        lengths = []  # the player's message beat their length answer (see the prompt)
     wanted = " or ".join(GAME_LENGTH_TEXT[length] for length in lengths)
     max_hours = recommendations.max_hours if recommendations else None  # "shorter ones"
     wanted_platforms = state.get("preferences", {}).get("platforms") or []
@@ -229,7 +265,12 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
     if sum(game.best_pick for game in games) != 1:
         problems.append("Mark exactly one game as the Best Pick.")
 
-    if problems and attempts < MAX_FIX_ATTEMPTS:
+    # Past the deadline, the answer stands as it is: a late answer beats no answer
+    if (
+        problems
+        and attempts < MAX_FIX_ATTEMPTS
+        and seconds_into_answer(state) < FIX_DEADLINE
+    ):
         feedback = HumanMessage(
             name=CHECK_FEEDBACK,
             content="[Automatic check] Your answer has problems:\n- "

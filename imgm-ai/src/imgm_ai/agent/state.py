@@ -1,3 +1,4 @@
+import time
 from typing import Annotated, Literal, TypedDict
 
 from langchain_core.messages import HumanMessage
@@ -95,6 +96,7 @@ class RecommenderState(MessagesState):
     recommendations: Recommendations | None  # the final cards (set by the format node)
     check_problems: list[str]  # what the last check found wrong (empty = passed)
     fix_attempts: int  # how many times the agent was sent back to fix its answer
+    started_at: float  # when this answer started (time.time()), for its time budget
     # "Not for me" games: never suggested again in this conversation. Unlike the
     # per-answer fields above, this one is conversation state, so it keeps growing.
     rejected: Annotated[list[RejectedGame], add_rejected]
@@ -117,6 +119,7 @@ def new_turn(
         "recommendations": None,  # this turn's cards don't exist yet
         "check_problems": [],  # nothing has failed a check yet
         "fix_attempts": 0,  # each answer gets its own fix rounds
+        "started_at": time.time(),  # each answer gets its own time budget
     }
     if preferences is not None:  # leave out → keep the preferences already saved
         turn["preferences"] = preferences

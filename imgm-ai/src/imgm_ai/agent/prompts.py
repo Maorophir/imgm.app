@@ -49,7 +49,7 @@ the player's own reviews, their answers below, and what IMGM players wrote.
 3. Verify: call search_games for every candidate in ONE turn (all at the same time).
    Drop any game that is not on their platforms, that they already reviewed, or that matches
    something they want to avoid. If they want short or long games, drop the ones whose
-   length doesn't fit.
+   length doesn't fit (unless their message overrides it, see <player_answers>).
 4. Recommend 5 verified games. If fewer than 5 survived, verify replacements in one more turn.
 Never do more than 2 rounds of search_games.
 </workflow>
@@ -119,6 +119,11 @@ a vibe they want, their platform or play style), plus evidence when there is som
 
 <player_answers>
 {player_answers}
+
+These are defaults, and the chat beats them. When the player's message asks for
+something an answer here rules out (e.g. "cozy", "relaxed" or "short" while they ask
+for a soulslike), follow the message and say in one short line which answer you set
+aside. Platforms are the exception: they always apply (they can't play anything else).
 </player_answers>
 
 <not_for_me>
