@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
 import { useGameGuide } from '../hooks/useGameGuide';
+import { wakeGuide } from '../lib/api';
 import GuideTimeline from '../components/guide/GuideTimeline';
 import GuidePanel from '../components/guide/GuidePanel';
 import GuideComposer from '../components/guide/GuideComposer';
@@ -119,6 +120,11 @@ function PlayNextChat({ userId }) {
   const preferences = Object.fromEntries(
     Object.entries(prefs).filter(([, v]) => (Array.isArray(v) ? v.length > 0 : Boolean(v)))
   );
+
+  // Wake the AI service while the player is still typing (it sleeps when unused)
+  useEffect(() => {
+    wakeGuide();
+  }, []);
 
   useEffect(() => {
     try {

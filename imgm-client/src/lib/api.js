@@ -65,6 +65,9 @@ export const getMyProgress = (signal) => fetchJson('/api/users/me/progress', { s
  * Events; each one is handed to onEvent(name, data) the moment it arrives.
  * (The browser's EventSource can't send a POST body, so the stream is read by hand.)
  */
+// Play Next page opened: wake the AI service so the first answer starts sooner
+export const wakeGuide = () => fetchJson('/api/guide/wake', { method: 'POST' }).catch(() => {});
+
 export async function streamGuide(body, { signal, onEvent }) {
   const response = await fetch(`${API_BASE}/api/guide/stream`, {
     method: 'POST',

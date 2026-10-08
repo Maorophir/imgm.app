@@ -66,3 +66,17 @@ export const streamGuide = async (req, res) => {
     .on('error', () => res.end()) // the AI service dropped or the player left
     .pipe(res);
 };
+
+// POST /api/guide/wake — the Play Next page opened: start the AI service now.
+// Google puts it to sleep after ~15 quiet minutes, and waking takes ~15 seconds;
+// done while the player is still typing, their first question doesn't wait for it.
+const WAKE_EVERY = 60 * 1000; // one wake-up call a minute is plenty, however many players
+let lastWake = 0;
+
+export const wakeGuide = (req, res) => {
+  if (Date.now() - lastWake > WAKE_EVERY) {
+    lastWake = Date.now();
+    fetch(`${aiServiceUrl}/health`, { signal: AbortSignal.timeout(60 * 1000) }).catch(() => {});
+  }
+  res.status(204).end();
+};

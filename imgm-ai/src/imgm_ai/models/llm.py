@@ -13,10 +13,13 @@ used up (429) or Google is overloaded (503).
 
 A model that fails is SKIPPED for a while, so the next calls don't trip over it again
 (one answer makes ~6 calls; without skipping, each one would retry the same busy model):
-    out of quota (429)            → skipped for as long as Google says (its retryDelay):
-                                    ~a minute for a per-minute limit, hours for a daily one
-    overloaded (503) or timed out → skipped for 2 minutes (usually brief)
+    out of quota (429)  → skipped for as long as Google says (its retryDelay):
+                          ~a minute for a per-minute limit, hours for a daily one
+    timed out           → skipped for 15 minutes: Google holds a free request without
+                          answering, often as the daily quota runs out
+    overloaded (503)    → skipped for 2 minutes (usually brief)
 Free models also give up sooner (FREE_TIMEOUT): there's always another model to try.
+When a failure cost real time, the page is told ("switched to a backup model").
 """
 
 import logging
@@ -28,6 +31,8 @@ from dotenv import load_dotenv
 from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
+
+from imgm_ai.agent.events import emit
 
 load_dotenv()
 log = logging.getLogger("imgm_ai.models")
@@ -68,8 +73,16 @@ VERTEX_MODELS = PAID_TIER_MODELS
 
 QUOTA_COOLDOWN = 60 * 60  # 429 without a retry time from Google: skip for an hour
 MAX_QUOTA_COOLDOWN = 24 * 60 * 60  # never skip longer than a day
-BUSY_COOLDOWN = 2 * 60  # seconds a model is skipped after an overload (503) or timeout
-FREE_TIMEOUT = 30  # seconds a free model gets before we move on (paid models get 60)
+BUSY_COOLDOWN = 2 * 60  # seconds a model is skipped after an overload (503)
+TIMEOUT_COOLDOWN = (
+    15 * 60
+)  # ...and after a timeout: a stalled model tends to stay stalled
+# Seconds a free model gets before we move on (paid models get 60). Normal free calls
+# take 2-5s and 95% finish within 20s; the rest took 40s+, slower than the next model.
+FREE_TIMEOUT = 20
+SLOW_FAILURE = (
+    3  # seconds: a failure slower than this is worth telling the player about
+)
 
 # "free:gemini-3.8-flash" → when it may be tried again
 _skip_until: dict[str, float] = {}
@@ -129,18 +142,15 @@ def cooldown_for(error: Exception) -> int:
         if wait:
             return min(max(int(float(wait.group(1))) + 1, 10), MAX_QUOTA_COOLDOWN)
         return QUOTA_COOLDOWN
-    busy = (
-        "503",
-        "UNAVAILABLE",
-        "overloaded",
-        "high demand",
-        "504",
-        "DEADLINE_EXCEEDED",
-    )
     if (
-        any(word in text for word in busy)
-        or "timed out" in text.lower()
+        "timed out" in text.lower()
         or "timeout" in type(error).__name__.lower()
+        or "504" in text
+        or "DEADLINE_EXCEEDED" in text
+    ):
+        return TIMEOUT_COOLDOWN
+    if any(
+        word in text for word in ("503", "UNAVAILABLE", "overloaded", "high demand")
     ):
         return BUSY_COOLDOWN
     return 0  # e.g. a bad request: skipping the model wouldn't help
@@ -156,6 +166,7 @@ def skip_while_cooling_down(model: Runnable, label: str) -> Runnable:
     def call(model_input, config):
         if time.monotonic() < _skip_until.get(label, 0):
             raise ModelCoolingDown(f"{label} is cooling down")
+        started = time.monotonic()
         try:
             return model.invoke(model_input, config)
         except Exception as error:
@@ -167,6 +178,9 @@ def skip_while_cooling_down(model: Runnable, label: str) -> Runnable:
                     str(error)[:60],
                     cooldown,
                 )
+            # The player was kept waiting: say why (a quick 429 isn't worth a line)
+            if time.monotonic() - started > SLOW_FAILURE:
+                emit({"type": "backup"})
             raise
 
     return RunnableLambda(call, name=label)

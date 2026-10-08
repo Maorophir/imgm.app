@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { requireUser, getSessionUser } from '../lib/session.js';
 import { canUsePlayNext } from '../lib/config.js';
-import { streamGuide } from '../controllers/guideController.js';
+import { streamGuide, wakeGuide } from '../controllers/guideController.js';
 
 const router = Router();
 
@@ -44,6 +44,9 @@ router.get('/access', async (req, res) => {
   const user = await getSessionUser(req).catch(() => null);
   res.json({ enabled: Boolean(user && canUsePlayNext(user.id)) });
 });
+
+// POST /api/guide/wake — the page opened: wake the AI service up early
+router.post('/wake', requireUser, playNextAccess, wakeGuide);
 
 // POST /api/guide/stream — ask Play Next (logged-in players with access only)
 router.post('/stream', requireUser, playNextAccess, oneAtATime, burstLimiter, dailyLimiter, streamGuide);

@@ -237,6 +237,19 @@ def guide_events(request: GuideRequest, user_id: str | None):
                     },
                 )
 
+            # A model stalled and the next one took over (models/llm.py): one line,
+            # however many times it happens in this run
+            elif mode == "custom" and chunk.get("type") == "backup":
+                yield sse(
+                    "step",
+                    {
+                        "id": "backup-model",
+                        "state": "done",
+                        "label": "Busy moment at Google",
+                        "detail": "switched to a backup model",
+                    },
+                )
+
             # The agent's answer, token by token (not the formatter's, not tool calls)
             elif mode == "messages":
                 message, meta = chunk
