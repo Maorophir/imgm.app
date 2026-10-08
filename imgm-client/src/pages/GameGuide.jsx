@@ -17,9 +17,23 @@ import RichText from '../components/guide/RichText';
 import { PowerIcon } from '../components/Logo';
 
 
+// While the guide writes, its draft isn't shown (the cards replace it moments later):
+// the timeline gets a "Writing up your picks" step instead, just before the formatting
+const withWritingStep = (turn) => {
+  if (!turn.answer || turn.status === 'error') return turn.steps;
+  const formatAt = turn.steps.findIndex((s) => s.id.startsWith('format-'));
+  const writing = {
+    id: 'writing',
+    label: 'Writing up your picks',
+    state: formatAt === -1 && turn.status === 'running' ? 'running' : 'done',
+  };
+  return formatAt === -1
+    ? [...turn.steps, writing]
+    : [...turn.steps.slice(0, formatAt), writing, ...turn.steps.slice(formatAt)];
+};
+
 const GuideTurn = ({ turn, isLatest, onNotForMe, running }) => {
   const [showFull, setShowFull] = useState(false);
-  const streaming = turn.status === 'running' && turn.answer;
 
   return (
     <div className="flex flex-col gap-4">
@@ -34,7 +48,7 @@ const GuideTurn = ({ turn, isLatest, onNotForMe, running }) => {
           <PowerIcon className="w-4.5 h-4.5 text-brand" />
         </span>
         <div className="min-w-0 flex-1 flex flex-col gap-3">
-          <GuideTimeline steps={turn.steps} running={turn.status === 'running'} collapsible={Boolean(turn.cards)} />
+          <GuideTimeline steps={withWritingStep(turn)} running={turn.status === 'running'} collapsible={Boolean(turn.cards)} />
 
           {turn.cards ? (
             <div className="rounded-2xl rounded-tl-md bg-slate-900/80 border border-slate-800 px-4 py-3 text-slate-200 leading-relaxed">
@@ -53,10 +67,10 @@ const GuideTurn = ({ turn, isLatest, onNotForMe, running }) => {
               {turn.cards.follow_up && <p className="mt-3 text-slate-300">{turn.cards.follow_up}</p>}
             </div>
           ) : (
-            turn.answer && (
+            // No cards: the guide's own words, once it's finished (e.g. it asked you something)
+            turn.answer && turn.status !== 'running' && (
               <div className="rounded-2xl rounded-tl-md bg-slate-900/80 border border-slate-800 px-4 py-3 text-slate-200 leading-relaxed whitespace-pre-line">
                 <RichText text={turn.answer} />
-                {streaming && <span className="inline-block w-2 h-4 ml-0.5 bg-brand animate-pulse align-middle" aria-hidden="true" />}
               </div>
             )
           )}

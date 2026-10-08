@@ -20,6 +20,12 @@ A model that fails is SKIPPED for a while, so the next calls don't trip over it 
     overloaded (503)    → skipped for 2 minutes (usually brief)
 Free models also give up sooner (FREE_TIMEOUT): there's always another model to try.
 When a failure cost real time, the page is told ("switched to a backup model").
+
+AI Studio (free + paid keys) and Vertex are separate systems. Gemini 3 signs every
+tool call it makes (a "thought signature") and expects it back, but each system
+rejects the other's signatures (400 "Invalid thought signature"). So each answer is
+marked with the system that wrote it, and a call to the other system gets those
+signatures removed; LangChain then sends Google's documented skip-the-check value.
 """
 
 import logging
@@ -28,6 +34,8 @@ import re
 import time
 
 from dotenv import load_dotenv
+from langchain_core.messages import AIMessage
+from langchain_core.prompt_values import PromptValue
 from langchain_core.runnables import Runnable, RunnableLambda
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
@@ -156,6 +164,61 @@ def cooldown_for(error: Exception) -> int:
     return 0  # e.g. a bad request: skipping the model wouldn't help
 
 
+SIGNATURES_KEY = (
+    "__gemini_function_call_thought_signatures__"  # where LangChain keeps them
+)
+_SIGNATURE_FIELDS = ("thought_signature", "signature")
+
+
+def backend_of(label: str) -> str:
+    """Which Google system a model runs on: "vertex", or "aistudio" (free and paid keys)."""
+    return "vertex" if label.startswith("vertex:") else "aistudio"
+
+
+def without_thought_signatures(message):
+    """The message without Gemini's thought signatures (other messages unchanged)."""
+    if not isinstance(message, AIMessage):
+        return message
+    content = message.content
+    if isinstance(content, list):
+        content = [
+            (
+                {k: v for k, v in block.items() if k not in _SIGNATURE_FIELDS}
+                | (
+                    {
+                        "extras": {
+                            k: v for k, v in block["extras"].items() if k != "signature"
+                        }
+                    }
+                    if isinstance(block.get("extras"), dict)
+                    else {}
+                )
+                if isinstance(block, dict)
+                else block
+            )
+            for block in content
+        ]
+    extra = {k: v for k, v in message.additional_kwargs.items() if k != SIGNATURES_KEY}
+    return message.model_copy(update={"content": content, "additional_kwargs": extra})
+
+
+def for_backend(model_input, backend: str):
+    """The conversation as `backend` accepts it: signatures from the other system removed."""
+    if isinstance(model_input, PromptValue):
+        model_input = model_input.to_messages()
+    if not isinstance(model_input, list):
+        return model_input  # a plain string: nothing signed
+    return [
+        (
+            message
+            if not isinstance(message, AIMessage)
+            or message.response_metadata.get("imgm_backend") == backend
+            else without_thought_signatures(message)
+        )
+        for message in model_input
+    ]
+
+
 def skip_while_cooling_down(model: Runnable, label: str) -> Runnable:
     """Wraps a model: after it fails, it's skipped for a while (see cooldown_for).
 
@@ -167,8 +230,14 @@ def skip_while_cooling_down(model: Runnable, label: str) -> Runnable:
         if time.monotonic() < _skip_until.get(label, 0):
             raise ModelCoolingDown(f"{label} is cooling down")
         started = time.monotonic()
+        backend = backend_of(label)
         try:
-            return model.invoke(model_input, config)
+            result = model.invoke(for_backend(model_input, backend), config)
+            if isinstance(
+                result, AIMessage
+            ):  # remember who wrote it (see the module docstring)
+                result.response_metadata["imgm_backend"] = backend
+            return result
         except Exception as error:
             if cooldown := cooldown_for(error):
                 _skip_until[label] = time.monotonic() + cooldown
