@@ -32,7 +32,8 @@ EMBEDDING_MODELS = {
 
 
 class PrefixedEmbeddings(Embeddings):
-    """Adds the task prefixes nomic-embed-text expects, so callers can't forget them.
+    """Adds the task prefixes an embedding model expects (nomic and Gemini both use them),
+    so callers can't forget them.
 
     nomic was trained to know the difference between a stored text ("search_document: ...")
     and a question ("search_query: ..."); without the prefixes, search quality quietly drops.
@@ -95,18 +96,25 @@ class FallbackEmbeddings(Embeddings):
 def get_embeddings() -> Embeddings:
     """The configured embedding model, ready to use."""
     if embeddings_provider() == "gemini":
-        # 768 of its 3,072 possible numbers: a recommended size that keeps storage small.
-        # TODO (production): gemini-embedding-2 takes task instructions inside the text
-        # instead of a task_type; check the docs for the exact format when we switch.
-        return FallbackEmbeddings(
-            [
-                GoogleGenerativeAIEmbeddings(
-                    model=EMBEDDING_MODELS["gemini"],
-                    output_dimensionality=768,
-                    google_api_key=key,
-                )
-                for _tier, key, _models in gemini_tiers()
-            ]
+        # gemini-embedding-2 has no task_type setting: the "stored text vs search question"
+        # label goes inside the text (Google's formats). The review's title is already the
+        # first line of every document, so the title field is "none".
+        # 768 of its 3,072 possible numbers: a recommended size that keeps storage small
+        # (Google normalizes shortened vectors automatically).
+        keys = [key for _tier, key, _models in gemini_tiers()]
+        return PrefixedEmbeddings(
+            FallbackEmbeddings(
+                [
+                    GoogleGenerativeAIEmbeddings(
+                        model=EMBEDDING_MODELS["gemini"],
+                        output_dimensionality=768,
+                        google_api_key=key,
+                    )
+                    for key in keys
+                ]
+            ),
+            document_prefix="title: none | text: ",
+            query_prefix="task: search result | query: ",
         )
     return PrefixedEmbeddings(
         OllamaEmbeddings(model=EMBEDDING_MODELS["ollama"]),

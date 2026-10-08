@@ -34,7 +34,7 @@ _store_lock = threading.Lock()
 def _create_review_store() -> PGVector:
     return PGVector(
         embeddings=get_embeddings(),
-        collection_name=f"reviews__{embedding_model_name()}",
+        collection_name=review_collection_name(),
         connection=vector_db_url(),
         use_jsonb=True,  # metadata as JSONB, so it can be filtered
     )
@@ -50,6 +50,21 @@ def get_review_store() -> PGVector:
         return _create_review_store()
 
 
+def review_collection_name() -> str:
+    """The collection for the configured embedding model, e.g. "reviews__nomic-embed-text"."""
+    return f"reviews__{embedding_model_name()}"
+
+
+def stored_id(review_id: str) -> str:
+    """A review's id inside the vector store, e.g. "reviews__nomic-embed-text:cmur1q7…".
+
+    langchain-postgres keeps EVERY collection in one table whose ids must be unique
+    across all of them. Bare review ids made a second model's index overwrite the
+    first one's rows, so each id carries its collection's name.
+    """
+    return f"{review_collection_name()}:{review_id}"
+
+
 def index_reviews() -> int:
     """Rebuild the review index from scratch. Returns how many reviews were indexed.
 
@@ -62,7 +77,9 @@ def index_reviews() -> int:
     store.delete_collection()
     store.create_collection()
     if documents:
-        store.add_documents(documents, ids=[document.id for document in documents])
+        store.add_documents(
+            documents, ids=[stored_id(document.id) for document in documents]
+        )
     return len(documents)
 
 
