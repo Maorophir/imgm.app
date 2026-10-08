@@ -157,12 +157,14 @@ def format_search_result(game: dict) -> str:
 
 
 @tool
-def search_games(query: str) -> str:
+def search_games(query: str, config: RunnableConfig) -> str:
     """Search the full game catalog (IGDB) by title. Returns up to 5 real games, each with
     its id, year, developer, platforms, genres, length (hours to beat) and IMGM rating. Use it to confirm a game
     exists and is on the player's platforms before recommending it. Use the id with
     get_game_profile."""
-    games = imgm_api.search_games(query)[:5]
+    # Which player this is for (hidden from the model): Express limits searches per player
+    user_id = config.get("configurable", {}).get("user_id")
+    games = imgm_api.search_games(query, user_id)[:5]
     if not games:
         return f"No games found for '{query}'."
     # For the page: the games being checked (the first result is the likely match)

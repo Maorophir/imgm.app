@@ -147,10 +147,10 @@ def step_detail(tool: str, result: str) -> str:
     return result.splitlines()[0] if result else "Done"
 
 
-def game_tile_from_imgm(game_id: int) -> dict:
+def game_tile_from_imgm(game_id: int, user_id: str | None = None) -> dict:
     """Cover, year, platforms and IMGM rating for a card, from Express ({} if unavailable)."""
     try:
-        game = imgm_api.get_game(game_id)
+        game = imgm_api.get_game(game_id, user_id)
     except Exception:
         log.warning("Couldn't load game %s for its card", game_id)
         return {}
@@ -326,7 +326,7 @@ def guide_events(request: GuideRequest, user_id: str | None):
             for card in recommendations.games:
                 if not games.get(card.game_id, {}).get("cover"):
                     games[card.game_id] = {
-                        **game_tile_from_imgm(card.game_id),
+                        **game_tile_from_imgm(card.game_id, user_id),
                         **games.get(card.game_id, {}),
                     }
             cards = [

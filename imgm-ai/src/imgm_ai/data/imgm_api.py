@@ -13,16 +13,37 @@ load_dotenv()
 API_URL = os.getenv("IMGM_API_URL", "http://localhost:5000")
 
 
-def search_games(query: str) -> list[dict]:
+def our_headers(user_id: str | None) -> dict:
+    """Proves to Express that this is Play Next, and for which player.
+
+    Express then counts its rate limits per player: each player's agent gets its own
+    limit instead of all agents sharing one (they all run on Google's IP addresses).
+    """
+    headers = {}
+    if key := os.getenv("INTERNAL_API_KEY"):
+        headers["X-Internal-Key"] = key
+        if user_id:
+            headers["X-User-Id"] = user_id
+    return headers
+
+
+def search_games(query: str, user_id: str | None = None) -> list[dict]:
     """Search IGDB through Express. Games come back with IMGM ratings attached."""
-    response = httpx.get(f"{API_URL}/api/games/search", params={"q": query}, timeout=15)
+    response = httpx.get(
+        f"{API_URL}/api/games/search",
+        params={"q": query},
+        headers=our_headers(user_id),
+        timeout=15,
+    )
     response.raise_for_status()  # a 4xx/5xx becomes an exception, which ToolNode reports to the model
     return response.json()
 
 
-def get_game(game_id: int) -> dict | None:
+def get_game(game_id: int, user_id: str | None = None) -> dict | None:
     """One game with its IMGM rating, through Express (None if it can't be found)."""
-    response = httpx.get(f"{API_URL}/api/games/{game_id}", timeout=15)
+    response = httpx.get(
+        f"{API_URL}/api/games/{game_id}", headers=our_headers(user_id), timeout=15
+    )
     if response.status_code == 404:
         return None
     response.raise_for_status()
