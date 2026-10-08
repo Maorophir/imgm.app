@@ -40,6 +40,8 @@ def _create_review_store() -> PGVector:
         collection_name=review_collection_name(),
         connection=vector_db_url(),
         use_jsonb=True,  # metadata as JSONB, so it can be filtered
+        # Test connections before use: Neon's sleeping database cuts idle ones
+        engine_args={"pool_pre_ping": True},
     )
 
 

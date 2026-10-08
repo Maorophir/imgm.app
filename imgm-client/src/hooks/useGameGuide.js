@@ -107,6 +107,11 @@ function reducer(turns, action) {
       );
     case 'error':
       return updateLast(turns, (turn) => ({ ...turn, status: 'error', error: action.message }));
+    case 'ended':
+      // The stream closed without "done" or "error" (the connection dropped): never spin forever
+      return turns.at(-1)?.status === 'running'
+        ? updateLast(turns, (turn) => ({ ...turn, status: 'error', error: 'Play Next stopped unexpectedly. Please try again.' }))
+        : turns;
     default:
       return turns;
   }
@@ -144,6 +149,7 @@ export function useGameGuide(userId) {
           },
         }
       );
+      if (!controller.signal.aborted) dispatch({ type: 'ended' });
     } catch (error) {
       if (!controller.signal.aborted) dispatch({ type: 'error', message: error.message });
     }

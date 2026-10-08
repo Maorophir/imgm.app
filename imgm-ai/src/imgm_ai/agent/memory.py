@@ -42,7 +42,11 @@ def make_checkpointer() -> PostgresSaver | InMemorySaver:
     pool = ConnectionPool(
         os.environ["VECTOR_DATABASE_URL"],
         kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        min_size=1,
         max_size=5,
+        # Neon's free database sleeps after 5 quiet minutes and cuts every connection.
+        # Each one is tested before use, and a dead one is swapped for a fresh one.
+        check=ConnectionPool.check_connection,
         open=True,
     )
     atexit.register(pool.close)

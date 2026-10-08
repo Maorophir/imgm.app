@@ -187,7 +187,15 @@ def guide_events(request: GuideRequest, user_id: str | None):
     }
 
     # Long chats are cut off: memory and context stay bounded
-    saved = graph.get_state(config).values.get("messages", [])
+    try:
+        saved = graph.get_state(config).values.get("messages", [])
+    except Exception:  # e.g. the database is unreachable: say so, never hang silently
+        log.exception("Play Next could not load the chat")
+        yield sse("start", {})
+        yield sse(
+            "error", {"message": "Play Next ran into a problem. Please try again."}
+        )
+        return
     if sum(is_player_question(m) for m in saved) >= MAX_QUESTIONS_PER_CHAT:
         yield sse("start", {})
         yield sse(
