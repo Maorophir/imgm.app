@@ -73,7 +73,9 @@ class ModelCoolingDown(Exception):
 
 
 def uses_gemini() -> bool:
-    return os.environ.get("LLM_PROVIDER") == "gemini"
+    return (
+        os.environ.get("LLM_PROVIDER", "").strip().strip("\"'") == "gemini"
+    )  # tolerate pasted quotes
 
 
 def gemini_tiers() -> list[tuple[str, str, list[str]]]:

@@ -1,0 +1,6 @@
+# Never in the image: secrets, the local virtualenv, caches, test output
+.env
+.venv
+**/__pycache__
+*.pyc
+*.png

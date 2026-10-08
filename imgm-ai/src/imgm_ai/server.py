@@ -36,6 +36,7 @@ from langchain_core.messages import AIMessageChunk
 from pydantic import BaseModel, Field, model_validator
 
 from imgm_ai.agent.graph import graph
+from imgm_ai.agent.memory import delete_old_chats
 from imgm_ai.agent.nodes import is_player_question
 from imgm_ai.agent.state import Preferences, new_turn, not_for_me_turn
 from imgm_ai.data import imgm_api
@@ -43,13 +44,21 @@ from imgm_ai.models.llm import model_names
 from imgm_ai.rag.store import index_review, sync_reviews
 
 log = logging.getLogger("imgm_ai.server")
+# Our own info/warning lines (model skips, catch-ups) show up in Cloud Run's logs
+logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+
+# Cloud Run sets K_SERVICE; APP_ENV=production works anywhere else
+IS_PRODUCTION = bool(os.getenv("K_SERVICE")) or os.getenv("APP_ENV") == "production"
+if IS_PRODUCTION and not os.getenv("INTERNAL_API_KEY"):
+    # Without it, anyone who finds this service's address could run (and bill) the agent
+    raise RuntimeError("INTERNAL_API_KEY must be set in production")
 
 
 @asynccontextmanager
 async def lifespan(_app):
-    """On startup, catch up the review index in the background (startup isn't delayed).
-
-    Covers reviews saved or deleted while this service was down or asleep.
+    """On startup, in the background (startup isn't delayed):
+    - catch up the review index (reviews saved or deleted while this service slept)
+    - delete chats untouched for 30 days (keeps the database small)
     """
 
     def catch_up():
@@ -57,6 +66,10 @@ async def lifespan(_app):
             log.info("Review index catch-up: %s", sync_reviews())
         except Exception:
             log.exception("Review index catch-up failed")
+        try:
+            delete_old_chats(graph.checkpointer)
+        except Exception:
+            log.exception("Old chat cleanup failed")
 
     threading.Thread(target=catch_up, daemon=True).start()
     yield

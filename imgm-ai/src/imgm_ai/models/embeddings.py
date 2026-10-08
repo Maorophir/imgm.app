@@ -55,7 +55,9 @@ class PrefixedEmbeddings(Embeddings):
 
 def embeddings_provider() -> str:
     """Which embedding provider is configured: "ollama" or "gemini"."""
-    provider = os.getenv("EMBEDDINGS_PROVIDER", "ollama")
+    provider = (
+        os.getenv("EMBEDDINGS_PROVIDER", "ollama").strip().strip("\"'")
+    )  # tolerate pasted quotes
     if provider not in EMBEDDING_MODELS:
         raise ValueError(
             f"Unknown EMBEDDINGS_PROVIDER {provider!r} (use: {', '.join(EMBEDDING_MODELS)})"

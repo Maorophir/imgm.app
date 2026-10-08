@@ -8,6 +8,7 @@ for quick experiments.
 """
 
 import atexit
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -18,6 +19,11 @@ from psycopg.rows import dict_row
 from psycopg_pool import ConnectionPool
 
 load_dotenv()
+log = logging.getLogger("imgm_ai.memory")
+
+CHAT_RETENTION_DAYS = (
+    30  # chats untouched for longer are deleted (keeps Neon's free 1 GB)
+)
 
 # Rebuilding classes from saved data is a classic attack route, so only our own
 # result type is allowed back in (LangGraph's built-in types, like messages, always are).
@@ -43,3 +49,28 @@ def make_checkpointer() -> PostgresSaver | InMemorySaver:
     saver = PostgresSaver(pool, serde=serde)
     saver.setup()  # creates the checkpoint tables the first time; safe to repeat
     return saver
+
+
+def delete_old_chats(saver, days: int = CHAT_RETENTION_DAYS) -> int:
+    """Delete chats nobody has touched for `days` days. Returns how many were deleted.
+
+    Only for the Postgres checkpointer (RAM chats vanish on restart anyway). A chat's
+    age is its newest checkpoint's timestamp.
+    """
+    if not isinstance(saver, PostgresSaver):
+        return 0
+    with saver.conn.connection() as conn, conn.cursor() as cur:
+        cur.execute(
+            """
+            SELECT thread_id FROM checkpoints
+            GROUP BY thread_id
+            HAVING max((checkpoint ->> 'ts')::timestamptz) < now() - make_interval(days => %(days)s)
+            """,
+            {"days": days},
+        )
+        old = [row["thread_id"] for row in cur.fetchall()]
+    for thread_id in old:
+        saver.delete_thread(thread_id)
+    if old:
+        log.info("Deleted %d chats older than %d days", len(old), days)
+    return len(old)
