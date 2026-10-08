@@ -1,6 +1,7 @@
 /**
  * PickCard — one recommended game. The Best Pick gets the big Legendary-style card;
- * the other four are compact rows. Every card links to the game's IMGM page.
+ * the other four are compact rows, the next two framed in their tier's colours
+ * (#2 Epic purple, #3 Rare blue). Every card links to the game's IMGM page.
  * With onNotForMe, each card also gets a "Not for me" button (swaps that game out).
  */
 import { Link } from 'react-router-dom';
@@ -51,6 +52,12 @@ const NotForMeButton = ({ pick, onNotForMe, disabled }) => (
   </button>
 );
 
+// Rank → tier frame for the compact rows (#1 is the Legendary Best Pick card)
+const RANK_TIERS = {
+  2: { frame: 'rarity-frame is-epic', color: '#c084fc' },
+  3: { frame: 'rarity-frame', color: '#60a5fa' }, // Rare: a plain frame in its blue
+};
+
 const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
   const notForMe = onNotForMe && <NotForMeButton pick={pick} onNotForMe={onNotForMe} disabled={disabled} />;
 
@@ -80,17 +87,14 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
     );
   }
 
-  return (
-    <Link
-      to={`/game/${pick.game_id}`}
-      className="relative flex gap-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-brand/60 transition animate-fade-in"
-    >
-      {notForMe}
+  const tier = RANK_TIERS[rank];
+  const row = (
+    <>
       <Cover src={pick.cover} title={pick.title} className="w-14 h-20 rounded-lg shrink-0" />
       <div className="min-w-0 flex flex-col gap-1">
         {/* pr-24 keeps long titles clear of the "Not for me" button */}
         <h3 className={`font-bold text-white leading-tight ${onNotForMe ? 'pr-24' : ''}`}>
-          <span className="text-slate-500 mr-1.5 tabular-nums">{rank}.</span>
+          <span className="mr-1.5 tabular-nums" style={{ color: tier?.color ?? '#64748b' }}>{rank}.</span>
           {pick.title}
         </h3>
         <span className="flex flex-wrap items-center gap-x-2">
@@ -99,6 +103,30 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
         </span>
         <p className="text-sm text-slate-300 leading-snug line-clamp-3"><RichText text={pick.why} /></p>
       </div>
+    </>
+  );
+
+  // #2 and #3: the row inside its tier's frame
+  if (tier) {
+    return (
+      <Link
+        to={`/game/${pick.game_id}`}
+        className={`relative block animate-fade-in hover:scale-[1.01] transition ${tier.frame}`}
+        style={{ '--rc': tier.color }}
+      >
+        {notForMe}
+        <article className="rounded-[17px] bg-slate-900 flex gap-3 p-3">{row}</article>
+      </Link>
+    );
+  }
+
+  return (
+    <Link
+      to={`/game/${pick.game_id}`}
+      className="relative flex gap-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-brand/60 transition animate-fade-in"
+    >
+      {notForMe}
+      {row}
     </Link>
   );
 };
