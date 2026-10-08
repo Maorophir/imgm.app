@@ -18,7 +18,7 @@ import ResetPassword from './pages/ResetPassword';
 import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
-import { PLAY_NEXT_ENABLED } from './lib/features';
+import { usePlayNextAccess } from './hooks/usePlayNextAccess';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -35,6 +35,14 @@ import { PLAY_NEXT_ENABLED } from './lib/features';
  * This pattern is called "layout composition" — the App composes the
  * overall page structure, and each route fills in the content area.
  */
+// Play Next for players who may use it (everyone after launch, beta players before);
+// everyone else is sent home as if the page didn't exist
+function PlayNextRoute() {
+  const { enabled, loading } = usePlayNextAccess();
+  if (loading) return <div className="min-h-[70vh]" />;
+  return enabled ? <GameGuide /> : <Navigate to="/" replace />;
+}
+
 function App() {
   return (
     <Router>
@@ -51,9 +59,9 @@ function App() {
           <Route path="/game/:id/review" element={<ReviewQuest />} />
           <Route path="/search" element={<Search />} />
           <Route path="/trending" element={<Trending />} />
-          {/* Play Next: live locally; hidden in production until launch (lib/features.js) */}
-          <Route path="/play-next" element={PLAY_NEXT_ENABLED ? <GameGuide /> : <Navigate to="/" replace />} />
-          <Route path="/guide" element={<Navigate to={PLAY_NEXT_ENABLED ? '/play-next' : '/'} replace />} />
+          {/* Play Next: live locally; in production only beta players until launch */}
+          <Route path="/play-next" element={<PlayNextRoute />} />
+          <Route path="/guide" element={<Navigate to="/play-next" replace />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />

@@ -4,7 +4,7 @@ import { useSession } from '../lib/authClient';
 import SearchBar from './SearchBar';
 import UserMenu from './UserMenu';
 import Logo from './Logo';
-import { PLAY_NEXT_ENABLED } from '../lib/features';
+import { usePlayNextAccess } from '../hooks/usePlayNextAccess';
 
 // White links; the current page gets a thin lime underline
 const navClass = ({ isActive }) =>
@@ -16,12 +16,11 @@ const mobileNavClass = ({ isActive }) =>
     isActive ? 'border-brand text-white bg-white/5' : 'border-transparent text-slate-300 hover:text-white hover:bg-white/5'
   }`;
 
-const LINKS = [
+const BASE_LINKS = [
   { to: '/', label: 'Home', end: true },
   { to: '/trending', label: 'Trending' },
-  // Hidden until Play Next launches (lib/features.js)
-  ...(PLAY_NEXT_ENABLED ? [{ to: '/play-next', label: <><span className="text-brand">✦</span> Play Next</> }] : []),
 ];
+const PLAY_NEXT_LINK = { to: '/play-next', label: <><span className="text-brand">✦</span> Play Next</> };
 
 /**
  * Desktop (md+): logo · search · links · account, all on one row.
@@ -31,6 +30,9 @@ const LINKS = [
  */
 function Navbar() {
   const { data: session, isPending } = useSession();
+  // Play Next shows for everyone after launch, before that only for beta players
+  const playNext = usePlayNextAccess();
+  const LINKS = playNext.enabled ? [...BASE_LINKS, PLAY_NEXT_LINK] : BASE_LINKS;
   const [menuOpen, setMenuOpen] = useState(false);
   const closeMenu = () => setMenuOpen(false);
 

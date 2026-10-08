@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
-import { requireUser } from '../lib/session.js';
+import { requireUser, getSessionUser } from '../lib/session.js';
+import { canUsePlayNext } from '../lib/config.js';
 import { streamGuide } from '../controllers/guideController.js';
 
 const router = Router();
@@ -34,7 +35,17 @@ const burstLimiter = limit(15 * 60 * 1000, 10, "You've asked Play Next a lot in 
 // The whole day: 30, so a slow steady stream can't run all day either
 const dailyLimiter = limit(24 * 60 * 60 * 1000, 30, "You've reached today's Play Next limit (30 questions). Come back tomorrow!");
 
-// POST /api/guide/stream — ask Play Next (logged-in players only)
-router.post('/stream', requireUser, oneAtATime, burstLimiter, dailyLimiter, streamGuide);
+// Before launch, only beta players may use it; for everyone else it doesn't exist (404)
+const playNextAccess = (req, res, next) =>
+  canUsePlayNext(req.user.id) ? next() : res.status(404).json({ error: 'Not found' });
+
+// GET /api/guide/access — may the current visitor use Play Next? (the website asks)
+router.get('/access', async (req, res) => {
+  const user = await getSessionUser(req).catch(() => null);
+  res.json({ enabled: Boolean(user && canUsePlayNext(user.id)) });
+});
+
+// POST /api/guide/stream — ask Play Next (logged-in players with access only)
+router.post('/stream', requireUser, playNextAccess, oneAtATime, burstLimiter, dailyLimiter, streamGuide);
 
 export default router;

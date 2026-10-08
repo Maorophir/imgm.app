@@ -54,3 +54,16 @@ export const internalApiKey = process.env.INTERNAL_API_KEY || null;
  */
 export const playNextEnabled =
   process.env.PLAY_NEXT === 'on' || (!isProduction && Boolean(process.env.AI_SERVICE_URL));
+
+/**
+ * Play Next's beta: players who get it before launch (comma-separated user ids in
+ * PLAY_NEXT_BETA_USERS on Render). Everyone else doesn't see it until PLAY_NEXT=on.
+ */
+export const playNextBetaUsers = new Set(
+  (process.env.PLAY_NEXT_BETA_USERS || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+);
+
+export const canUsePlayNext = (userId) => playNextEnabled || playNextBetaUsers.has(userId);
