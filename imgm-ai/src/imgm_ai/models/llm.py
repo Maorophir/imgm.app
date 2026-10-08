@@ -3,7 +3,7 @@ The chat model: Ollama locally, Gemini on the live site (LLM_PROVIDER=gemini).
 
 Gemini runs as a chain of fallbacks, cheapest first. A model is only used if every
 model before it failed:
-    1. The FREE key (GEMINI_FREE_API_KEY, or GOOGLE_API_KEY):  four Flash models, then two Flash-Lite
+    1. The FREE key (GEMINI_DEV_API_KEY in development, else GEMINI_FREE_API_KEY):  four Flash models, then two Flash-Lite
     2. The PAID key (GEMINI_PAID_API_KEY, optional):          the full list, strongest first
 So normal days cost nothing, and the paid key only answers when the free quota is
 used up (429) or Google is overloaded (503).
@@ -81,9 +81,17 @@ def uses_gemini() -> bool:
 def gemini_tiers() -> list[tuple[str, str, list[str]]]:
     """The Gemini keys in the order they're tried: [(tier, api_key, models), ...].
 
-    GOOGLE_API_KEY still counts as the free key, so older .env files keep working.
+    The free key is, in this order:
+      GEMINI_DEV_API_KEY   a separate free project for development, so testing never
+                           uses up the players' daily free quota (never set in production)
+      GEMINI_FREE_API_KEY  the production free key
+      GOOGLE_API_KEY       older .env files
     """
-    free_key = os.getenv("GEMINI_FREE_API_KEY")
+    free_key = (
+        os.getenv("GEMINI_DEV_API_KEY")
+        or os.getenv("GEMINI_FREE_API_KEY")
+        or os.getenv("GOOGLE_API_KEY")
+    )
     paid_key = os.getenv("GEMINI_PAID_API_KEY")
     tiers = []
     if free_key:
