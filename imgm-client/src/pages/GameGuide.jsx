@@ -78,19 +78,6 @@ const GuideTurn = ({ turn, isLatest, onNotForMe, running }) => {
 
 function GameGuide() {
   const { data: session, isPending } = useSession();
-  const { turns, current, running, ask, notForMe, newChat } = useGameGuide();
-  const [prefs, setPrefs] = useState({}); // the "Tune it" answers (all optional)
-  const bottomRef = useRef(null);
-  // Only the questions actually answered are sent (empty lists and un-picks dropped)
-  const preferences = Object.fromEntries(
-    Object.entries(prefs).filter(([, v]) => (Array.isArray(v) ? v.length > 0 : Boolean(v)))
-  );
-
-  // Keep the newest activity in view as the guide works
-  const activity = current ? `${current.steps.length}-${current.answer.length}-${Boolean(current.cards)}` : '';
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [activity]);
 
   if (isPending) return <div className="min-h-[70vh] animate-pulse" />;
 
@@ -110,6 +97,42 @@ function GameGuide() {
       </div>
     );
   }
+
+  // key: another player logging in on this tab gets their own chat, never this one
+  return <PlayNextChat key={session.user.id} userId={session.user.id} />;
+}
+
+// The "Tune it" answers, kept in the tab next to the chat (see useGameGuide)
+const loadPrefs = (userId) => {
+  try {
+    return JSON.parse(sessionStorage.getItem(`imgm:play-next:${userId}:prefs`)) || {};
+  } catch {
+    return {};
+  }
+};
+
+function PlayNextChat({ userId }) {
+  const { turns, current, running, ask, notForMe, newChat } = useGameGuide(userId);
+  const [prefs, setPrefs] = useState(() => loadPrefs(userId)); // the "Tune it" answers (all optional)
+  const bottomRef = useRef(null);
+  // Only the questions actually answered are sent (empty lists and un-picks dropped)
+  const preferences = Object.fromEntries(
+    Object.entries(prefs).filter(([, v]) => (Array.isArray(v) ? v.length > 0 : Boolean(v)))
+  );
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(`imgm:play-next:${userId}:prefs`, JSON.stringify(prefs));
+    } catch {
+      // Blocked storage: the answers just won't survive leaving the page
+    }
+  }, [userId, prefs]);
+
+  // Keep the newest activity in view as the guide works
+  const activity = current ? `${current.steps.length}-${current.answer.length}-${Boolean(current.cards)}` : '';
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [activity]);
 
   return (
     <div className="max-w-7xl mx-auto px-4 md:px-6 py-8 grid lg:grid-cols-[minmax(0,1fr)_420px] gap-8 items-start">

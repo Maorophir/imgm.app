@@ -45,25 +45,6 @@ router.get('/access', async (req, res) => {
   res.json({ enabled: Boolean(user && canUsePlayNext(user.id)) });
 });
 
-// TEMPORARY: 5 events, one a second, to find which hop holds the stream back (remove after)
-router.get('/stream-test', (req, res) => {
-  res.writeHead(200, {
-    'Content-Type': 'text/event-stream',
-    'Cache-Control': 'no-cache, no-transform',
-    Connection: 'keep-alive',
-    'X-Accel-Buffering': 'no',
-  });
-  let n = 0;
-  const timer = setInterval(() => {
-    res.write(`event: tick\ndata: ${n}\n\n`);
-    if (++n === 5) {
-      clearInterval(timer);
-      res.end();
-    }
-  }, 1000);
-  res.on('close', () => clearInterval(timer));
-});
-
 // POST /api/guide/stream — ask Play Next (logged-in players with access only)
 router.post('/stream', requireUser, playNextAccess, oneAtATime, burstLimiter, dailyLimiter, streamGuide);
 
