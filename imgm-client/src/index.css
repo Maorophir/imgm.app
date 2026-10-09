@@ -79,12 +79,6 @@ body {
     90%, 100% { transform: translateX(0); }
   }
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
-  --animate-nudge: nudge 1.1s ease-in-out infinite;
-
-  /* Play Next: the first-visit arrow pointing at "Tune it" */
-  @keyframes nudge {
-    50% { transform: translateX(-5px); }
-  }
 
   /* A star "pops" when it becomes the newly selected one */
   @keyframes pop {

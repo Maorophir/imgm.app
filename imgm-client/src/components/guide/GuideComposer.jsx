@@ -1,52 +1,15 @@
 /**
- * GuideComposer — where the player asks: a text box, the optional "Tune it" questions
- * (length, mood, platforms…), and (before the first question) a few ideas to start from.
+ * GuideComposer — follow-ups after the quest: a text box, and "Tune it" to change
+ * the quest's answers (length, vibe, platforms…) for the next question.
  */
 import { useState } from "react";
 import GuidePreferences from "./GuidePreferences";
 import { summarize } from "./preferenceOptions";
 
-const STARTERS = [
-  "Something cozy to wind down with",
-  "Beautiful but brutally hard",
-  "A great co-op night with friends",
-  "A story that will make me cry",
-  "Short sessions, big fun",
-];
-
-// Remembered in this browser: once a player has opened "Tune it", the arrow stops pointing at it
-const TUNE_SEEN_KEY = "playNext.tuneItSeen";
-const readTuneSeen = () => {
-  try {
-    return localStorage.getItem(TUNE_SEEN_KEY) === "true";
-  } catch {
-    return false; // private window / blocked storage: just show the arrow
-  }
-};
-
-const GuideComposer = ({
-  onAsk,
-  disabled,
-  prefs,
-  onPrefsChange,
-  showStarters,
-  followUp,
-}) => {
+const GuideComposer = ({ onAsk, disabled, prefs, onPrefsChange }) => {
   const [text, setText] = useState("");
   const [tuning, setTuning] = useState(false);
-  const [tuneSeen, setTuneSeen] = useState(readTuneSeen);
   const summary = summarize(prefs);
-
-  const toggleTuning = () => {
-    setTuning((t) => !t);
-    if (tuneSeen) return;
-    setTuneSeen(true);
-    try {
-      localStorage.setItem(TUNE_SEEN_KEY, "true");
-    } catch {
-      // not saved: the arrow comes back next visit, nothing breaks
-    }
-  };
 
   const submit = (question) => {
     const q = question.trim();
@@ -69,22 +32,6 @@ const GuideComposer = ({
         </div>
       )}
 
-      {showStarters && (
-        <div className="flex flex-wrap gap-2">
-          {STARTERS.map((starter) => (
-            <button
-              key={starter}
-              type="button"
-              onClick={() => submit(starter)}
-              disabled={disabled}
-              className="px-3.5 py-2 rounded-full text-sm font-semibold text-slate-200 bg-slate-800/80 border border-slate-700 hover:border-brand/70 hover:text-white transition disabled:opacity-40"
-            >
-              {starter}
-            </button>
-          ))}
-        </div>
-      )}
-
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -99,9 +46,7 @@ const GuideComposer = ({
           placeholder={
             disabled
               ? "Picking your games…"
-              : followUp
-                ? 'Ask a follow-up, e.g. "shorter ones please"'
-                : "What are you in the mood for?"
+              : 'Ask a follow-up, e.g. "shorter ones please"'
           }
           disabled={disabled}
           aria-label="Ask Play Next"
@@ -119,37 +64,18 @@ const GuideComposer = ({
       <div className="flex items-center gap-3 text-sm">
         <button
           type="button"
-          onClick={toggleTuning}
+          onClick={() => setTuning((t) => !t)}
           aria-expanded={tuning}
           className="shrink-0 px-4 py-2 rounded-full font-extrabold uppercase tracking-wider text-xs border-2 border-brand text-white bg-brand/10 hover:bg-brand/20 shadow-[0_0_18px_-6px_var(--color-brand)] transition"
         >
           {tuning ? "Done tuning" : "Tune it"}{" "}
           <span className="text-brand">{tuning ? "▴" : "▾"}</span>
         </button>
-        {!tuneSeen && !tuning ? (
-          // First visit only: point at it until they've opened it once
-          <span className="flex min-w-0 items-center gap-2 font-bold text-brand">
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4 shrink-0 animate-nudge"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <path d="M19 12H5M12 19l-7-7 7-7" />
-            </svg>
-            <span className="truncate">Start here for a much better match</span>
-          </span>
-        ) : (
-          <span
-            className={`min-w-0 truncate ${summary ? "text-slate-400" : "text-slate-500"}`}
-          >
-            {summary || "Length, mood, platforms, games you loved"}
-          </span>
-        )}
+        <span
+          className={`min-w-0 truncate ${summary ? "text-slate-400" : "text-slate-500"}`}
+        >
+          {summary || "Change your answers for the next question"}
+        </span>
       </div>
     </div>
   );

@@ -1,15 +1,19 @@
 /**
- * GuidePreferences — the optional "Tune it" questions for Play Next.
+ * GuidePreferences — the "Tune it" panel: the quest's answers, editable during the chat.
  *
- * Every answer is optional: one click picks, a second click un-picks. The values are
- * the keys the AI understands (imgm-ai Preferences); players only see the labels.
+ * One click picks, a second click un-picks. The values are the keys the AI
+ * understands (imgm-ai Preferences); players only see the labels.
  * Text-only chips, the selected ones lit in the brand lime.
+ * Also home to two pieces the quest reuses: <CustomInput> and <LovedGames>.
  */
 import { useState } from "react";
 import GamePicker from "../reviewQuest/GamePicker";
-import { MAX_CUSTOM, QUESTIONS } from "./preferenceOptions";
-
-const MAX_LOVED = 3;
+import {
+  MAX_CUSTOM,
+  MAX_LOVED,
+  QUESTIONS,
+  toggleAnswer,
+} from "./preferenceOptions";
 
 const Chip = ({ on, disabled, onClick, children }) => (
   <button
@@ -28,7 +32,7 @@ const Chip = ({ on, disabled, onClick, children }) => (
 );
 
 // "Something else…": the player types their own answer and presses Enter
-const CustomInput = ({ onAdd }) => {
+export const CustomInput = ({ onAdd }) => {
   const [text, setText] = useState("");
   return (
     <input
@@ -47,119 +51,103 @@ const CustomInput = ({ onAdd }) => {
   );
 };
 
-const GuidePreferences = ({ prefs, onChange }) => {
-  const set = (key, value) => onChange({ ...prefs, [key]: value });
-
-  const toggle = ({ key, multi, max }, value) => {
-    if (!multi) return set(key, prefs[key] === value ? undefined : value); // click again = un-pick
-    const current = prefs[key] ?? [];
-    if (current.includes(value))
-      return set(
-        key,
-        current.filter((v) => v !== value),
-      );
-    if (max && current.length >= max) return;
-    set(key, [...current, value]);
-  };
-
+// Loved recently: up to 3 games, picked with the same search as the Review Quest
+export const LovedGames = ({ prefs, onChange }) => {
   const loved = prefs.loved_games ?? [];
-
+  const set = (titles) => onChange({ ...prefs, loved_games: titles });
   return (
-    <div className="flex flex-col gap-4">
-      {QUESTIONS.map((q) => {
-        const picked = [prefs[q.key]].flat().filter(Boolean);
-        const full = q.multi && q.max && picked.length >= q.max;
-        const own = picked.filter((v) => !q.options.some((o) => o.value === v)); // typed by the player
-        return (
-          <fieldset key={q.key} className="flex flex-col gap-2">
-            <legend className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-              {q.label}
-              {q.multi && (
-                <span className="normal-case tracking-normal font-semibold">
-                  {" "}
-                  · {q.max ? `up to ${q.max}` : "pick any"}
-                </span>
-              )}
-            </legend>
-            <div className="flex flex-wrap gap-2">
-              {q.options.map((o) => {
-                const on = picked.includes(o.value);
-                return (
-                  <Chip
-                    key={o.value}
-                    on={on}
-                    disabled={full && !on}
-                    onClick={() => toggle(q, o.value)}
-                  >
-                    {o.label}
-                    {o.hint && (
-                      <span className="ml-1.5 font-normal text-slate-400">
-                        {o.hint}
-                      </span>
-                    )}
-                  </Chip>
-                );
-              })}
-              {own.map((value) => (
-                <Chip key={value} on onClick={() => toggle(q, value)}>
-                  {value} <span className="ml-1 text-slate-400">✕</span>
-                </Chip>
-              ))}
-              {q.custom && own.length < MAX_CUSTOM && (
-                <CustomInput
-                  onAdd={(value) =>
-                    !picked.some(
-                      (v) => v.toLowerCase() === value.toLowerCase(),
-                    ) && toggle(q, value)
-                  }
-                />
-              )}
-            </div>
-          </fieldset>
-        );
-      })}
-
-      {/* Loved recently: up to 3 games, picked with the same search as the Review Quest */}
-      <fieldset className="flex flex-col gap-2">
-        <legend className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
-          Loved recently
-          <span className="normal-case tracking-normal font-semibold">
-            {" "}
-            · up to {MAX_LOVED}
-          </span>
-        </legend>
-        {loved.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            {loved.map((title) => (
-              <Chip
-                key={title}
-                on
-                onClick={() =>
-                  set(
-                    "loved_games",
-                    loved.filter((t) => t !== title),
-                  )
-                }
-              >
-                {title} <span className="ml-1 text-slate-400">✕</span>
-              </Chip>
-            ))}
-          </div>
-        )}
-        {loved.length < MAX_LOVED && (
-          <GamePicker
-            value={null}
-            onChange={(game) =>
-              game &&
-              !loved.includes(game.title) &&
-              set("loved_games", [...loved, game.title])
-            }
-            placeholder="Search a game you loved…"
-          />
-        )}
-      </fieldset>
+    <div className="flex flex-col gap-2">
+      {loved.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {loved.map((title) => (
+            <Chip
+              key={title}
+              on
+              onClick={() => set(loved.filter((t) => t !== title))}
+            >
+              {title} <span className="ml-1 text-slate-400">✕</span>
+            </Chip>
+          ))}
+        </div>
+      )}
+      {loved.length < MAX_LOVED && (
+        <GamePicker
+          value={null}
+          onChange={(game) =>
+            game && !loved.includes(game.title) && set([...loved, game.title])
+          }
+          placeholder="Search a game you loved…"
+        />
+      )}
     </div>
   );
 };
+
+const GuidePreferences = ({ prefs, onChange }) => (
+  <div className="flex flex-col gap-4">
+    {QUESTIONS.map((q) => {
+      const picked = [prefs[q.key]].flat().filter(Boolean);
+      const full = q.multi && q.max && picked.length >= q.max;
+      const own = picked.filter((v) => !q.options.some((o) => o.value === v)); // typed by the player
+      return (
+        <fieldset key={q.key} className="flex flex-col gap-2">
+          <legend className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+            {q.label}
+            {q.multi && (
+              <span className="normal-case tracking-normal font-semibold">
+                {" "}
+                · {q.max ? `up to ${q.max}` : "pick any"}
+              </span>
+            )}
+          </legend>
+          <div className="flex flex-wrap gap-2">
+            {q.options.map((o) => {
+              const on = picked.includes(o.value);
+              return (
+                <Chip
+                  key={o.value}
+                  on={on}
+                  disabled={full && !on}
+                  onClick={() => onChange(toggleAnswer(prefs, q, o.value))}
+                >
+                  {o.label}
+                </Chip>
+              );
+            })}
+            {own.map((value) => (
+              <Chip
+                key={value}
+                on
+                onClick={() => onChange(toggleAnswer(prefs, q, value))}
+              >
+                {value} <span className="ml-1 text-slate-400">✕</span>
+              </Chip>
+            ))}
+            {q.custom && own.length < MAX_CUSTOM && (
+              <CustomInput
+                onAdd={(value) =>
+                  !picked.some(
+                    (v) => v.toLowerCase() === value.toLowerCase(),
+                  ) && onChange(toggleAnswer(prefs, q, value))
+                }
+              />
+            )}
+          </div>
+        </fieldset>
+      );
+    })}
+
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+        Loved recently
+        <span className="normal-case tracking-normal font-semibold">
+          {" "}
+          · up to {MAX_LOVED}
+        </span>
+      </legend>
+      <LovedGames prefs={prefs} onChange={onChange} />
+    </fieldset>
+  </div>
+);
 
 export default GuidePreferences;
