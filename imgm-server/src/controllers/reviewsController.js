@@ -236,3 +236,52 @@ export const voteOnReview = async (req, res) => {
     res.status(500).json({ error: 'Internal server error' });
   }
 };
+
+// GET /api/reviews/recent?limit=8 — the newest reviews on any game, for the home page.
+// Light on purpose: who, which game, the score and a short snippet (swearing masked).
+// At most 2 per game, so one busy game can't fill the whole row.
+const PER_GAME = 2;
+const recentQuery = z.object({ limit: z.coerce.number().int().min(1).max(12).default(8) });
+export const getRecentReviews = async (req, res) => {
+  const query = recentQuery.safeParse(req.query);
+  if (!query.success) return res.status(400).json({ error: 'Invalid request' });
+  try {
+    const newest = await prisma.review.findMany({
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: query.data.limit * 6, // enough to fill the row even with a busy game
+      select: {
+        id: true,
+        rating: true,
+        reviewText: true,
+        createdAt: true,
+        user: { select: { displayUsername: true } },
+        game: { select: { id: true, title: true, coverUrl: true } },
+      },
+    });
+    const perGame = new Map();
+    const reviews = newest
+      .filter((review) => {
+        const shown = perGame.get(review.game.id) ?? 0;
+        perGame.set(review.game.id, shown + 1);
+        return shown < PER_GAME;
+      })
+      .slice(0, query.data.limit);
+    res.json(
+      reviews.map((review) => {
+        const { masked, reviewText } = withMaskedText(review);
+        const text = (masked?.reviewText ?? reviewText)?.trim() || null;
+        return {
+          id: review.id,
+          rating: review.rating,
+          snippet: text && (text.length > 160 ? `${text.slice(0, 160).trimEnd()}…` : text),
+          createdAt: review.createdAt,
+          author: review.user?.displayUsername ?? null,
+          game: review.game,
+        };
+      })
+    );
+  } catch (error) {
+    console.error('Error fetching recent reviews:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};

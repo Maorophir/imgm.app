@@ -45,6 +45,9 @@ export const getGame = (id, signal) => fetchJson(`/api/games/${id}`, { signal })
 export const voteOnReview = (reviewId, helpful) =>
   fetchJson(`/api/reviews/${reviewId}/vote`, { method: 'PUT', body: { helpful } });
 
+// The newest reviews on any game (home page): [{ id, rating, snippet, createdAt, author, game }]
+export const getRecentReviews = (signal) => fetchJson('/api/reviews/recent?limit=8', { signal });
+
 // One page of a game's reviews: { reviews, mine (the viewer's own, first page only), total, hasMore }
 export const getGameReviews = (gameId, { sort, tier, offset, limit }, signal) => {
   const params = new URLSearchParams({ sort, offset, limit, ...(tier && { tier }) });

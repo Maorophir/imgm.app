@@ -3,15 +3,8 @@
  * "+ New chat" on top; each chat can be deleted (a second click confirms).
  */
 import { useState } from 'react';
+import { timeAgo } from '../../lib/timeAgo';
 
-// "just now", "5m", "3h", "2d"
-const age = (date) => {
-  const minutes = Math.floor((Date.now() - new Date(date)) / 60000);
-  if (minutes < 1) return 'just now';
-  if (minutes < 60) return `${minutes}m`;
-  if (minutes < 60 * 24) return `${Math.floor(minutes / 60)}h`;
-  return `${Math.floor(minutes / (60 * 24))}d`;
-};
 
 const ChatRow = ({ chat, active, onOpen, onDelete, disabled }) => {
   const [confirming, setConfirming] = useState(false);
@@ -27,7 +20,7 @@ const ChatRow = ({ chat, active, onOpen, onDelete, disabled }) => {
         }`}
       >
         <span className="block text-sm font-semibold truncate">{chat.title}</span>
-        <span className="block text-[11px] text-slate-500">{age(chat.updatedAt)}</span>
+        <span className="block text-[11px] text-slate-500">{timeAgo(chat.updatedAt)}</span>
       </button>
       <button
         type="button"

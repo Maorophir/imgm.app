@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
-import { getReviewsByGameId, getMyReview, saveReview, deleteMyReview, voteOnReview } from '../controllers/reviewsController.js';
+import { getReviewsByGameId, getMyReview, saveReview, deleteMyReview, voteOnReview, getRecentReviews } from '../controllers/reviewsController.js';
 
 const router = Router();
+
+// GET /api/reviews/recent — the newest reviews on any game (home page)
+router.get('/recent', getRecentReviews);
 
 // GET /api/reviews/game/:gameId — all reviews of a game
 router.get('/game/:gameId', getReviewsByGameId);
