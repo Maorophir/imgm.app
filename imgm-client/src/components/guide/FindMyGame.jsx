@@ -28,13 +28,13 @@ const OptionCard = ({ option, on, disabled, onClick }) => (
     onClick={onClick}
     disabled={disabled}
     aria-pressed={on}
-    className={`flex flex-col gap-1 rounded-2xl border p-4 text-left transition-all disabled:opacity-35 disabled:cursor-not-allowed ${
+    className={`flex flex-col gap-1 rounded-2xl border p-4 lg:p-5 text-left transition-all disabled:opacity-35 disabled:cursor-not-allowed ${
       on
         ? "bg-brand/15 border-brand shadow-[0_0_18px_rgb(184_240_58/0.25)]"
         : "bg-slate-800/50 border-slate-700/60 hover:border-slate-500 hover:bg-slate-800/80"
     }`}
   >
-    <span className="font-bold text-white">{option.label}</span>
+    <span className="font-bold text-white lg:text-lg">{option.label}</span>
     {option.hint && (
       <span className="text-sm text-slate-300 leading-snug">{option.hint}</span>
     )}
@@ -154,7 +154,7 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
   };
 
   return (
-    <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 md:p-8">
+    <div className="flex-1 flex flex-col rounded-3xl border border-slate-800 bg-slate-900/60 p-5 md:p-8 lg:border-0 lg:bg-transparent lg:p-0">
       {/* Progress */}
       <div className="flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.2em]">
         <span className="text-brand">Find my game</span>
@@ -170,7 +170,7 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
       </div>
 
       {/* The screen — key={step} replays the fade-in on every screen change */}
-      <div key={step} className="animate-fade-in mt-7">
+      <div key={step} className="animate-fade-in mt-7 lg:my-auto lg:py-8">
         <h2 className="font-display text-3xl md:text-4xl uppercase tracking-tight text-white">
           {screen.title}
         </h2>
@@ -218,7 +218,7 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
       </div>
 
       {/* Back · the way out · Next */}
-      <div className="mt-8 flex flex-wrap items-center gap-3">
+      <div className="mt-auto lg:mt-0 pt-8 lg:sticky lg:-bottom-5 lg:z-10 lg:-mx-6 lg:px-6 lg:py-4 lg:bg-slate-950/90 lg:backdrop-blur lg:border-t lg:border-white/5 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => go(step - 1)}

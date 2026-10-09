@@ -24,6 +24,29 @@
     outline: 2px solid var(--color-brand);
     outline-offset: 2px;
   }
+
+  /* Scrollbars, site-wide: thin, a dim lime thumb on no track (not the browser's grey) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(184 240 58 / 0.35) transparent;
+  }
+  /* Safari only understands the older -webkit- way */
+  @supports not (scrollbar-color: auto) {
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgb(184 240 58 / 0.35);
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--color-brand);
+    }
+  }
 }
 
 html,
@@ -80,6 +103,13 @@ body {
   }
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
   --animate-drift: drift 18s ease-in-out infinite alternate;
+  --animate-loading: loading 1.3s ease-in-out infinite;
+
+  /* Play Next "Warming up": the lime segment slides across its track, over and over */
+  @keyframes loading {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(250%); }
+  }
 
   /* Play Next background: the glows wander slowly */
   @keyframes drift {

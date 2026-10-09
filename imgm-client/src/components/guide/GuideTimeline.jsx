@@ -6,14 +6,14 @@
 import { useEffect, useState } from "react";
 const Spinner = () => (
   <span
-    className="w-3.5 h-3.5 rounded-full border-2 border-brand/30 border-t-brand animate-spin shrink-0"
+    className="block w-3.5 h-3.5 rounded-full border-2 border-brand/25 border-t-brand animate-spin shrink-0"
     aria-hidden="true"
   />
 );
 
 const Check = () => (
   <span
-    className="w-3.5 h-3.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[9px] font-black flex items-center justify-center shrink-0"
+    className="w-3.5 h-3.5 rounded-full bg-brand/15 text-brand text-[9px] font-black flex items-center justify-center shrink-0"
     aria-hidden="true"
   >
     ✓
@@ -28,19 +28,22 @@ const WarmingUp = () => {
     return () => clearTimeout(timer);
   }, []);
   return (
-    <p className="flex items-start gap-2 text-sm text-slate-400">
-      <span className="mt-[3px]">
-        <Spinner />
+    <div className="flex flex-col gap-2 text-sm text-slate-400">
+      Warming up…
+      {/* A lime bar that keeps sliding: something is happening, no promise of how long */}
+      <span
+        className="relative block h-1.5 w-56 max-w-full overflow-hidden rounded-full bg-brand/15"
+        role="progressbar"
+        aria-label="Warming up"
+      >
+        <span className="absolute inset-y-0 left-0 w-2/5 rounded-full bg-brand shadow-[0_0_12px_var(--color-brand)] animate-loading" />
       </span>
-      <span>
-        Warming up…
-        {slow && (
-          <span className="block text-slate-500 animate-fade-in">
-            The first question after a quiet spell takes a little longer.
-          </span>
-        )}
-      </span>
-    </p>
+      {slow && (
+        <span className="text-slate-500 animate-fade-in">
+          The first question after a quiet spell takes a little longer.
+        </span>
+      )}
+    </div>
   );
 };
 

@@ -3,12 +3,11 @@
  *
  *   the player's question  a lime-tinted bubble on the right
  *   Play Next              a glowing avatar ("digging…" while it works), its steps,
- *                          then the answer with a strip of the 5 pick covers
+ *                          then the answer (the picks themselves are in the side panel)
  *   quick replies          under the latest answer: one tap asks a common follow-up
  * On small screens the latest turn also shows the full picks (the side panel is hidden).
  */
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import GuideTimeline from "./GuideTimeline";
 import GuidePanel from "./GuidePanel";
 import RichText from "./RichText";
@@ -43,43 +42,6 @@ const Avatar = ({ working }) => (
     <PowerIcon className="w-4.5 h-4.5 text-brand" />
   </span>
 );
-
-// The 5 picks as covers, Best Pick first with its gold ring: each one opens the game
-const PicksStrip = ({ games }) => {
-  const picks = [...games].sort((a, b) => b.best_pick - a.best_pick);
-  return (
-    <div className="mt-4 flex gap-2.5 overflow-x-auto pb-1">
-      {picks.map((pick) => (
-        <Link
-          key={pick.game_id}
-          to={`/game/${pick.game_id}`}
-          title={pick.title}
-          className={`group relative w-16 sm:w-20 shrink-0 rounded-lg overflow-hidden transition hover:-translate-y-0.5 ${
-            pick.best_pick
-              ? "ring-2 ring-amber-300 shadow-[0_0_18px_-4px_#fbbf24]"
-              : "ring-1 ring-white/10 hover:ring-brand/70"
-          }`}
-        >
-          {pick.cover ? (
-            <img
-              src={pick.cover}
-              alt={pick.title}
-              loading="lazy"
-              className="w-full aspect-[3/4] object-cover"
-            />
-          ) : (
-            <div className="w-full aspect-[3/4] bg-slate-800" />
-          )}
-          {pick.best_pick && (
-            <span className="absolute top-1 left-1 rounded px-1 text-[9px] font-black text-slate-900 bg-amber-300">
-              ★
-            </span>
-          )}
-        </Link>
-      ))}
-    </div>
-  );
-};
 
 // One tap = one common follow-up
 const quickReplies = (cards) => {
@@ -126,11 +88,6 @@ const GuideTurn = ({ turn, isLatest, running, onNotForMe, onAsk, canAsk }) => {
               <p className="text-[17px] leading-relaxed text-slate-100">
                 {turn.cards.intro}
               </p>
-
-              {/* Large screens: the full cards are in the side panel; the latest small-screen turn shows them below */}
-              <div className={isLatest ? "hidden lg:block" : ""}>
-                <PicksStrip games={turn.cards.games} />
-              </div>
 
               {turn.cards.follow_up && (
                 <p className="mt-4 text-slate-300">{turn.cards.follow_up}</p>
