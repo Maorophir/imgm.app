@@ -12,7 +12,7 @@ class Preferences(
 ):  # total=False → every answer is optional (skippable)
     platforms: list[str]  # ["PC", "Nintendo Switch"]
     moods: list[str]  # ["cozy", "challenging"]
-    # What they want to spend their hours DOING (the quest's screen 3, up to 2)
+    # What they want to spend their hours DOING (the quest's screen 3, up to 3)
     wants_to: list[
         Literal["story", "combat", "explore", "puzzles", "build", "strategy", "runs", "compete"]
     ]

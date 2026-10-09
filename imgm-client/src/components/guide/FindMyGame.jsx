@@ -256,7 +256,7 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
               disabled={disabled}
               className="px-6 py-3 rounded-xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition disabled:opacity-40"
             >
-              I know just the game for you →
+              Find my next game →
             </button>
           )}
         </div>

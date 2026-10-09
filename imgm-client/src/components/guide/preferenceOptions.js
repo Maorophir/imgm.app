@@ -42,7 +42,7 @@ export const QUESTIONS = [
     key: "wants_to",
     label: "I want to",
     multi: true,
-    max: 2,
+    max: 3,
     options: [
       {
         value: "story",
@@ -176,7 +176,7 @@ export const QUEST_SCREENS = [
   {
     id: "do",
     title: "What do you want to do?",
-    subtitle: "What you'll spend your hours doing. Pick up to 2.",
+    subtitle: "What you'll spend your hours doing. Pick up to 3.",
     keys: ["wants_to"],
     any: "Surprise me",
   },
