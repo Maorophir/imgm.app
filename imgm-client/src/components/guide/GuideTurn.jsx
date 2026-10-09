@@ -212,18 +212,21 @@ const GuideTurn = ({
             )
           )}
 
-          {/* Stopping is the player's choice, not a failure: a quiet note, not a red error */}
-          {turn.error && (
-            <p
-              className={`rounded-xl text-sm px-4 py-2.5 border ${
-                turn.stopped
-                  ? "bg-white/5 border-white/10 text-slate-400"
-                  : "bg-red-500/10 border-red-500/30 text-red-200"
-              }`}
-            >
-              {turn.error}
-              {turn.stopped && isLatest && " Edit your question above, or ask something new."}
+          {/* Stopping is the player's choice, not a failure: one quiet line, like other AI chats */}
+          {turn.stopped ? (
+            <p className="flex items-center gap-2 text-sm text-slate-500">
+              <span
+                className="block w-2 h-2 rounded-[2px] bg-slate-500"
+                aria-hidden="true"
+              />
+              You stopped this answer
             </p>
+          ) : (
+            turn.error && (
+              <p className="rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-sm px-4 py-2.5">
+                {turn.error}
+              </p>
+            )
           )}
 
           {/* Small screens: the picks right here, under the answer */}

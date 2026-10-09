@@ -76,7 +76,14 @@ const GuideTimeline = ({ steps, running, collapsible = false }) => {
           className="flex items-start gap-2.5 text-sm animate-fade-in"
         >
           <span className="mt-[3px]">
-            {step.state === "done" ? <Check /> : <Spinner />}
+            {step.state === "done" ? (
+              <Check />
+            ) : running ? (
+              <Spinner />
+            ) : (
+              // The answer was stopped (or failed) before this step finished
+              <span className="block w-3.5 h-3.5 rounded-full border-2 border-slate-600" aria-hidden="true" />
+            )}
           </span>
           <span className="min-w-0">
             <span
