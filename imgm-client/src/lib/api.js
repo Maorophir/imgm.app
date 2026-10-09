@@ -41,6 +41,12 @@ export const getFeaturedGames = (signal) => fetchJson('/api/games/featured', { s
 
 export const getGame = (id, signal) => fetchJson(`/api/games/${id}`, { signal });
 
+// One page of a game's reviews: { reviews, mine (the viewer's own, first page only), total, hasMore }
+export const getGameReviews = (gameId, { sort, tier, offset, limit }, signal) => {
+  const params = new URLSearchParams({ sort, offset, limit, ...(tier && { tier }) });
+  return fetchJson(`/api/reviews/game/${gameId}?${params}`, { signal });
+};
+
 // The logged-in user's review of a game, or null if they haven't reviewed it
 export const getMyReview = (gameId, signal) => fetchJson(`/api/reviews/mine/${gameId}`, { signal });
 

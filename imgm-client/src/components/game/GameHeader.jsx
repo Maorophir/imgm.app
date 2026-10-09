@@ -127,7 +127,7 @@ const GameHeader = ({ game }) => {
 
             {/* IMGM's own score, in the loot-rarity style */}
             <div>
-              <ImgmRating average={game.ratings?.imgm} count={game.reviews?.length ?? 0} />
+              <ImgmRating average={game.ratings?.imgm} count={game.reviewStats?.count ?? 0} />
             </div>
 
             {ratings.length > 0 && (

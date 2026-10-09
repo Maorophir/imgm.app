@@ -1,32 +1,20 @@
 import { prisma } from '../lib/db.js';
 import * as igdb from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
-import { withMaskedText } from '../lib/reviewText.js';
-import { withAuthorXp } from '../lib/playerXp.js';
 
 // Re-fetch a cached game from IGDB once it's older than this
 const GAME_STALE_AFTER = 7 * 24 * 60 * 60 * 1000; // 7 days
 
 const GAME_INCLUDE = {
   aiSummary: true,
-  reviews: {
-    include: {
-      analysis: true,
-      // Public author info = the gamer tag only (never the real name or Google photo)
-      user: { select: { id: true, displayUsername: true } },
-      // "It's like ___ meets ___" games
-      comparedA: { select: { id: true, title: true, coverUrl: true } },
-      comparedB: { select: { id: true, title: true, coverUrl: true } },
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
-  }
+  // Only the ratings: the reviews themselves come page by page from /api/reviews/game/:id
+  reviews: { select: { rating: true } },
 };
 
 /**
  * Shapes a DB game for the client: flattens the AI summary relation into
- * `aiSummary` / `aiSentiment` strings and computes the IMGM average rating.
+ * `aiSummary` / `aiSentiment` strings, computes the IMGM average rating, and sums up
+ * the reviews: how many, and how many gave each rating (for the breakdown bar).
  */
 const toClientGame = (game) => {
   const { aiSummary, reviews = [], ...rest } = game;
@@ -34,10 +22,12 @@ const toClientGame = (game) => {
   if (reviews.length > 0) {
     ratings.imgm = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
   }
+  const byRating = {}; // { 10: 3, 8: 1, … }
+  for (const { rating } of reviews) byRating[rating] = (byRating[rating] ?? 0) + 1;
 
   return {
     ...rest,
-    reviews: reviews.map(withMaskedText), // swearing gets a masked copy
+    reviewStats: { count: reviews.length, byRating },
     ratings,
     aiSummary: aiSummary?.summaryText ?? null,
     aiSentiment: aiSummary?.overallSentiment ?? null,
@@ -162,7 +152,7 @@ export const getGameById = async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    res.json(toClientGame({ ...game, reviews: await withAuthorXp(game.reviews) }));
+    res.json(toClientGame(game));
   } catch (error) {
     console.error(`Error fetching game ${req.params.id}:`, error);
     res.status(500).json({ error: 'Internal server error' });
