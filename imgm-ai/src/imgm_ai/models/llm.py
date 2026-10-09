@@ -45,7 +45,10 @@ from imgm_ai.agent.events import emit
 load_dotenv()
 log = logging.getLogger("imgm_ai.models")
 
-OLLAMA_MODEL = "gemma4:e4b"
+# The local model, set per machine in .env (both have 8 GB GPUs; see two-machines notes)
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL") or "gemma4:e4b"  # empty in .env = the default
+# Thinking models (Qwen) think before every call: smarter, much slower. "off" skips it.
+OLLAMA_THINK = os.getenv("OLLAMA_THINK", "").strip().lower()
 
 # Free tier: every model has its OWN free quota, so each one is extra free capacity.
 # Stable versions only (no previews or "-latest" aliases, which can change underneath
@@ -275,8 +278,9 @@ def get_model(prepare=None):
     """
     prepare = prepare or (lambda m: m)
     if not uses_gemini():
+        thinking = {"reasoning": OLLAMA_THINK != "off"} if OLLAMA_THINK else {}
         return prepare(
-            ChatOllama(model=OLLAMA_MODEL, num_ctx=32768)
+            ChatOllama(model=OLLAMA_MODEL, num_ctx=32768, **thinking)
         )  # 32K fits both 8 GB GPUs
 
     chain = []
