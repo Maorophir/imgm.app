@@ -7,7 +7,7 @@ The player's answers are filled into <player_answers>, and the games they reject
 into <not_for_me>, on every model call.
 """
 
-from imgm_ai.agent.state import Preferences, RejectedGame
+from imgm_ai.agent.state import GAME_LENGTH_TEXT, Preferences, RejectedGame
 
 SYSTEM_PROMPT = """<identity>
 You are Play Next, the game recommendation assistant of IMGM ("I Am Gaming"),
@@ -59,6 +59,8 @@ Never do more than 2 rounds of search_games.
   A series entry they haven't played, of a game they named, is usually the Best Pick.
 - When they named a game, include at least one game from its series or studio, if one fits.
 - Make the 5 varied: different takes on what they want, not five copies of the same game.
+- "wants to" is what they will spend their hours doing: every pick's core gameplay must be
+  one of those activities (a cozy game they'd only watch a story in is wrong for "build").
 - Never recommend a game the player already reviewed. They have played it.
 - Only games on the player's platforms (a PS4 game counts for PS5, an Xbox One game for Xbox Series X|S).
 - Skip little-known games (under 10 IGDB ratings, unless hyped) and small spin-off, demo or
@@ -158,17 +160,49 @@ Rules:
 </verified_games>"""
 
 
+# The page sends short codes; the model gets what they mean
+ANSWER_TEXT: dict[str, dict[str, str]] = {
+    "wants_to": {
+        "story": "follow a story",
+        "combat": "master the combat",
+        "explore": "explore a world and find its secrets",
+        "puzzles": "solve puzzles",
+        "build": "build and manage (farms, towns, factories)",
+        "strategy": "plan and outsmart (strategy, tactics)",
+        "runs": "one more run (roguelites: die, learn, retry)",
+        "compete": "compete and race (sports, racing, beating real people)",
+    },
+    "session_length": {
+        "short": "15-minute bites",
+        "medium": "an hour or two",
+        "long": "whole evenings",
+    },
+    "game_length": GAME_LENGTH_TEXT,
+    "play_style": {
+        "solo": "just me",
+        "couch": "couch co-op (same screen)",
+        "online": "online with friends",
+        "competitive": "competitive, against other people",
+        "coop": "co-op with friends",
+    },
+}
+ANSWER_NAMES = {"session_length": "time per sitting", "play_style": "who's playing"}
+
+
 def format_preferences(prefs: Preferences) -> str:
     """Turn the player's answers into readable lines for the prompt.
 
-    {"platforms": ["PC"], "play_style": "coop"}  →  "- platforms: PC\\n- play style: coop"
-    Skipped (empty) answers are left out.
+    {"platforms": ["PC"], "wants_to": ["explore", "puzzles"]}
+    →  "- platforms: PC\\n- wants to: explore a world and find its secrets, solve puzzles"
+    Skipped (empty) answers are left out; values without a meaning (titles, typed words) stay as they are.
     """
-    lines = [
-        f"- {key.replace('_', ' ')}: {', '.join(value) if isinstance(value, list) else value}"
-        for key, value in prefs.items()
-        if value
-    ]
+    lines = []
+    for key, value in prefs.items():
+        if not value:
+            continue
+        meanings = ANSWER_TEXT.get(key, {})
+        values = [meanings.get(v, v) for v in (value if isinstance(value, list) else [value])]
+        lines.append(f"- {ANSWER_NAMES.get(key, key.replace('_', ' '))}: {', '.join(values)}")
     return "\n".join(lines) or "The player skipped the questions."
 
 

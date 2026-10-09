@@ -12,13 +12,16 @@ class Preferences(
 ):  # total=False → every answer is optional (skippable)
     platforms: list[str]  # ["PC", "Nintendo Switch"]
     moods: list[str]  # ["cozy", "challenging"]
-    session_length: Literal[
-        "short", "medium", "long"
-    ]  # one sitting (not shown on the page yet)
+    # What they want to spend their hours DOING (the quest's screen 3, up to 2)
+    wants_to: list[
+        Literal["story", "combat", "explore", "puzzles", "build", "strategy", "runs", "compete"]
+    ]
+    session_length: Literal["short", "medium", "long"]  # one sitting: 15 min · 1-2h · evenings
     game_length: list[
         Literal["short", "medium", "long"]
     ]  # the whole game: <10h · 10-30h · 30h+ (any of them)
-    play_style: Literal["solo", "coop", "online"]
+    # "coop" = chats saved before the quest (now "couch" or "online")
+    play_style: Literal["solo", "couch", "online", "competitive", "coop"]
     difficulty: Literal["relaxed", "balanced", "hard"]
     loved_games: list[str]  # titles for now; later IGDB ids from the game picker
     avoid: list[str]  # ["horror", "microtransactions"]
