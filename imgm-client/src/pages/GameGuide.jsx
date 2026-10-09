@@ -1,21 +1,22 @@
 /**
  * Play Next — Route: /play-next (the old /guide redirects here)
  *
- * The AI recommendation chat. The player asks; the guide shows its work live (a
- * step timeline, the games it considers, its answer streaming in), then lands on
- * 5 picks with one Best Pick in the side panel (inline on small screens).
+ * The AI recommendation chat. A new chat starts with the "Find my game" quest; then
+ * the guide shows its work live (a step timeline, the games it considers), then
+ * lands on 5 picks with one Best Pick in the side panel (inline on small screens).
+ * Large screens get an app-like layout: the page fits the window, the chat scrolls
+ * inside its own panel, and the composer stays pinned at its bottom.
  */
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "../lib/authClient";
 import { useGameGuide, MAX_QUESTIONS } from "../hooks/useGameGuide";
 import { wakeGuide } from "../lib/api";
-import GuideTimeline from "../components/guide/GuideTimeline";
+import GuideTurn from "../components/guide/GuideTurn";
 import GuidePanel from "../components/guide/GuidePanel";
 import GuideComposer from "../components/guide/GuideComposer";
 import FindMyGame from "../components/guide/FindMyGame";
 import ChatHistory from "../components/guide/ChatHistory";
-import RichText from "../components/guide/RichText";
 import { PowerIcon } from "../components/Logo";
 
 // The quest's answers, remembered in this browser for "Use my last answers"
@@ -33,108 +34,6 @@ const keepLastAnswers = (userId, answers) => {
   } catch {
     // not saved: next time they answer the quest again
   }
-};
-
-// While the guide writes, its draft isn't shown (the cards replace it moments later):
-// the timeline gets a "Writing up your picks" step instead, just before the formatting
-const withWritingStep = (turn) => {
-  if (!turn.answer || turn.status === "error") return turn.steps;
-  const formatAt = turn.steps.findIndex((s) => s.id.startsWith("format-"));
-  const writing = {
-    id: "writing",
-    label: "Writing up your picks",
-    state: formatAt === -1 && turn.status === "running" ? "running" : "done",
-  };
-  return formatAt === -1
-    ? [...turn.steps, writing]
-    : [
-        ...turn.steps.slice(0, formatAt),
-        writing,
-        ...turn.steps.slice(formatAt),
-      ];
-};
-
-const GuideTurn = ({ turn, isLatest, onNotForMe, running }) => {
-  const [showFull, setShowFull] = useState(false);
-
-  return (
-    <div className="flex flex-col gap-4">
-      {/* The player's question */}
-      <p className="self-end max-w-[85%] rounded-2xl rounded-br-md bg-white text-slate-950 px-4 py-2.5 font-semibold">
-        {turn.question}
-      </p>
-
-      {/* The guide: its steps, then its answer */}
-      <div className="flex gap-3">
-        <span
-          className="w-8 h-8 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center shrink-0"
-          aria-hidden="true"
-        >
-          <PowerIcon className="w-4.5 h-4.5 text-brand" />
-        </span>
-        <div className="min-w-0 flex-1 flex flex-col gap-3">
-          <GuideTimeline
-            steps={withWritingStep(turn)}
-            running={turn.status === "running"}
-            collapsible={Boolean(turn.cards)}
-          />
-
-          {turn.cards ? (
-            <div className="rounded-2xl rounded-tl-md bg-slate-900/80 border border-slate-800 px-4 py-3 text-slate-200 leading-relaxed">
-              <p>{turn.cards.intro}</p>
-              <p className="mt-2 text-sm text-brand font-semibold hidden lg:block">
-                Your 5 picks are in the panel →
-              </p>
-              {turn.answer && (
-                <button
-                  type="button"
-                  onClick={() => setShowFull((s) => !s)}
-                  className="mt-2 text-xs font-bold text-slate-400 hover:text-white"
-                >
-                  {showFull
-                    ? "Hide the full answer ▴"
-                    : "Read the full answer ▾"}
-                </button>
-              )}
-              {showFull && (
-                <p className="mt-2 text-sm text-slate-300 whitespace-pre-line border-t border-slate-800 pt-2">
-                  <RichText text={turn.answer} />
-                </p>
-              )}
-              {turn.cards.follow_up && (
-                <p className="mt-3 text-slate-300">{turn.cards.follow_up}</p>
-              )}
-            </div>
-          ) : (
-            // No cards: the guide's own words, once it's finished (e.g. it asked you something)
-            turn.answer &&
-            turn.status !== "running" && (
-              <div className="rounded-2xl rounded-tl-md bg-slate-900/80 border border-slate-800 px-4 py-3 text-slate-200 leading-relaxed whitespace-pre-line">
-                <RichText text={turn.answer} />
-              </div>
-            )
-          )}
-
-          {turn.error && (
-            <p className="rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-sm px-4 py-2.5">
-              {turn.error}
-            </p>
-          )}
-
-          {/* Small screens: the picks right here, under the answer */}
-          {isLatest && (turn.cards || turn.games.length > 0) && (
-            <div className="lg:hidden">
-              <GuidePanel
-                turn={turn}
-                onNotForMe={onNotForMe}
-                disabled={running}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
 };
 
 function GameGuide() {
@@ -229,22 +128,23 @@ function PlayNextChat({ userId }) {
   );
 
   return (
-    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-8 grid lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-8 items-start">
+    // lg+: fits the window under the navbar (75px), each column scrolls on its own
+    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-4 lg:py-5 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-6 lg:h-[calc(100dvh-75px)]">
       {/* Chat history (wide screens) */}
-      <aside className="hidden xl:block sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
+      <aside className="hidden xl:block min-h-0 overflow-y-auto pr-1">
         {history}
       </aside>
 
       {/* Chat */}
-      <section className="flex flex-col gap-6 min-h-[70vh]">
-        <header className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
+      <section className="flex flex-col min-h-[75vh] lg:min-h-0 lg:rounded-3xl lg:border lg:border-white/10 lg:bg-slate-950/50 lg:backdrop-blur-sm lg:overflow-hidden">
+        <header className="flex flex-wrap items-center justify-between gap-3 lg:px-6 lg:pt-5 pb-4 lg:border-b lg:border-white/5">
+          <div className="min-w-0">
+            <h1 className="font-display text-4xl md:text-5xl uppercase tracking-tight text-white leading-none">
               Play Next<span className="text-brand">.</span>
             </h1>
-            <p className="text-slate-400 mt-1">
-              Tell it what you're in the mood for. Watch it dig through your
-              reviews and the IMGM community, live.
+            <p className="text-sm text-slate-400 mt-1.5">
+              Your reviews and the IMGM community, dug through live to find your
+              next game.
             </p>
           </div>
           {/* Smaller screens: the chats list opens here */}
@@ -258,24 +158,25 @@ function PlayNextChat({ userId }) {
           </button>
         </header>
         {historyOpen && (
-          <div className="xl:hidden rounded-2xl border border-slate-800 bg-slate-900/60 p-3 animate-fade-in">
+          <div className="xl:hidden mb-4 lg:mx-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-3 animate-fade-in">
             {history}
           </div>
         )}
 
-        {/* A new chat starts with the quest; the chat takes over once it's answered */}
-        {turns.length === 0 && (
-          <FindMyGame
-            key={chatId}
-            prefs={prefs}
-            onChange={setPrefs}
-            onReveal={reveal}
-            lastAnswers={lastAnswers}
-            disabled={running || full}
-          />
-        )}
+        {/* The conversation: scrolls inside the panel on large screens */}
+        <div className="flex-1 min-h-0 lg:overflow-y-auto lg:px-6 py-5 flex flex-col gap-10">
+          {/* A new chat starts with the quest; the chat takes over once it's answered */}
+          {turns.length === 0 && (
+            <FindMyGame
+              key={chatId}
+              prefs={prefs}
+              onChange={setPrefs}
+              onReveal={reveal}
+              lastAnswers={lastAnswers}
+              disabled={running || full}
+            />
+          )}
 
-        <div className="flex-1 flex flex-col gap-8">
           {turns.map((turn) => (
             <GuideTurn
               key={turn.id}
@@ -283,13 +184,16 @@ function PlayNextChat({ userId }) {
               isLatest={turn === current}
               running={running}
               onNotForMe={(pick) => notForMe(pick, preferences)}
+              onAsk={(question) => ask(question, preferences)}
+              canAsk={!running && !full}
             />
           ))}
           <div ref={bottomRef} />
         </div>
 
+        {/* The composer: pinned to the panel's bottom (large screens) or the screen's (small) */}
         {turns.length > 0 && (
-          <div className="sticky bottom-4 rounded-3xl bg-slate-950/90 backdrop-blur p-3 border border-slate-800 shadow-2xl shadow-black/50">
+          <div className="sticky bottom-4 lg:static rounded-3xl lg:rounded-none bg-slate-950/90 lg:bg-slate-950/70 backdrop-blur p-3 lg:px-6 lg:py-4 border border-slate-800 lg:border-0 lg:border-t lg:border-white/5 shadow-2xl shadow-black/50 lg:shadow-none">
             {full && (
               <p className="px-2 pb-3 text-sm text-slate-300">
                 This chat is full ({MAX_QUESTIONS} questions).{" "}
@@ -316,7 +220,7 @@ function PlayNextChat({ userId }) {
       </section>
 
       {/* Side panel (large screens) */}
-      <aside className="hidden lg:block sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
+      <aside className="hidden lg:block min-h-0 overflow-y-auto pr-1">
         <GuidePanel
           turn={current}
           onNotForMe={(pick) => notForMe(pick, preferences)}
