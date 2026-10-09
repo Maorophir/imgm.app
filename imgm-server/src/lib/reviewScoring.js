@@ -50,6 +50,8 @@ export const awardBadges = (answers, { previousBadges = [], isFirstForGame }) =>
   const badges = new Set();
 
   if (previousBadges.includes('first_reviewer') || isFirstForGame) badges.add('first_reviewer');
+  // Earned from helpful votes (lib/reviewVotes.js); editing the review keeps it
+  if (previousBadges.includes('trusted_voice')) badges.add('trusted_voice');
   if (countAnsweredScreens(answers) === OPTIONAL_SCREENS) badges.add('deep_diver');
   if (answers.completionStatus === 'completed_100') badges.add('completionist');
   if (answers.hoursPlayed >= VETERAN_HOURS) badges.add('veteran');

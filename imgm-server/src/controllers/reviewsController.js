@@ -7,6 +7,7 @@ import { ensureGame } from '../services/gameStore.js';
 import { findSlurField, withMaskedText } from '../lib/reviewText.js';
 import { getPlayerXp, withAuthorXp } from '../lib/playerXp.js';
 import { notifyReviewChanged } from '../lib/aiIndex.js';
+import { castVote } from '../lib/reviewVotes.js';
 
 // What we send back for each review: the author and the "X meets Y" games
 const REVIEW_INCLUDE = {
@@ -19,6 +20,7 @@ const REVIEW_INCLUDE = {
 
 // Sort orders (ties: newest first, then id, so pages never overlap)
 const REVIEW_SORTS = {
+  helpful: [{ helpfulScore: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
   newest: [{ createdAt: 'desc' }, { id: 'desc' }],
   highest: [{ rating: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
   lowest: [{ rating: 'asc' }, { createdAt: 'desc' }, { id: 'desc' }],
@@ -33,14 +35,19 @@ const TIER_RATINGS = {
   legendary: [10, 10],
 };
 const pageQuery = z.object({
-  sort: z.enum(Object.keys(REVIEW_SORTS)).default('newest'),
+  sort: z.enum(Object.keys(REVIEW_SORTS)).default('helpful'),
   tier: z.enum(Object.keys(TIER_RATINGS)).optional(),
   offset: z.coerce.number().int().min(0).max(10000).default(0),
   limit: z.coerce.number().int().min(1).max(20).default(10),
 });
 
+// The viewer's own vote rides along on each review (as `myVote`: true / false / null)
+const withViewerVote = (userId) =>
+  userId ? { ...REVIEW_INCLUDE, votes: { where: { userId }, select: { helpful: true } } } : REVIEW_INCLUDE;
+
 // Author XP + the masked copy of any swearing (the site shows it unless the viewer opts in)
-const forClient = async (reviews) => (await withAuthorXp(reviews)).map(withMaskedText);
+const forClient = async (reviews) =>
+  (await withAuthorXp(reviews)).map(({ votes, ...review }) => withMaskedText({ ...review, myVote: votes?.[0]?.helpful ?? null }));
 
 // GET /api/reviews/game/:gameId?sort=&tier=&offset=&limit= — one page of a game's reviews.
 // The viewer's own review isn't in the pages: the first page returns it as `mine`
@@ -61,7 +68,7 @@ export const getReviewsByGameId = async (req, res) => {
       ...(user && { NOT: { userId: user.id } }),
     };
     const [page, total, mine] = await Promise.all([
-      prisma.review.findMany({ where, include: REVIEW_INCLUDE, orderBy: REVIEW_SORTS[sort], skip: offset, take: limit }),
+      prisma.review.findMany({ where, include: withViewerVote(user?.id), orderBy: REVIEW_SORTS[sort], skip: offset, take: limit }),
       prisma.review.count({ where }),
       user && offset === 0
         ? prisma.review.findUnique({ where: { userId_gameId: { userId: user.id, gameId } }, include: REVIEW_INCLUDE })
@@ -207,6 +214,25 @@ export const deleteMyReview = async (req, res) => {
     res.status(204).end(); // 204 = done, nothing to send back
   } catch (error) {
     console.error('Error deleting review:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// PUT /api/reviews/:id/vote  { helpful: true | false | null } — "Was this review helpful?"
+// null takes the vote back. Not on your own review.
+const voteSchema = z.object({ helpful: z.boolean().nullable() });
+export const voteOnReview = async (req, res) => {
+  const body = voteSchema.safeParse(req.body);
+  if (!body.success) return res.status(400).json({ error: 'Invalid vote' });
+  try {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'Log in to vote.' });
+    const review = await prisma.review.findUnique({ where: { id: req.params.id }, select: { userId: true } });
+    if (!review) return res.status(404).json({ error: 'Review not found' });
+    if (review.userId === user.id) return res.status(403).json({ error: "You can't vote on your own review." });
+    res.json(await castVote(user.id, req.params.id, body.data.helpful));
+  } catch (error) {
+    console.error('Error voting on review:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

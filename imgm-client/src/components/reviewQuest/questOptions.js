@@ -1,4 +1,4 @@
-import { Angry, Award, BookOpen, Brain, Bug, CassetteTape, CloudFog, Coffee, Cog, Coins, DoorOpen, Flag, Frown, Gamepad2, Ghost, Globe, Handshake, Headphones, HeartCrack, Hourglass, Infinity as InfinityIcon, Laugh, Leaf, Medal, Meh, Monitor, Mountain, Palette, Repeat, ScanSearch, Smile, Sparkles, Sunset, Swords, Tornado, Trophy, User, Zap } from 'lucide-react';
+import { ShieldCheck, Angry, Award, BookOpen, Brain, Bug, CassetteTape, CloudFog, Coffee, Cog, Coins, DoorOpen, Flag, Frown, Gamepad2, Ghost, Globe, Handshake, Headphones, HeartCrack, Hourglass, Infinity as InfinityIcon, Laugh, Leaf, Medal, Meh, Monitor, Mountain, Palette, Repeat, ScanSearch, Smile, Sparkles, Sunset, Swords, Tornado, Trophy, User, Zap } from 'lucide-react';
 
 /**
  * Review Quest options — labels and art for every answer.
@@ -228,6 +228,7 @@ export const BADGES = {
   deep_diver: { label: 'Deep Diver', art: ScanSearch },
   completionist: { label: 'Completionist', art: Trophy },
   veteran: { label: 'Veteran', art: Award },
+  trusted_voice: { label: 'Trusted Voice', art: ShieldCheck }, // 10+ players found one review helpful
 };
 
 // Every answer, "skipped" — the starting point for a new review

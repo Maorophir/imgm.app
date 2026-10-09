@@ -33,6 +33,7 @@ model User {
   // Custom IMGM relations
   reviews       Review[]
   playNextChats PlayNextChat[]
+  reviewVotes   ReviewVote[]
 }
 
 model Session {
@@ -159,6 +160,12 @@ model Review {
   // Awarded by the server when the review is saved
   badges           String[]
   xp               Int      @default(0) // XP this review earned; a player's XP = the sum
+  // "Was this review helpful?" (votes in ReviewVote; these are kept in step with them)
+  helpfulCount     Int      @default(0)
+  unhelpfulCount   Int      @default(0)
+  helpfulScore     Float    @default(0) // how surely it's helpful (Wilson score), for "Most helpful"
+  helpfulXp        Int      @default(0) // XP the author earned from helpful votes (capped)
+  votes            ReviewVote[]
 
   userId           String
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -216,4 +223,18 @@ model PlayNextChat {
 
   @@id([userId, id])
   @@index([userId, updatedAt])
+}
+
+// One player's vote on one review: helpful or not. Changing it updates the row.
+model ReviewVote {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewId  String
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+  helpful   Boolean
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, reviewId])
+  @@index([reviewId])
 }

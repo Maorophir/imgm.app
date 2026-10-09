@@ -4,7 +4,7 @@
  *   header      title + count, "Show strong language", the Review Quest button
  *   breakdown   how many reviews each rarity tier got (worst left, best right);
  *               click a tier to show only its reviews
- *   sort        Newest / Highest / Lowest
+ *   sort        Most helpful (default) / Newest / Highest / Lowest
  *   list        your own review pinned on top, then 5 reviews, then "Show 10 more"
  *
  * Reviews come page by page from /api/reviews/game/:id (the game itself only
@@ -21,6 +21,7 @@ import StartQuestButton from '../reviewQuest/StartQuestButton';
 const FIRST_PAGE = 5;
 const NEXT_PAGE = 10;
 const SORTS = [
+  { value: 'helpful', label: 'Most helpful' },
   { value: 'newest', label: 'Newest' },
   { value: 'highest', label: 'Highest' },
   { value: 'lowest', label: 'Lowest' },
@@ -103,7 +104,7 @@ const RatingBreakdown = ({ tiers, total, selected, onSelect }) => (
 const ReviewsSection = ({ game, gameId }) => {
   const total = game.reviewStats?.count ?? 0;
   const tiers = tierCounts(game.reviewStats?.byRating);
-  const [sort, setSort] = useState('newest');
+  const [sort, setSort] = useState('helpful');
   const [tier, setTier] = useState(null);
   // { key, reviews, mine, total, hasMore } for the current sort + filter (key = which one)
   const [list, setList] = useState(null);

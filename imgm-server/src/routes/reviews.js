@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { getReviewsByGameId, getMyReview, saveReview, deleteMyReview } from '../controllers/reviewsController.js';
+import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { getReviewsByGameId, getMyReview, saveReview, deleteMyReview, voteOnReview } from '../controllers/reviewsController.js';
 
 const router = Router();
 
@@ -11,6 +12,17 @@ router.get('/mine/:gameId', getMyReview);
 
 // DELETE /api/reviews/mine/:gameId — delete the logged-in user's review
 router.delete('/mine/:gameId', deleteMyReview);
+
+// PUT /api/reviews/:id/vote — "Was this helpful?" (60 votes a minute is plenty for a person)
+const voteLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 60,
+  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  standardHeaders: 'draft-8',
+  legacyHeaders: false,
+  message: { error: 'Too many votes. Slow down a little.' },
+});
+router.put('/:id/vote', voteLimiter, voteOnReview);
 
 // POST /api/reviews — create or update the logged-in user's review
 router.post('/', saveReview);

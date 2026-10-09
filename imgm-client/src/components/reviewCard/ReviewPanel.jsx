@@ -7,6 +7,7 @@
  */
 import { EyeOff, Sparkles, ThumbsDown, TriangleAlert } from 'lucide-react';
 import ArtIcon from '../ArtIcon';
+import HelpfulVote from './HelpfulVote';
 import { useState } from 'react';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
 import { getRarity, RATING_LABELS, BADGES } from '../reviewQuest/questOptions';
@@ -161,6 +162,8 @@ const ReviewPanel = ({ review: original }) => {
           )}
         </div>
       )}
+
+      <HelpfulVote review={original} />
     </article>
   );
 };
