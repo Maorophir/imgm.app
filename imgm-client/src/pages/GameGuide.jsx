@@ -195,6 +195,7 @@ function PlayNextChat({ userId }) {
               onNotForMe={(pick) => notForMe(pick, preferences)}
               onAsk={(question) => ask(question, preferences)}
               onEdit={(question) => guide.editLast(question, preferences)}
+              onRetry={guide.retryLast}
               canAsk={!running && !full}
             />
           ))}

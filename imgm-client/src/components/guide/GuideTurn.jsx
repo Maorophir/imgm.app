@@ -7,6 +7,8 @@
  *   quick replies          under the latest answer: one tap asks a common follow-up
  *   edit                   the latest question can be edited and asked again (it
  *                          replaces the old one, in the AI's memory too)
+ *   stopped / failed       a quiet "You stopped this answer" divider (or the error),
+ *                          and a redo button that asks the same question again
  * On small screens the latest turn also shows the full picks (the side panel is hidden).
  */
 import { useState } from "react";
@@ -135,6 +137,31 @@ const Question = ({ text, editable, onEdit }) => {
   );
 };
 
+// The redo button: an arrow going round, like Gemini's
+const RetryButton = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    title="Try again"
+    aria-label="Try again"
+    className="self-start w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-brand hover:bg-white/5 transition"
+  >
+    <svg
+      viewBox="0 0 24 24"
+      className="w-5 h-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </svg>
+  </button>
+);
+
 const GuideTurn = ({
   turn,
   isLatest,
@@ -142,6 +169,7 @@ const GuideTurn = ({
   onNotForMe,
   onAsk,
   onEdit,
+  onRetry,
   canAsk,
 }) => {
   const [showFull, setShowFull] = useState(false);
@@ -214,12 +242,10 @@ const GuideTurn = ({
 
           {/* Stopping is the player's choice, not a failure: one quiet line, like other AI chats */}
           {turn.stopped ? (
-            <p className="flex items-center gap-2 text-sm text-slate-500">
-              <span
-                className="block w-2 h-2 rounded-[2px] bg-slate-500"
-                aria-hidden="true"
-              />
+            <p className="flex items-center gap-4 py-1 text-sm text-slate-500">
+              <span className="h-px flex-1 bg-white/10" aria-hidden="true" />
               You stopped this answer
+              <span className="h-px flex-1 bg-white/10" aria-hidden="true" />
             </p>
           ) : (
             turn.error && (
@@ -227,6 +253,9 @@ const GuideTurn = ({
                 {turn.error}
               </p>
             )
+          )}
+          {isLatest && turn.error && !running && (
+            <RetryButton onClick={onRetry} />
           )}
 
           {/* Small screens: the picks right here, under the answer */}

@@ -103,13 +103,6 @@ body {
   }
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
   --animate-drift: drift 18s ease-in-out infinite alternate;
-  --animate-loading: loading 1.3s ease-in-out infinite;
-
-  /* Play Next "Warming up": the lime segment slides across its track, over and over */
-  @keyframes loading {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(250%); }
-  }
 
   /* Play Next background: the glows wander slowly */
   @keyframes drift {

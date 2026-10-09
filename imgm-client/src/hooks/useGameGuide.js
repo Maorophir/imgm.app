@@ -8,6 +8,7 @@
  *   openChat(id) a past chat from the history, with the tuning it had
  *   stop()       stops the answer in progress (the Stop button)
  *   editLast(q)  replaces the latest question with an edited one, and asks it again
+ *   retryLast()  asks the latest question again, exactly as it was sent (the redo button)
  * If Play Next goes quiet for 2 minutes (no event at all), the request is stopped
  * and the turn says so: a chat never spins forever.
  *
@@ -34,10 +35,11 @@ import {
 
 const STREAM_EVENTS = new Set(["step", "games", "token", "cards", "done"]);
 
-const newTurn = (question, kind) => ({
+const newTurn = (question, kind, request) => ({
   id: crypto.randomUUID(),
   question,
   kind, // "ask" or "not_for_me"
+  request, // what was sent (message or not_for_me, preferences): the redo sends it again
   steps: [],
   games: [],
   answer: "",
@@ -93,7 +95,7 @@ const updateLast = (turns, change) => [
 function reducer(turns, action) {
   switch (action.type) {
     case "start":
-      return [...turns, newTurn(action.question, action.kind)];
+      return [...turns, newTurn(action.question, action.kind, action.request)];
     case "reset":
       return [];
     case "drop-last":
@@ -228,7 +230,7 @@ export function useGameGuide(userId) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    dispatch({ type: "start", question: label, kind });
+    dispatch({ type: "start", question: label, kind, request: body });
 
     // The watchdog: every event resets the clock; a long silence stops the request
     let lastEvent = Date.now();
@@ -304,6 +306,18 @@ export function useGameGuide(userId) {
     [run, turns.length],
   );
 
+  // The redo button: the latest question again, replacing the stopped (or failed) one
+  const retryLast = useCallback(() => {
+    const last = turns.at(-1);
+    if (!last) return;
+    const request = last.request ?? { message: last.question }; // chats saved before redo existed
+    dispatch({ type: "drop-last" });
+    return run(last.question, last.kind ?? "ask", {
+      ...request,
+      replace_turn: turns.length,
+    });
+  }, [run, turns]);
+
   // Switches the page to another chat (stopping any answer in progress)
   const show = useCallback((id, chatTurns, chatPrefs) => {
     abortRef.current?.abort();
@@ -348,6 +362,7 @@ export function useGameGuide(userId) {
     notForMe,
     stop,
     editLast,
+    retryLast,
     newChat,
     openChat,
     deleteChat,
