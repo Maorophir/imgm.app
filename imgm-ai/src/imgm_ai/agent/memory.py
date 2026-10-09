@@ -41,9 +41,23 @@ def make_checkpointer() -> PostgresSaver | InMemorySaver:
     # These connection settings are the ones LangGraph's PostgresSaver requires.
     pool = ConnectionPool(
         os.environ["VECTOR_DATABASE_URL"],
-        kwargs={"autocommit": True, "prepare_threshold": 0, "row_factory": dict_row},
+        kwargs={
+            "autocommit": True,
+            "prepare_threshold": 0,
+            "row_factory": dict_row,
+            # A connection can die without a word (the PC slept, Docker/WSL dropped it,
+            # Neon cut it): with no timeouts, the next query on it waits FOREVER and the
+            # chat hangs before it starts. These make the OS give up within seconds:
+            "connect_timeout": 10,  # s: opening a connection
+            "tcp_user_timeout": 15000,  # ms: data sent but never acknowledged
+            "keepalives": 1,  # idle connections are probed…
+            "keepalives_idle": 30,  # …after 30s of quiet,
+            "keepalives_interval": 10,  # every 10s,
+            "keepalives_count": 3,  # and dropped after 3 missed answers
+        },
         min_size=1,
         max_size=5,
+        timeout=20,  # s: waiting for a free connection, then fail (and say so) instead of hanging
         # Neon's free database sleeps after 5 quiet minutes and cuts every connection.
         # Each one is tested before use, and a dead one is swapped for a fresh one.
         check=ConnectionPool.check_connection,

@@ -95,6 +95,8 @@ class GuideRequest(BaseModel):
     message: str | None = Field(default=None, min_length=1, max_length=1000)
     not_for_me: NotForMe | None = None
     preferences: Preferences = Field(default_factory=dict)
+    # The player edited their question number N (their latest): it replaces the old one
+    replace_turn: int | None = Field(default=None, ge=1, le=MAX_QUESTIONS_PER_CHAT)
 
     @model_validator(mode="after")
     def needs_a_message_or_a_rejection(self) -> "GuideRequest":
@@ -174,6 +176,30 @@ def sse(event: str, data: dict) -> str:
 # ── The stream ───────────────────────────────────────────
 
 
+def count_questions(messages: list) -> int:
+    return sum(is_player_question(m) for m in messages)
+
+
+def before_question(config: dict, turn: int) -> dict:
+    """An edited question: the config that continues the chat from just BEFORE question `turn`.
+
+    LangGraph keeps every step of a thread (get_state_history, newest first), so the old
+    question isn't deleted: we branch off the finished state that had only the questions
+    before it. The edited question then becomes the newest branch, the one every later
+    get_state sees, and the old one is never shown to the model again.
+    Editing the first question just starts the thread over.
+    """
+    if turn == 1:
+        graph.checkpointer.delete_thread(config["configurable"]["thread_id"])
+        return config
+    for snapshot in graph.get_state_history(config):
+        finished = not snapshot.next  # the end of an answer, not halfway through one
+        if finished and count_questions(snapshot.values.get("messages", [])) == turn - 1:
+            # Keep our own settings (user_id…), add the checkpoint to branch from
+            return {**config, "configurable": {**config["configurable"], **snapshot.config["configurable"]}}
+    return config  # nothing to rewind (e.g. the old question was never saved)
+
+
 def guide_events(request: GuideRequest, user_id: str | None):
     """Run the agent and yield its work as SSE events, as it happens."""
     # The saved chat is filed under the logged-in player's id + the page's chat id,
@@ -188,6 +214,8 @@ def guide_events(request: GuideRequest, user_id: str | None):
 
     # Long chats are cut off: memory and context stay bounded
     try:
+        if request.replace_turn:
+            config = before_question(config, request.replace_turn)
         saved = graph.get_state(config).values.get("messages", [])
     except Exception:  # e.g. the database is unreachable: say so, never hang silently
         log.exception("Play Next could not load the chat")
@@ -196,7 +224,7 @@ def guide_events(request: GuideRequest, user_id: str | None):
             "error", {"message": "Play Next ran into a problem. Please try again."}
         )
         return
-    if sum(is_player_question(m) for m in saved) >= MAX_QUESTIONS_PER_CHAT:
+    if count_questions(saved) >= MAX_QUESTIONS_PER_CHAT:
         yield sse("start", {})
         yield sse(
             "error",

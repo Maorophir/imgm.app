@@ -6,6 +6,10 @@
  * AI remembers what was said: follow-ups and "Not for me" work.
  *   newChat()    a fresh id, no turns, no tuning
  *   openChat(id) a past chat from the history, with the tuning it had
+ *   stop()       stops the answer in progress (the Stop button)
+ *   editLast(q)  replaces the latest question with an edited one, and asks it again
+ * If Play Next goes quiet for 2 minutes (no event at all), the request is stopped
+ * and the turn says so: a chat never spins forever.
  *
  * Where it's kept:
  *   this browser tab (sessionStorage): the open chat, so visiting a picked game and
@@ -19,10 +23,16 @@
  *   answer the guide's text, streamed in token by token
  *   cards  the final 5 picks (with one Best Pick)
  */
-import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
-import { deleteGuideChat, getGuideChat, listGuideChats, saveGuideChat, streamGuide } from '../lib/api';
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import {
+  deleteGuideChat,
+  getGuideChat,
+  listGuideChats,
+  saveGuideChat,
+  streamGuide,
+} from "../lib/api";
 
-const STREAM_EVENTS = new Set(['step', 'games', 'token', 'cards', 'done']);
+const STREAM_EVENTS = new Set(["step", "games", "token", "cards", "done"]);
 
 const newTurn = (question, kind) => ({
   id: crypto.randomUUID(),
@@ -30,14 +40,15 @@ const newTurn = (question, kind) => ({
   kind, // "ask" or "not_for_me"
   steps: [],
   games: [],
-  answer: '',
+  answer: "",
   answerId: null,
   cards: null,
-  status: 'running', // running | done | error
+  status: "running", // running | done | error
   error: null,
 });
 
 export const MAX_QUESTIONS = 10; // per chat; the AI service refuses more (server.py)
+const SILENCE_LIMIT_MS = 120_000; // no event for this long = Play Next is stuck
 
 // The tab's saved chat for this player: { chatId, turns, prefs }
 const storageKey = (userId) => `imgm:play-next:${userId}`;
@@ -48,9 +59,14 @@ function loadChat(userId) {
     if (saved?.chatId && Array.isArray(saved.turns)) {
       // A turn still running when the page was left was stopped with it
       const turns = saved.turns.map((turn) =>
-        turn.status === 'running'
-          ? { ...turn, status: 'error', error: 'Stopped when you left the page. Ask again to pick it back up.' }
-          : turn
+        turn.status === "running"
+          ? {
+              ...turn,
+              status: "error",
+              error:
+                "Stopped when you left the page. Ask again to pick it back up.",
+            }
+          : turn,
       );
       return { chatId: saved.chatId, turns, prefs: saved.prefs ?? {} };
     }
@@ -69,56 +85,94 @@ function keepInTab(userId, chat) {
 }
 
 // Every change goes to the latest turn
-const updateLast = (turns, change) => [...turns.slice(0, -1), change(turns.at(-1))];
+const updateLast = (turns, change) => [
+  ...turns.slice(0, -1),
+  change(turns.at(-1)),
+];
 
 function reducer(turns, action) {
   switch (action.type) {
-    case 'start':
+    case "start":
       return [...turns, newTurn(action.question, action.kind)];
-    case 'reset':
+    case "reset":
       return [];
-    case 'load':
+    case "drop-last":
+      return turns.slice(0, -1);
+    case "stopped":
+      return turns.at(-1)?.status === "running"
+        ? updateLast(turns, (turn) => ({
+            ...turn,
+            status: "error",
+            stopped: true,
+            error: "You stopped this answer.",
+          }))
+        : turns;
+    case "load":
       return action.turns;
-    case 'step':
+    case "step":
       return updateLast(turns, (turn) => {
         const exists = turn.steps.some((s) => s.id === action.data.id);
         const steps = exists
-          ? turn.steps.map((s) => (s.id === action.data.id ? { ...s, ...action.data } : s))
+          ? turn.steps.map((s) =>
+              s.id === action.data.id ? { ...s, ...action.data } : s,
+            )
           : [...turn.steps, action.data];
         return { ...turn, steps };
       });
-    case 'games':
+    case "games":
       return updateLast(turns, (turn) => {
         const games = [...turn.games];
         for (const tile of action.data.games) {
           const at = games.findIndex((g) => g.id === tile.id);
           // A game found through reviews and then checked in the catalog keeps both
-          if (at === -1) games.push({ ...tile, verified: tile.source === 'catalog' });
-          else games[at] = { ...games[at], ...tile, verified: games[at].verified || tile.source === 'catalog' };
+          if (at === -1)
+            games.push({ ...tile, verified: tile.source === "catalog" });
+          else
+            games[at] = {
+              ...games[at],
+              ...tile,
+              verified: games[at].verified || tile.source === "catalog",
+            };
         }
         return { ...turn, games };
       });
-    case 'token':
+    case "token":
       return updateLast(turns, (turn) =>
         // A new message (e.g. the guide rewrote its answer after a check) replaces the old text
         action.data.message_id === turn.answerId
           ? { ...turn, answer: turn.answer + action.data.text }
-          : { ...turn, answer: action.data.text, answerId: action.data.message_id }
+          : {
+              ...turn,
+              answer: action.data.text,
+              answerId: action.data.message_id,
+            },
       );
-    case 'cards':
+    case "cards":
       return updateLast(turns, (turn) => ({ ...turn, cards: action.data }));
-    case 'done':
+    case "done":
       return updateLast(turns, (turn) =>
         turn.cards
-          ? { ...turn, status: 'done' }
-          : { ...turn, status: 'error', error: 'No picks this time. Try asking another way.' }
+          ? { ...turn, status: "done" }
+          : {
+              ...turn,
+              status: "error",
+              error: "No picks this time. Try asking another way.",
+            },
       );
-    case 'error':
-      return updateLast(turns, (turn) => ({ ...turn, status: 'error', error: action.message }));
-    case 'ended':
+    case "error":
+      return updateLast(turns, (turn) => ({
+        ...turn,
+        status: "error",
+        error: action.message,
+      }));
+    case "ended":
       // The stream closed without "done" or "error" (the connection dropped): never spin forever
-      return turns.at(-1)?.status === 'running'
-        ? updateLast(turns, (turn) => ({ ...turn, status: 'error', error: 'Play Next stopped unexpectedly. Please try again.' }))
+      return turns.at(-1)?.status === "running"
+        ? updateLast(turns, (turn) => ({
+            ...turn,
+            status: "error",
+            error: "Play Next stopped unexpectedly. Please try again.",
+          }))
         : turns;
     default:
       return turns;
@@ -127,7 +181,8 @@ function reducer(turns, action) {
 
 // What the history keeps of a turn: the panel only shows the latest turn's games
 // when it has no cards, so finished turns drop them (keeps saved chats small)
-const forHistory = (turns) => turns.map((turn) => (turn.cards ? { ...turn, games: [] } : turn));
+const forHistory = (turns) =>
+  turns.map((turn) => (turn.cards ? { ...turn, games: [] } : turn));
 
 export function useGameGuide(userId) {
   const [saved] = useState(() => loadChat(userId)); // read once, when the page opens
@@ -153,7 +208,12 @@ export function useGameGuide(userId) {
 
   // After each answer, the chat goes to the history
   useEffect(() => {
-    if (!finishedRef.current || turns.length === 0 || turns.at(-1).status === 'running') return;
+    if (
+      !finishedRef.current ||
+      turns.length === 0 ||
+      turns.at(-1).status === "running"
+    )
+      return;
     finishedRef.current = false;
     saveGuideChat(chatId, { turns: forHistory(turns), prefs })
       .then(refreshChats)
@@ -168,40 +228,80 @@ export function useGameGuide(userId) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    dispatch({ type: 'start', question: label, kind });
+    dispatch({ type: "start", question: label, kind });
+
+    // The watchdog: every event resets the clock; a long silence stops the request
+    let lastEvent = Date.now();
+    const watchdog = setInterval(() => {
+      if (Date.now() - lastEvent < SILENCE_LIMIT_MS) return;
+      clearInterval(watchdog);
+      controller.abort();
+      dispatch({
+        type: "error",
+        message: "Play Next stopped responding. Please try again.",
+      });
+      finishedRef.current = true;
+    }, 5000);
+
     try {
       await streamGuide(
         { chat_id: chatIdRef.current, ...body },
         {
           signal: controller.signal,
           onEvent: (event, data) => {
-            if (event === 'error') dispatch({ type: 'error', message: data.message });
+            lastEvent = Date.now();
+            if (event === "error")
+              dispatch({ type: "error", message: data.message });
             // Only the events the page shows ("start" is just the server saying hello)
             else if (STREAM_EVENTS.has(event)) dispatch({ type: event, data });
           },
-        }
+        },
       );
-      if (!controller.signal.aborted) dispatch({ type: 'ended' });
+      if (!controller.signal.aborted) dispatch({ type: "ended" });
     } catch (error) {
-      if (!controller.signal.aborted) dispatch({ type: 'error', message: error.message });
+      if (!controller.signal.aborted)
+        dispatch({ type: "error", message: error.message });
     }
+    clearInterval(watchdog);
     if (!controller.signal.aborted) finishedRef.current = true;
   }, []);
 
   // A question (the first one, or a follow-up like "shorter ones please")
   const ask = useCallback(
-    (question, preferences = {}) => run(question, 'ask', { message: question, preferences }),
-    [run]
+    (question, preferences = {}) =>
+      run(question, "ask", { message: question, preferences }),
+    [run],
   );
 
   // "Not for me" on one card: the AI remembers it for the rest of the chat and swaps it
   const notForMe = useCallback(
     (pick, preferences = {}) =>
-      run(`Not for me: ${pick.title}`, 'not_for_me', {
+      run(`Not for me: ${pick.title}`, "not_for_me", {
         not_for_me: { game_id: pick.game_id, title: pick.title },
         preferences,
       }),
-    [run]
+    [run],
+  );
+
+  // The Stop button: the request is cancelled (Express and the AI service stop too)
+  const stop = useCallback(() => {
+    abortRef.current?.abort();
+    dispatch({ type: "stopped" });
+    finishedRef.current = true; // the chat is saved as it stands
+  }, []);
+
+  // An edited latest question: it takes the old one's place, here and in the AI's memory
+  const editLast = useCallback(
+    (question, preferences = {}) => {
+      const replaceTurn = turns.length; // the AI branches off from just before it
+      dispatch({ type: "drop-last" });
+      return run(question, "ask", {
+        message: question,
+        preferences,
+        replace_turn: replaceTurn,
+      });
+    },
+    [run, turns.length],
   );
 
   // Switches the page to another chat (stopping any answer in progress)
@@ -209,7 +309,7 @@ export function useGameGuide(userId) {
     abortRef.current?.abort();
     chatIdRef.current = id;
     setChatId(id);
-    dispatch({ type: 'load', turns: chatTurns });
+    dispatch({ type: "load", turns: chatTurns });
     setPrefs(chatPrefs);
   }, []);
 
@@ -222,7 +322,7 @@ export function useGameGuide(userId) {
       const chat = await getGuideChat(id);
       show(chat.id, chat.turns, chat.prefs ?? {});
     },
-    [show]
+    [show],
   );
 
   const deleteChat = useCallback(
@@ -231,7 +331,7 @@ export function useGameGuide(userId) {
       if (id === chatIdRef.current) newChat();
       refreshChats();
     },
-    [newChat, refreshChats]
+    [newChat, refreshChats],
   );
 
   const current = turns.at(-1) ?? null;
@@ -239,13 +339,15 @@ export function useGameGuide(userId) {
     chatId,
     turns,
     current,
-    running: current?.status === 'running',
+    running: current?.status === "running",
     full: turns.length >= MAX_QUESTIONS,
     prefs,
     setPrefs,
     chats,
     ask,
     notForMe,
+    stop,
+    editLast,
     newChat,
     openChat,
     deleteChat,

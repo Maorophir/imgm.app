@@ -5,6 +5,8 @@
  *   Play Next              a glowing avatar ("digging…" while it works), its steps,
  *                          then the answer (the picks themselves are in the side panel)
  *   quick replies          under the latest answer: one tap asks a common follow-up
+ *   edit                   the latest question can be edited and asked again (it
+ *                          replaces the old one, in the AI's memory too)
  * On small screens the latest turn also shows the full picks (the side panel is hidden).
  */
 import { useState } from "react";
@@ -53,16 +55,106 @@ const quickReplies = (cards) => {
   ].filter(Boolean);
 };
 
-const GuideTurn = ({ turn, isLatest, running, onNotForMe, onAsk, canAsk }) => {
+// The player's question: a bubble, or (while editing) a text box with Cancel / Send
+const Question = ({ text, editable, onEdit }) => {
+  const [draft, setDraft] = useState(null); // null = not editing
+  const send = () => {
+    const question = draft.trim();
+    if (!question) return;
+    setDraft(null);
+    if (question !== text) onEdit(question);
+  };
+
+  if (draft !== null) {
+    return (
+      <div className="self-end w-full max-w-[85%] flex flex-col gap-2 animate-fade-in">
+        <textarea
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              send();
+            }
+            if (e.key === "Escape") setDraft(null);
+          }}
+          maxLength={1000}
+          rows={2}
+          autoFocus
+          aria-label="Edit your question"
+          className="w-full rounded-2xl rounded-br-md bg-slate-900 border border-brand/60 text-white px-4 py-2.5 font-semibold outline-none resize-y"
+        />
+        <div className="self-end flex gap-2">
+          <button
+            type="button"
+            onClick={() => setDraft(null)}
+            className="px-4 py-1.5 rounded-xl text-sm font-bold text-slate-300 border border-slate-700 hover:text-white hover:border-slate-500 transition"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={send}
+            disabled={!draft.trim()}
+            className="px-4 py-1.5 rounded-xl text-sm font-bold bg-brand text-slate-950 hover:brightness-110 transition disabled:opacity-40"
+          >
+            Send
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group self-end max-w-[85%] flex flex-col items-end gap-1">
+      <p className="rounded-2xl rounded-br-md bg-gradient-to-br from-brand/25 to-brand/10 border border-brand/40 text-white px-4 py-2.5 font-semibold shadow-[0_8px_28px_-14px_var(--color-brand)]">
+        {text}
+      </p>
+      {editable && (
+        <button
+          type="button"
+          onClick={() => setDraft(text)}
+          className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-bold text-slate-500 hover:text-brand transition"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="w-3.5 h-3.5"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
+          Edit
+        </button>
+      )}
+    </div>
+  );
+};
+
+const GuideTurn = ({
+  turn,
+  isLatest,
+  running,
+  onNotForMe,
+  onAsk,
+  onEdit,
+  canAsk,
+}) => {
   const [showFull, setShowFull] = useState(false);
   const working = turn.status === "running";
 
   return (
     <div className="flex flex-col gap-5 animate-fade-in">
-      {/* The player's question */}
-      <p className="self-end max-w-[85%] rounded-2xl rounded-br-md bg-gradient-to-br from-brand/25 to-brand/10 border border-brand/40 text-white px-4 py-2.5 font-semibold shadow-[0_8px_28px_-14px_var(--color-brand)]">
-        {turn.question}
-      </p>
+      {/* The player's question: the latest one can be edited ("Not for me" turns can't) */}
+      <Question
+        text={turn.question}
+        editable={isLatest && !running && turn.kind !== "not_for_me"}
+        onEdit={onEdit}
+      />
 
       {/* Play Next: its steps, then its answer */}
       <div className="flex gap-3">
@@ -120,9 +212,17 @@ const GuideTurn = ({ turn, isLatest, running, onNotForMe, onAsk, canAsk }) => {
             )
           )}
 
+          {/* Stopping is the player's choice, not a failure: a quiet note, not a red error */}
           {turn.error && (
-            <p className="rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-sm px-4 py-2.5">
+            <p
+              className={`rounded-xl text-sm px-4 py-2.5 border ${
+                turn.stopped
+                  ? "bg-white/5 border-white/10 text-slate-400"
+                  : "bg-red-500/10 border-red-500/30 text-red-200"
+              }`}
+            >
               {turn.error}
+              {turn.stopped && isLatest && " Edit your question above, or ask something new."}
             </p>
           )}
 

@@ -17,6 +17,8 @@ const guideSchema = z
     not_for_me: z.object({ game_id: z.int().positive(), title: z.string().trim().min(1).max(200) }).optional(),
     // The AI service validates the exact shape (platforms, moods, …)
     preferences: z.record(z.string(), z.any()).default({}),
+    // An edited question: it replaces the chat's question number N (the latest one)
+    replace_turn: z.int().min(1).max(50).optional(),
   })
   .refine((body) => body.message || body.not_for_me, { message: 'Send a message or a "not for me".' });
 

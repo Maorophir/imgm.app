@@ -194,6 +194,7 @@ function PlayNextChat({ userId }) {
               running={running}
               onNotForMe={(pick) => notForMe(pick, preferences)}
               onAsk={(question) => ask(question, preferences)}
+              onEdit={(question) => guide.editLast(question, preferences)}
               canAsk={!running && !full}
             />
           ))}
@@ -220,6 +221,8 @@ function PlayNextChat({ userId }) {
             <GuideComposer
               key={chatId}
               onAsk={(question) => ask(question, preferences)}
+              onStop={guide.stop}
+              running={running}
               disabled={running || full}
               prefs={prefs}
               onPrefsChange={setPrefs}
