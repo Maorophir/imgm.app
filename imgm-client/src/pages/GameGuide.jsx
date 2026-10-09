@@ -17,6 +17,7 @@ import GuidePanel from "../components/guide/GuidePanel";
 import GuideComposer from "../components/guide/GuideComposer";
 import FindMyGame from "../components/guide/FindMyGame";
 import ChatHistory from "../components/guide/ChatHistory";
+import PlayNextBackdrop from "../components/guide/PlayNextBackdrop";
 import { PowerIcon } from "../components/Logo";
 
 // The quest's answers, remembered in this browser for "Use my last answers"
@@ -110,6 +111,11 @@ function PlayNextChat({ userId }) {
     ask(note || "Find my next game", preferences);
   };
 
+  // The background takes its colours from the newest Best Pick
+  const bestCover = turns
+    .findLast((turn) => turn.cards)
+    ?.cards.games.find((game) => game.best_pick)?.cover;
+
   const history = (
     <ChatHistory
       chats={guide.chats}
@@ -128,8 +134,11 @@ function PlayNextChat({ userId }) {
   );
 
   return (
-    // lg+: fits the window under the navbar (75px), each column scrolls on its own
-    <div className="max-w-[1600px] mx-auto px-4 md:px-6 py-4 lg:py-5 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-6 lg:h-[calc(100dvh-75px)]">
+    // lg+: fits the window under the navbar (75px), each column scrolls on its own.
+    // isolate: the backdrop sits behind this page's content, above the app's black
+    <div className="isolate max-w-[1600px] mx-auto px-4 md:px-6 py-4 lg:py-5 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-6 lg:h-[calc(100dvh-75px)]">
+      <PlayNextBackdrop cover={bestCover} />
+
       {/* Chat history (wide screens) */}
       <aside className="hidden xl:block min-h-0 overflow-y-auto pr-1">
         {history}
