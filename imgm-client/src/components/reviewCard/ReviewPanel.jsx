@@ -5,7 +5,7 @@
  * Empty or partial reviews get one calm line instead of an empty box.
  * Swearing shows masked ("f***") unless the viewer turned on strong language.
  */
-import { Sparkles, ThumbsDown, TriangleAlert } from 'lucide-react';
+import { EyeOff, Sparkles, ThumbsDown, TriangleAlert } from 'lucide-react';
 import ArtIcon from '../ArtIcon';
 import { useState } from 'react';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
@@ -131,6 +131,16 @@ const ReviewPanel = ({ review: original }) => {
                     className="absolute inset-0 flex items-center justify-center rounded-lg bg-slate-900/40 text-xs font-bold text-amber-300 hover:text-amber-200"
                   >
                     <TriangleAlert className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" /> Spoilers · tap to reveal
+                  </button>
+                )}
+                {/* Revealed: hide them again */}
+                {review.hasSpoilers && spoilersShown && (
+                  <button
+                    type="button"
+                    onClick={() => setSpoilersShown(false)}
+                    className="self-start inline-flex items-center gap-1.5 mt-1 text-xs font-bold text-slate-400 hover:text-amber-300 transition"
+                  >
+                    <EyeOff className="w-3.5 h-3.5" aria-hidden="true" /> Hide spoilers
                   </button>
                 )}
               </div>

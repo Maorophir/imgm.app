@@ -6,7 +6,6 @@ import Navbar from './components/Navbar';
 
 // Page components (one per route)
 import Home from './pages/Home';
-import Trending from './pages/Trending';
 import Profile from './pages/Profile';
 import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
@@ -58,7 +57,8 @@ function App() {
           <Route path="/game/:id" element={<GameDetails />} />
           <Route path="/game/:id/review" element={<ReviewQuest />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/trending" element={<Trending />} />
+          {/* Trending is hidden until it has real content: old links go home */}
+          <Route path="/trending" element={<Navigate to="/" replace />} />
           {/* Play Next: live locally; in production only beta players until launch */}
           <Route path="/play-next" element={<PlayNextRoute />} />
           <Route path="/guide" element={<Navigate to="/play-next" replace />} />
