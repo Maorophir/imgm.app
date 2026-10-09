@@ -5,6 +5,7 @@ the checker (plain code that enforces the rules a prompt can only ask for).
 
 import re
 import time
+import unicodedata
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
@@ -139,6 +140,47 @@ def verified_games(messages: list) -> dict[int, str]:
     return games
 
 
+def line_title(search_line: str) -> str:
+    """The game's title in a search_games line: "- [id 1] Hades (2020) · …" → "Hades"."""
+    match = re.match(r"- \[id \d+\] (.+?)(?: \(\d{4}\))?(?: ·|$)", search_line)
+    return match.group(1) if match else ""
+
+
+def same_title(a: str, b: str) -> bool:
+    """Equal titles, ignoring case, accents and punctuation ("Ghost of Yotei" = "Ghost of Yōtei")."""
+
+    def plain(title: str) -> str:
+        letters = (
+            unicodedata.normalize("NFKD", title).encode("ascii", "ignore").decode()
+        )
+        return re.sub(r"[^a-z0-9]+", " ", letters.lower()).strip()
+
+    return bool(plain(a)) and plain(a) == plain(b)
+
+
+def fix_game_ids(
+    recommendations: Recommendations, verified: dict[int, str]
+) -> Recommendations:
+    """Cards whose id belongs to another game get the right id, when the title says which.
+
+    The formatter copies ids from the verified list and sometimes takes a neighbour's
+    (e.g. "Horizon Forbidden West" with a DLC's id). An exact title match among the
+    verified games repairs it without a model call; anything less (a DLC whose name
+    merely starts the same) is left for the check to send back.
+    """
+    for card in recommendations.games:
+        if same_title(card.title, line_title(verified.get(card.game_id, ""))):
+            continue
+        matches = [
+            gid
+            for gid, line in verified.items()
+            if same_title(card.title, line_title(line))
+        ]
+        if len(matches) == 1:
+            card.game_id = matches[0]
+    return recommendations
+
+
 def game_hours(search_line: str) -> float | None:
     """The hours to beat in a search_games line ("… about 2.5h to beat …"), or None."""
     match = re.search(r"about ([\d.]+)h to beat", search_line)
@@ -180,7 +222,12 @@ def format_answer(state: RecommenderState) -> dict:
     prompt = FORMAT_PROMPT.format(
         answer=answer, verified_games=verified, requests=requests
     )
-    return {"recommendations": formatter.invoke([HumanMessage(content=prompt)])}
+    recommendations = formatter.invoke([HumanMessage(content=prompt)])
+    if recommendations:  # a wrong id with a right title is repaired here, for free
+        recommendations = fix_game_ids(
+            recommendations, verified_games(state["messages"])
+        )
+    return {"recommendations": recommendations}
 
 
 def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
@@ -228,6 +275,13 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
                 f"The player said 'Not for me' to {game.title}: replace it."
             )
         line = verified.get(game.game_id, "")
+        # An id that belongs to another game (fix_game_ids couldn't tell which one)
+        if line and not same_title(game.title, line_title(line)):
+            problems.append(
+                f"{game.title}: the id you gave ({game.game_id}) belongs to "
+                f"{line_title(line)}. Use {game.title}'s own id from search_games."
+            )
+            continue  # the rest of the rules would judge the wrong game
         if (
             line
             and wanted_platforms
