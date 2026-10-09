@@ -3,6 +3,7 @@
  * One page, many categories, every one optional. Options read left → right,
  * worst → best (or less → more for neutral ones); tap again to un-tick.
  */
+import ArtIcon from '../../ArtIcon';
 import { CHECKLIST, checklistColor } from '../questOptions';
 
 const CheckChip = ({ label, checked, color, onClick }) => (
@@ -41,10 +42,10 @@ const ChecklistStep = ({ answers, update }) => {
 
       {categories.map((category) => (
         <section key={category.field} aria-label={category.title}>
-          {/* ── 🎨 GRAPHICS ── */}
+          {/* ── GRAPHICS ── */}
           <h2 className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2.5">
             <span className="h-px flex-1 bg-slate-700/70" />
-            <span><span className="mr-1.5" aria-hidden="true">{category.art}</span>{category.title}</span>
+            <span className="inline-flex items-center gap-1.5"><ArtIcon icon={category.art} className="w-4 h-4 text-brand" />{category.title}</span>
             <span className="h-px flex-1 bg-slate-700/70" />
           </h2>
           <div className="flex flex-wrap gap-2">

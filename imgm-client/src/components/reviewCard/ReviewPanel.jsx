@@ -5,6 +5,8 @@
  * Empty or partial reviews get one calm line instead of an empty box.
  * Swearing shows masked ("f***") unless the viewer turned on strong language.
  */
+import { Sparkles, ThumbsDown, TriangleAlert } from 'lucide-react';
+import ArtIcon from '../ArtIcon';
 import { useState } from 'react';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
 import { getRarity, RATING_LABELS, BADGES } from '../reviewQuest/questOptions';
@@ -78,8 +80,8 @@ const ReviewPanel = ({ review: original }) => {
       {review.badges?.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {review.badges.map((b) => (
-            <span key={b} className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/35 text-amber-200 whitespace-nowrap">
-              {BADGES[b]?.art} {BADGES[b]?.label ?? b}
+            <span key={b} className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/35 text-amber-200 whitespace-nowrap">
+              <ArtIcon icon={BADGES[b]?.art} className="w-3.5 h-3.5" /> {BADGES[b]?.label ?? b}
             </span>
           ))}
         </div>
@@ -120,15 +122,15 @@ const ReviewPanel = ({ review: original }) => {
             <div>
               <SectionLabel>Moments</SectionLabel>
               <div className="relative flex flex-col gap-2">
-                {moment('🌟 Best', review.bestMoment)}
-                {moment('💢 Worst', review.worstMoment)}
+                {moment(<><Sparkles className="inline w-3 h-3 mr-1 -mt-px" aria-hidden="true" />Best</>, review.bestMoment)}
+                {moment(<><ThumbsDown className="inline w-3 h-3 mr-1 -mt-px" aria-hidden="true" />Worst</>, review.worstMoment)}
                 {hidden && (
                   <button
                     type="button"
                     onClick={() => setSpoilersShown(true)}
                     className="absolute inset-0 flex items-center justify-center rounded-lg bg-slate-900/40 text-xs font-bold text-amber-300 hover:text-amber-200"
                   >
-                    ⚠️ Spoilers · tap to reveal
+                    <TriangleAlert className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" /> Spoilers · tap to reveal
                   </button>
                 )}
               </div>

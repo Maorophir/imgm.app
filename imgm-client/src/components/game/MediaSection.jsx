@@ -3,6 +3,7 @@
  * Screenshots come first (not everyone wants to watch videos); tap one to open
  * it big. Videos are filtered to the few that matter (see pickVideos.js).
  */
+import { Clapperboard, Image as ImageIcon } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { pickVideos, allVideos } from './pickVideos';
 
@@ -144,8 +145,8 @@ const MediaSection = ({ game }) => {
   const screenshots = game.screenshots ?? [];
   const videos = game.videos ?? [];
   const tabs = [
-    screenshots.length > 0 && { key: 'screenshots', label: '🖼️ Screenshots', count: screenshots.length },
-    videos.length > 0 && { key: 'videos', label: '🎬 Videos', count: allVideos(videos).length },
+    screenshots.length > 0 && { key: 'screenshots', icon: ImageIcon, label: 'Screenshots', count: screenshots.length },
+    videos.length > 0 && { key: 'videos', icon: Clapperboard, label: 'Videos', count: allVideos(videos).length },
   ].filter(Boolean);
   const [tab, setTab] = useState(tabs[0]?.key);
 
@@ -170,7 +171,7 @@ const MediaSection = ({ game }) => {
                   tab === t.key ? 'bg-brand text-slate-950 shadow' : 'text-slate-400 hover:text-white'
                 }`}
               >
-                {t.label} <span className="font-medium opacity-70 tabular-nums">{t.count}</span>
+                <t.icon className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />{t.label} <span className="font-medium opacity-70 tabular-nums">{t.count}</span>
               </button>
             ))}
           </div>

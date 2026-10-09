@@ -8,6 +8,8 @@
  * The art stretches to fill whatever room the text doesn't use, so sparse cards
  * show more art and busy cards never cut text off.
  */
+import { Hourglass, ListChecks, Monitor } from 'lucide-react';
+import ArtIcon from '../ArtIcon';
 import { useState } from 'react';
 import RarityStars from '../RarityStars';
 import MarqueeText from '../MarqueeText';
@@ -47,9 +49,9 @@ const RarityCard = ({ review, game, artUrl }) => {
   const completion = COMPLETION_STATUSES.find((o) => o.value === review.completionStatus);
   const meets = [review.comparedA, review.comparedB].filter(Boolean);
   const meta = [
-    review.hoursPlayed != null && `⏳ ${review.hoursPlayed}h`,
-    review.platform && `🖥️ ${review.platform}`,
-    completion && `${completion.art} ${completion.label}`,
+    review.hoursPlayed != null && { icon: Hourglass, text: `${review.hoursPlayed}h` },
+    review.platform && { icon: Monitor, text: review.platform },
+    completion && { icon: completion.art, text: completion.label },
   ].filter(Boolean);
   const hasBody = meets.length > 0 || vibes.length > 0 || gotGood;
   const hasFoot = meta.length > 0 || canFlip || quick;
@@ -84,7 +86,7 @@ const RarityCard = ({ review, game, artUrl }) => {
             </div>
             {review.badges?.length > 0 && (
               <span className="flex gap-0.5 text-sm shrink-0">
-                {review.badges.map((b) => <span key={b} title={BADGES[b]?.label}>{BADGES[b]?.art}</span>)}
+                {review.badges.map((b) => <span key={b} title={BADGES[b]?.label}><ArtIcon icon={BADGES[b]?.art} className="w-4 h-4 text-amber-300" /></span>)}
               </span>
             )}
           </div>
@@ -140,20 +142,25 @@ const RarityCard = ({ review, game, artUrl }) => {
               {vibes.length > 0 && (
                 <div className="flex flex-wrap gap-1">
                   {vibes.map((v) => (
-                    <span key={v.value} className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-200 whitespace-nowrap">
-                      {v.art} {v.label}
+                    <span key={v.value} className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-200 whitespace-nowrap">
+                      <ArtIcon icon={v.art} className="w-3 h-3" /> {v.label}
                     </span>
                   ))}
                 </div>
               )}
-              {gotGood && <p className="text-[11px] text-slate-400">{gotGood.art} Got good: {gotGood.label.toLowerCase()}</p>}
+              {gotGood && <p className="flex items-center gap-1 text-[11px] text-slate-400"><ArtIcon icon={gotGood.art} className="w-3 h-3" /> Got good: {gotGood.label.toLowerCase()}</p>}
             </div>
           )}
 
           {hasFoot && (
             <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-2.5 mt-2 border-t border-slate-800">
               <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-slate-400 min-w-0">
-                {meta.map((m) => <span key={m}>{m}</span>)}
+                {meta.map((m) => (
+                  <span key={m.text} className="inline-flex items-center gap-1">
+                    <ArtIcon icon={m.icon} className="w-3 h-3" />
+                    {m.text}
+                  </span>
+                ))}
               </span>
               {canFlip && <span className="text-[11px] font-bold text-slate-300 whitespace-nowrap">Flip ↻</span>}
               {!canFlip && quick && (
@@ -170,7 +177,7 @@ const RarityCard = ({ review, game, artUrl }) => {
           <Frame rarity={rarity} className="card-face card-face-back">
             <div className="flex flex-col gap-2.5 p-3 h-full overflow-y-auto">
               <p className="flex items-center justify-between gap-2 font-black text-white">
-                <span className="whitespace-nowrap shrink-0">☑ The checklist</span>
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"><ListChecks className="w-4 h-4 text-brand" aria-hidden="true" /> The checklist</span>
                 <span className="text-[11px] font-medium text-slate-400 truncate min-w-0">{name}</span>
               </p>
               <div className="grid gap-1.5">

@@ -1,12 +1,14 @@
 /**
  * ⑧ Best & worst moment — one line each, with a spoiler switch.
  */
+import { Sparkles, ThumbsDown, TriangleAlert } from 'lucide-react';
+import ArtIcon from '../../ArtIcon';
 const MAX_LENGTH = 280;
 
 const MomentField = ({ label, art, placeholder, value, onChange }) => (
   <div>
     <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-      <span className="mr-1" aria-hidden="true">{art}</span>{label}
+      <ArtIcon icon={art} className="w-3.5 h-3.5 mr-1 -mt-0.5" />{label}
     </p>
     <textarea
       rows={2}
@@ -26,8 +28,8 @@ const MomentsStep = ({ answers, update }) => {
 
   return (
     <div className="flex flex-col gap-4">
-      <MomentField label="Best moment" art="🌟" placeholder="The moment that made you go “wow”…" value={answers.bestMoment} onChange={(bestMoment) => update({ bestMoment })} />
-      <MomentField label="Worst moment" art="💢" placeholder="The part you'd rather forget…" value={answers.worstMoment} onChange={(worstMoment) => update({ worstMoment })} />
+      <MomentField label="Best moment" art={Sparkles} placeholder="The moment that made you go “wow”…" value={answers.bestMoment} onChange={(bestMoment) => update({ bestMoment })} />
+      <MomentField label="Worst moment" art={ThumbsDown} placeholder="The part you'd rather forget…" value={answers.worstMoment} onChange={(worstMoment) => update({ worstMoment })} />
 
       {/* On/off switch — a button with role="switch" */}
       <button
@@ -41,7 +43,7 @@ const MomentsStep = ({ answers, update }) => {
           <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${spoilers ? 'translate-x-5' : ''}`} />
         </span>
         <span className="text-sm">
-          <span className="font-semibold text-slate-200">⚠️ Contains spoilers</span>
+          <span className="inline-flex items-center gap-1.5 font-semibold text-slate-200"><TriangleAlert className="w-4 h-4 text-amber-400" aria-hidden="true" /> Contains spoilers</span>
           <span className="block text-xs text-slate-500">Readers will have to tap to reveal your moments</span>
         </span>
       </button>

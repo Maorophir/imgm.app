@@ -4,6 +4,7 @@
  *   <ChoiceCard> a big tappable card with art (completion, "got good", worth it…)
  *   <FieldLabel> the small caps label above a group of choices
  */
+import ArtIcon from '../ArtIcon';
 
 export const FieldLabel = ({ children, hint }) => (
   <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
@@ -24,7 +25,7 @@ export const Chip = ({ label, art, selected, disabled, onClick }) => (
         ? 'bg-brand/15 border-brand text-white shadow-[0_0_14px_rgb(184_240_58/0.3)]'
         : 'bg-slate-800/60 border-slate-700/60 text-slate-300 hover:border-slate-500 hover:text-white'}`}
   >
-    {art && <span aria-hidden="true">{art}</span>}
+    <ArtIcon icon={art} className="w-4 h-4" />
     {label}
   </button>
 );
@@ -39,8 +40,8 @@ export const ChoiceCard = ({ label, art, hint, selected, onClick }) => (
         ? 'bg-brand/15 border-brand shadow-[0_0_18px_rgb(184_240_58/0.3)] scale-[1.03]'
         : 'bg-slate-800/50 border-slate-700/60 hover:border-slate-500 hover:bg-slate-800/80'}`}
   >
-    {/* The "art slot" — an emoji today, an illustration later */}
-    <span className="text-4xl leading-none" aria-hidden="true">{art}</span>
+    {/* The "art slot": a Lucide icon in the brand colour */}
+    <ArtIcon icon={art} className={`w-9 h-9 ${selected ? 'text-white' : 'text-brand'}`} />
     <span className="font-bold text-white text-sm">{label}</span>
     {hint && <span className="text-xs text-slate-400 leading-snug">{hint}</span>}
   </button>

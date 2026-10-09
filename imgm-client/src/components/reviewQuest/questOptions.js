@@ -1,3 +1,5 @@
+import { Angry, Award, BookOpen, Brain, Bug, CassetteTape, CloudFog, Coffee, Cog, Coins, DoorOpen, Flag, Frown, Gamepad2, Ghost, Globe, Handshake, Headphones, HeartCrack, Hourglass, Infinity as InfinityIcon, Laugh, Leaf, Medal, Meh, Monitor, Mountain, Palette, Repeat, ScanSearch, Smile, Sparkles, Sunset, Swords, Tornado, Trophy, User, Zap } from 'lucide-react';
+
 /**
  * Review Quest options — labels and art for every answer.
  *
@@ -33,45 +35,45 @@ export const getRarity = (rating) => {
 
 // ② Your setup
 export const COMPLETION_STATUSES = [
-  { value: 'playing', label: 'Still playing', art: '🎮' },
-  { value: 'finished', label: 'Finished it', art: '🏁' },
-  { value: 'completed_100', label: '100% done', art: '🏆' },
-  { value: 'dropped', label: 'Dropped it', art: '🚪' },
+  { value: 'playing', label: 'Still playing', art: Gamepad2 },
+  { value: 'finished', label: 'Finished it', art: Flag },
+  { value: 'completed_100', label: '100% done', art: Trophy },
+  { value: 'dropped', label: 'Dropped it', art: DoorOpen },
 ];
 export const PLAY_STYLES = [
-  { value: 'solo', label: 'Solo', art: '🧍' },
-  { value: 'coop', label: 'Co-op', art: '🤝' },
-  { value: 'online', label: 'Online', art: '🌐' },
+  { value: 'solo', label: 'Solo', art: User },
+  { value: 'coop', label: 'Co-op', art: Handshake },
+  { value: 'online', label: 'Online', art: Globe },
 ];
 
 // ③ Vibe check
 export const VIBES = [
-  { value: 'addictive', label: 'Addictive', art: '🎰' },
-  { value: 'relaxing', label: 'Relaxing', art: '😌' },
-  { value: 'rage_inducing', label: 'Rage-inducing', art: '😤' },
-  { value: 'emotional', label: 'Emotional', art: '😭' },
-  { value: 'grindy', label: 'Grindy', art: '⚙️' },
-  { value: 'cozy', label: 'Cozy', art: '☕' },
-  { value: 'chaotic', label: 'Chaotic', art: '🌪️' },
-  { value: 'mind_blowing', label: 'Mind-blowing', art: '🤯' },
-  { value: 'scary', label: 'Scary', art: '👻' },
-  { value: 'funny', label: 'Funny', art: '😂' },
-  { value: 'competitive', label: 'Competitive', art: '🏆' },
-  { value: 'epic', label: 'Epic', art: '⚔️' },
-  { value: 'atmospheric', label: 'Atmospheric', art: '🌫️' },
-  { value: 'nostalgic', label: 'Nostalgic', art: '📼' },
-  { value: 'challenging', label: 'Challenging', art: '🧗' },
-  { value: 'beautiful', label: 'Beautiful', art: '🌅' },
+  { value: 'addictive', label: 'Addictive', art: InfinityIcon },
+  { value: 'relaxing', label: 'Relaxing', art: Leaf },
+  { value: 'rage_inducing', label: 'Rage-inducing', art: Angry },
+  { value: 'emotional', label: 'Emotional', art: HeartCrack },
+  { value: 'grindy', label: 'Grindy', art: Cog },
+  { value: 'cozy', label: 'Cozy', art: Coffee },
+  { value: 'chaotic', label: 'Chaotic', art: Tornado },
+  { value: 'mind_blowing', label: 'Mind-blowing', art: Sparkles },
+  { value: 'scary', label: 'Scary', art: Ghost },
+  { value: 'funny', label: 'Funny', art: Laugh },
+  { value: 'competitive', label: 'Competitive', art: Trophy },
+  { value: 'epic', label: 'Epic', art: Swords },
+  { value: 'atmospheric', label: 'Atmospheric', art: CloudFog },
+  { value: 'nostalgic', label: 'Nostalgic', art: CassetteTape },
+  { value: 'challenging', label: 'Challenging', art: Mountain },
+  { value: 'beautiful', label: 'Beautiful', art: Sunset },
 ];
 export const MAX_VIBES = 3;
 
 // ④ When did it get good? — worst → best, left to right
 // (art slot: the "bored → hooked" illustrations)
 export const GOT_GOOD_AFTER = [
-  { value: 'never',      label: 'Never',             art: '😴', hint: 'It never clicked for me' },
-  { value: 'many_hours', label: 'After many hours',  art: '🥱', hint: 'You have to push through' },
-  { value: 'few_hours',  label: 'After a few hours', art: '🙂', hint: 'Slow start, then it clicks' },
-  { value: 'instantly',  label: 'Instantly',         art: '🤩', hint: 'Hooked from minute one' },
+  { value: 'never',      label: 'Never',             art: Frown, hint: 'It never clicked for me' },
+  { value: 'many_hours', label: 'After many hours',  art: Meh, hint: 'You have to push through' },
+  { value: 'few_hours',  label: 'After a few hours', art: Smile, hint: 'Slow start, then it clicks' },
+  { value: 'instantly',  label: 'Instantly',         art: Zap, hint: 'Hooked from minute one' },
 ];
 
 // ⑤ The checklist — every category is optional. Options go left → right:
@@ -83,7 +85,7 @@ export const GOT_GOOD_AFTER = [
 // Edit the jokes freely — only the `value` keys are stored.
 export const CHECKLIST = [
   {
-    field: 'graphics', title: 'Graphics', art: '🎨', kind: 'scale',
+    field: 'graphics', title: 'Graphics', art: Palette, kind: 'scale',
     options: [
       { value: 'ms_paint',   label: 'MS Paint' },
       { value: 'potato',     label: 'Potato-core' },
@@ -94,7 +96,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'gameplay', title: 'Gameplay', art: '🎮', kind: 'scale',
+    field: 'gameplay', title: 'Gameplay', art: Gamepad2, kind: 'scale',
     options: [
       { value: 'dont',      label: 'Just don\'t' },
       { value: 'paint_dry', label: 'Watching paint dry is more fun' },
@@ -105,7 +107,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'audio', title: 'Audio', art: '🎧', kind: 'scale',
+    field: 'audio', title: 'Audio', art: Headphones, kind: 'scale',
     options: [
       { value: 'deaf',    label: 'I\'m now deaf' },
       { value: 'mute',    label: 'Played it on mute' },
@@ -116,7 +118,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'story', title: 'Story', art: '📖', kind: 'scale',
+    field: 'story', title: 'Story', art: BookOpen, kind: 'scale',
     na: { value: 'na', label: 'N/A · It\'s not that kind of game' },
     options: [
       { value: 'none',    label: 'What story?' },
@@ -128,7 +130,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'difficulty', title: 'Difficulty', art: '🧠', kind: 'neutral',
+    field: 'difficulty', title: 'Difficulty', art: Brain, kind: 'neutral',
     options: [
       { value: 'press_w',      label: 'Just press W' },
       { value: 'easy',         label: 'Easy' },
@@ -139,7 +141,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'grind', title: 'Grind', art: '⚙️', kind: 'neutral',
+    field: 'grind', title: 'Grind', art: Cog, kind: 'neutral',
     options: [
       { value: 'none',        label: 'Nothing to grind' },
       { value: 'optional',    label: 'Only for completionists' },
@@ -149,7 +151,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'gameLength', title: 'Game length', art: '⏳', kind: 'neutral',
+    field: 'gameLength', title: 'Game length', art: Hourglass, kind: 'neutral',
     na: { value: 'na', label: 'N/A · It\'s an endless online game' },
     options: [
       { value: 'coffee',   label: 'One cup of coffee' },
@@ -160,7 +162,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'bugs', title: 'Bugs', art: '🐛', kind: 'scale',
+    field: 'bugs', title: 'Bugs', art: Bug, kind: 'scale',
     options: [
       { value: 'terrarium', label: 'A bug terrarium with a game in it' },
       { value: 'annoying',  label: 'Can get annoying' },
@@ -169,7 +171,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'pcRequirements', title: 'PC requirements', art: '🖥️', kind: 'neutral',
+    field: 'pcRequirements', title: 'PC requirements', art: Monitor, kind: 'neutral',
     // Only for PC players — hidden when another platform was picked in Setup
     showIf: (answers) => !answers.platform || answers.platform === 'PC',
     options: [
@@ -182,7 +184,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'worthPrice', title: 'Price', art: '💰', kind: 'scale',
+    field: 'worthPrice', title: 'Price', art: Coins, kind: 'scale',
     na: { value: 'na', label: 'N/A · It\'s free-to-play' },
     options: [
       { value: 'never', label: 'Burn your money instead' },
@@ -192,7 +194,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'replay', title: 'Replay', art: '🔁', kind: 'scale',
+    field: 'replay', title: 'Replay', art: Repeat, kind: 'scale',
     na: { value: 'na', label: 'N/A · It never really ends' },
     options: [
       { value: 'once',    label: 'Once was enough' },
@@ -222,10 +224,10 @@ export const MAX_XP = (QUEST_SCREENS - 1) * XP_EASY + XP_WRITTEN; // 130
 
 // Badges (awarded by the server)
 export const BADGES = {
-  first_reviewer: { label: 'First Reviewer', art: '🥇' },
-  deep_diver: { label: 'Deep Diver', art: '🔍' },
-  completionist: { label: 'Completionist', art: '🏆' },
-  veteran: { label: 'Veteran', art: '⏳' },
+  first_reviewer: { label: 'First Reviewer', art: Medal },
+  deep_diver: { label: 'Deep Diver', art: ScanSearch },
+  completionist: { label: 'Completionist', art: Trophy },
+  veteran: { label: 'Veteran', art: Award },
 };
 
 // Every answer, "skipped" — the starting point for a new review

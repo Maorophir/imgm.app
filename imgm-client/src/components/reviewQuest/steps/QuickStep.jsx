@@ -1,6 +1,7 @@
 /**
  * Quick review — for people in a hurry: their score plus one optional line.
  */
+import { Zap } from 'lucide-react';
 import RarityStars from '../../RarityStars';
 import { RATING_LABELS, getRarity } from '../questOptions';
 
@@ -11,7 +12,7 @@ const QuickStep = ({ answers, update }) => {
 
   return (
     <div>
-      <h1 className="text-2xl md:text-3xl font-black text-white mb-3">⚡ Quick review</h1>
+      <h1 className="flex items-center gap-2 text-2xl md:text-3xl font-black text-white mb-3"><Zap className="w-7 h-7 text-brand" aria-hidden="true" /> Quick review</h1>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-6">
         <RarityStars value={answers.rating} size="sm" readOnly />
         <span className="font-black uppercase tracking-widest text-sm" style={{ color: rarity.color }}>

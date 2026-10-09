@@ -1,3 +1,4 @@
+import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
@@ -24,8 +25,8 @@ const PLAY_NEXT_LINK = { to: '/play-next', label: <><span className="text-brand"
 
 /**
  * Desktop (md+): logo · search · links · account, all on one row.
- * Phone: logo · account · ☰ on top, the search bar full-width underneath,
- * and the links in a menu that drops down from ☰. The account part (Log In or
+ * Phone: logo · account · menu button on top, the search bar full-width underneath,
+ * and the links in a menu that drops down from it. The account part (Log In or
  * the player menu) is rendered once and shown at every width.
  */
 function Navbar() {
@@ -82,7 +83,7 @@ function Navbar() {
             aria-label={menuOpen ? 'Close menu' : 'Open menu'}
             className="md:hidden w-10 h-10 grid place-items-center rounded-xl border border-slate-700 text-slate-200 hover:text-white hover:border-slate-500 transition"
           >
-            <span aria-hidden="true" className="text-xl leading-none">{menuOpen ? '✕' : '☰'}</span>
+            {menuOpen ? <X className="w-5 h-5" aria-hidden="true" /> : <Menu className="w-5 h-5" aria-hidden="true" />}
           </button>
         </div>
       </div>

@@ -12,6 +12,8 @@
  *   - If the user already reviewed this game, the quest opens pre-filled and
  *     posting updates that review (one review per person per game).
  */
+import { ArrowBigUp, CircleCheck, Clapperboard, Combine, Drama, Gamepad2, Layers, ListChecks, Monitor, PartyPopper, PenLine, Pencil, Scale, Star, Timer, Trash2, Zap } from 'lucide-react';
+import ArtIcon from '../components/ArtIcon';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getGame, getMyReview, saveReview, deleteMyReview } from '../lib/api';
@@ -37,15 +39,15 @@ import WordsStep from '../components/reviewQuest/steps/WordsStep';
 
 // The quest, in order. `fields` = what "Skip" clears; `xp` = what answering it earns.
 const STEPS = [
-  { key: 'rating',    art: '⭐', title: 'Your rating',             xp: XP_EASY,    Component: RatingStep },
-  { key: 'setup',     art: '🖥️', title: 'Your setup',              xp: XP_EASY,    Component: SetupStep, fields: ['platform', 'hoursPlayed', 'completionStatus', 'playStyle'] },
-  { key: 'vibes',     art: '🎭', title: "What's the vibe?",        xp: XP_EASY,    Component: VibesStep, fields: ['vibes'] },
-  { key: 'gotGood',   art: '⏱️', title: 'When did it get good?',   xp: XP_EASY,    Component: GotGoodStep, fields: ['gotGoodAfter'] },
-  { key: 'checklist', art: '☑️', title: 'The checklist',           xp: XP_EASY,    Component: ChecklistStep, fields: CHECKLIST.map((c) => c.field) },
-  { key: 'meets',     art: '🎮', title: "It's like ___ meets ___", xp: XP_EASY,    Component: MeetsStep, fields: ['comparedA', 'comparedB'] },
-  { key: 'prosCons',  art: '➕', title: 'Pros & cons',             xp: XP_EASY,    Component: ProsConsStep, fields: ['pros', 'cons'] },
-  { key: 'moments',   art: '🎬', title: 'Best & worst moment',     xp: XP_EASY,    Component: MomentsStep, fields: ['bestMoment', 'worstMoment', 'hasSpoilers'] },
-  { key: 'words',     art: '✍️', title: 'Final words',             xp: XP_WRITTEN, Component: WordsStep, fields: ['reviewText'] },
+  { key: 'rating',    art: Star, title: 'Your rating',             xp: XP_EASY,    Component: RatingStep },
+  { key: 'setup',     art: Monitor, title: 'Your setup',              xp: XP_EASY,    Component: SetupStep, fields: ['platform', 'hoursPlayed', 'completionStatus', 'playStyle'] },
+  { key: 'vibes',     art: Drama, title: "What's the vibe?",        xp: XP_EASY,    Component: VibesStep, fields: ['vibes'] },
+  { key: 'gotGood',   art: Timer, title: 'When did it get good?',   xp: XP_EASY,    Component: GotGoodStep, fields: ['gotGoodAfter'] },
+  { key: 'checklist', art: ListChecks, title: 'The checklist',           xp: XP_EASY,    Component: ChecklistStep, fields: CHECKLIST.map((c) => c.field) },
+  { key: 'meets',     art: Combine, title: "It's like ___ meets ___", xp: XP_EASY,    Component: MeetsStep, fields: ['comparedA', 'comparedB'] },
+  { key: 'prosCons',  art: Scale, title: 'Pros & cons',             xp: XP_EASY,    Component: ProsConsStep, fields: ['pros', 'cons'] },
+  { key: 'moments',   art: Clapperboard, title: 'Best & worst moment',     xp: XP_EASY,    Component: MomentsStep, fields: ['bestMoment', 'worstMoment', 'hasSpoilers'] },
+  { key: 'words',     art: PenLine, title: 'Final words',             xp: XP_WRITTEN, Component: WordsStep, fields: ['reviewText'] },
 ];
 const LAST_STEP = STEPS.length - 1;
 
@@ -59,7 +61,7 @@ const LevelProgress = ({ before, after }) => {
     <div className="mt-3 mx-auto max-w-xs text-left">
       {levelUp && (
         <p className="text-center text-sm font-black uppercase tracking-[0.2em] mb-2 text-amber-300 animate-pop" style={{ textShadow: '0 0 14px #fbbf2466' }}>
-          ⬆ Level up! {newTier ? <>You're now a <span style={{ color: now.tier.color }}>{now.tier.label}</span></> : `Level ${now.level}`}
+          <ArrowBigUp className="inline w-5 h-5 mr-1 -mt-1" aria-hidden="true" />Level up! {newTier ? <>You're now a <span style={{ color: now.tier.color }}>{now.tier.label}</span></> : `Level ${now.level}`}
         </p>
       )}
       <p className="flex justify-between text-xs font-bold mb-1">
@@ -227,7 +229,7 @@ const ReviewQuest = () => {
   if (!session) {
     return (
       <div className="max-w-md mx-auto px-6 py-24 text-center">
-        <p className="text-5xl mb-4">🎮</p>
+        <span className="mx-auto mb-4 w-14 h-14 rounded-2xl grid place-items-center bg-brand/10 border border-brand/30 text-brand"><Gamepad2 className="w-7 h-7" aria-hidden="true" /></span>
         <h1 className="text-2xl font-bold text-white mb-2">Log in to review {game.title}</h1>
         <p className="text-slate-400 mb-8">Your review helps other players decide what to play next.</p>
         {/* After logging in, come straight back here */}
@@ -308,7 +310,7 @@ const ReviewQuest = () => {
         {/* Editing notice on the first screen */}
         {step === 0 && isEditing && (
           <p className="mb-5 text-sm text-slate-200 bg-white/5 border border-slate-700 rounded-xl px-4 py-2.5">
-            ✏️ You reviewed this on {new Date(existing.review.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.
+            <Pencil className="inline w-4 h-4 mr-1.5 -mt-0.5 text-brand" aria-hidden="true" />You reviewed this on {new Date(existing.review.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.
             Your answers are filled in, so change anything and update it.
           </p>
         )}
@@ -318,7 +320,7 @@ const ReviewQuest = () => {
           {isQuestScreen && (
             <>
               <h1 className="text-2xl md:text-3xl font-black text-white mb-6">
-                <span className="mr-2">{current.art}</span>{current.title}
+                <ArtIcon icon={current.art} className="inline w-7 h-7 mr-2.5 -mt-1 text-brand" />{current.title}
               </h1>
               <current.Component answers={answers} update={update} game={game} />
             </>
@@ -328,7 +330,7 @@ const ReviewQuest = () => {
 
           {step === DONE && result && (
             <div className="text-center py-2">
-              <p className="text-5xl mb-2">{result.isNew ? '🎉' : '✅'}</p>
+              <span className="mx-auto mb-3 w-16 h-16 rounded-2xl grid place-items-center bg-brand/10 border border-brand/30 text-brand">{result.isNew ? <PartyPopper className="w-8 h-8" aria-hidden="true" /> : <CircleCheck className="w-8 h-8" aria-hidden="true" />}</span>
               <h1 className="text-2xl md:text-3xl font-black text-white mb-1">
                 {result.isNew ? 'Review posted!' : 'Review updated!'}
               </h1>
@@ -354,7 +356,7 @@ const ReviewQuest = () => {
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {existing.review.badges.map((b) => (
                     <span key={b} className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-400/40 text-amber-200 text-sm font-semibold">
-                      <span aria-hidden="true">{BADGES[b]?.art}</span>
+                      <ArtIcon icon={BADGES[b]?.art} className="w-4 h-4" />
                       {BADGES[b]?.label ?? b}
                       {result.newBadges.includes(b) && (
                         <span className="text-[10px] font-black bg-amber-400 text-slate-900 rounded px-1 py-px">NEW</span>
@@ -364,7 +366,7 @@ const ReviewQuest = () => {
                 </div>
               )}
 
-              <p className="text-xs text-slate-500 mt-6">🃏 Your shareable trading card is coming soon.</p>
+              <p className="inline-flex items-center gap-1.5 text-xs text-slate-500 mt-6"><Layers className="w-3.5 h-3.5" aria-hidden="true" /> Your shareable trading card is coming soon.</p>
             </div>
           )}
         </div>
@@ -385,7 +387,7 @@ const ReviewQuest = () => {
                 onClick={() => changeStep(QUICK)}
                 className="py-3.5 rounded-2xl font-bold bg-slate-800 hover:bg-slate-700 border border-slate-600/50 disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
-                ⚡ Quick review
+                <Zap className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />Quick review
                 <span className="block text-xs font-normal text-slate-400">Just the score + one line</span>
               </button>
               <button
@@ -393,7 +395,7 @@ const ReviewQuest = () => {
                 onClick={() => changeStep(1)}
                 className="py-3.5 rounded-2xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] disabled:opacity-40 disabled:cursor-not-allowed transition"
               >
-                🎮 {isEditing ? 'Edit the quest' : 'Start the quest'}
+                <Gamepad2 className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />{isEditing ? 'Edit the quest' : 'Start the quest'}
                 <span className="block text-xs font-semibold text-slate-950/70">{STEPS.length - 1} quick screens · up to {MAX_XP} XP</span>
               </button>
             </div>
@@ -425,7 +427,7 @@ const ReviewQuest = () => {
                 </div>
               ) : (
                 <button onClick={() => setConfirmDelete(true)} className="text-sm font-semibold text-slate-500 hover:text-red-400 transition">
-                  🗑️ Delete my review
+                  <Trash2 className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />Delete my review
                 </button>
               )}
             </div>
@@ -454,7 +456,7 @@ const ReviewQuest = () => {
                 onClick={() => changeStep(0)}
                 className="py-3 rounded-xl font-bold bg-slate-800 hover:bg-slate-700 border border-slate-600/50 transition"
               >
-                ✏️ Edit my answers
+                <Pencil className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />Edit my answers
               </button>
               <button onClick={() => navigate(`/game/${id}`)} className={`py-3 ${primaryButton}`}>
                 See it on the game page →

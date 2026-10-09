@@ -1,7 +1,7 @@
 /**
  * Review Quest answer options — the single source of truth for which values
  * each quest question accepts. The database stores these short keys; the
- * client maps them to labels/art (e.g. 'rage_inducing' → "Rage-inducing 😤").
+ * client maps them to labels/art (e.g. 'rage_inducing' → "Rage-inducing" + its icon).
  *
  * Checklist ladders are ordered worst → best (or less → more for neutral
  * ones like difficulty), matching the left → right order on screen.

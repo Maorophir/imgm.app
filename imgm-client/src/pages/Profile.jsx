@@ -4,6 +4,7 @@
  * Your level (tier, XP bar, the tier ladder) and your gamer tag, which you can
  * change once every 30 days (changing only its capitals is always allowed).
  */
+import { Hourglass } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
@@ -118,7 +119,7 @@ function Profile() {
 
         {waiting && (
           <p className="text-sm text-amber-200 bg-amber-500/10 border border-amber-400/30 rounded-xl px-4 py-2.5">
-            ⏳ You can pick a new tag on {formatDate(nextChange)}. Until then you can still change its capitals
+            <Hourglass className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />You can pick a new tag on {formatDate(nextChange)}. Until then you can still change its capitals
             (e.g. “{current?.toLowerCase()}” → “{current}”).
           </p>
         )}

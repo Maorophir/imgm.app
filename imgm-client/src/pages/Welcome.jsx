@@ -5,6 +5,7 @@
  * the site, then back to where they were going (?redirect=…). The tag is what
  * everyone sees on their reviews; their real name stays private.
  */
+import { Gamepad2 } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
@@ -59,7 +60,7 @@ const Welcome = () => {
         className="w-full max-w-md bg-slate-900/70 backdrop-blur-xl border border-slate-700/50 rounded-3xl shadow-2xl shadow-black/50 p-7 flex flex-col gap-5 animate-fade-in"
       >
         <div className="text-center">
-          <p className="text-5xl mb-2" aria-hidden="true">🎮</p>
+          <span className="mx-auto mb-3 w-14 h-14 rounded-2xl grid place-items-center bg-brand/10 border border-brand/30 text-brand"><Gamepad2 className="w-7 h-7" aria-hidden="true" /></span>
           <h1 className="text-2xl font-black text-white">Choose your gamer tag</h1>
           <p className="text-slate-400 text-sm mt-1.5">
             It’s the name everyone sees on your reviews. Your real name stays private.
