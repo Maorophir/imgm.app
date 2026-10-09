@@ -102,13 +102,6 @@ body {
     90%, 100% { transform: translateX(0); }
   }
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
-  --animate-drift: drift 18s ease-in-out infinite alternate;
-
-  /* Play Next background: the glows wander slowly */
-  @keyframes drift {
-    0% { transform: translate(0, 0) scale(1); }
-    100% { transform: translate(8vw, 6vh) scale(1.15); }
-  }
 
   /* A star "pops" when it becomes the newly selected one */
   @keyframes pop {

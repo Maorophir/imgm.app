@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "../lib/authClient";
 import { useGameGuide, MAX_QUESTIONS } from "../hooks/useGameGuide";
-import { wakeGuide } from "../lib/api";
+import { getFeaturedGames, wakeGuide } from "../lib/api";
 import GuideTurn from "../components/guide/GuideTurn";
 import GuidePanel from "../components/guide/GuidePanel";
 import GuideComposer from "../components/guide/GuideComposer";
@@ -112,9 +112,26 @@ function PlayNextChat({ userId }) {
   };
 
   // The background takes its colours from the newest Best Pick
-  const bestCover = turns
-    .findLast((turn) => turn.cards)
-    ?.cards.games.find((game) => game.best_pick)?.cover;
+  // The cover wall follows the chat: your picks first (Best Pick leading), then the
+  // games it's considering, then featured games to fill the wall
+  const [featured, setFeatured] = useState([]);
+  useEffect(() => {
+    getFeaturedGames()
+      .then((games) => setFeatured(games.map((game) => game.coverUrl)))
+      .catch(() => {}); // no featured games: the wall just uses the chat's own
+  }, []);
+  const picks = [...(current?.cards?.games ?? [])].sort(
+    (a, b) => b.best_pick - a.best_pick,
+  );
+  const wallCovers = [
+    ...new Set(
+      [
+        ...picks.map((g) => g.cover),
+        ...(current?.games ?? []).map((g) => g.cover),
+        ...featured,
+      ].filter(Boolean),
+    ),
+  ].slice(0, 42);
 
   const history = (
     <ChatHistory
@@ -137,7 +154,7 @@ function PlayNextChat({ userId }) {
     // lg+: fits the window under the navbar (75px), each column scrolls on its own.
     // isolate: the backdrop sits behind this page's content, above the app's black
     <div className="isolate max-w-[1600px] mx-auto px-4 md:px-6 py-4 lg:py-5 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-6 lg:h-[calc(100dvh-75px)]">
-      <PlayNextBackdrop cover={bestCover} />
+      <PlayNextBackdrop covers={wallCovers} />
 
       {/* Chat history (wide screens) */}
       <aside className="hidden xl:block min-h-0 overflow-y-auto pr-1">

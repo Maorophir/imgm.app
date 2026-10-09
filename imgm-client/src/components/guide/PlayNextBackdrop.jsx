@@ -1,46 +1,63 @@
 /**
- * PlayNextBackdrop — the living background behind the Play Next page.
+ * PlayNextBackdrop — the living cover wall behind the Play Next page.
  *
- *   glows    soft lime (top left) and teal (bottom right) light, slowly drifting
- *   grid     a faint grid that fades out from the top, like a game menu
- *   ambient  once picks are in, the Best Pick's cover, hugely blurred, tints the whole
- *            page in its colours (and fades over when the next answer picks another)
+ * Three rows of game covers drift sideways (alternating directions, each at its own
+ * speed), very dim, like a console menu. The covers follow the chat: featured games
+ * before you ask, the games Play Next is considering while it works, your picks first
+ * once it's done (GameGuide decides the order; this just lays them out).
  * Fixed behind everything and ignores the mouse; the page wraps it with `isolate`
  * so it sits above the app's black background but below the content.
  */
-const GRID = {
-  backgroundImage:
-    "linear-gradient(to right, rgb(255 255 255 / 0.035) 1px, transparent 1px), linear-gradient(to bottom, rgb(255 255 255 / 0.035) 1px, transparent 1px)",
-  backgroundSize: "56px 56px",
-  maskImage:
-    "radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%)",
-  WebkitMaskImage:
-    "radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 75%)",
+const ROWS = [
+  { animation: "animate-scroll-left", duration: "160s" },
+  { animation: "animate-scroll-right", duration: "130s" },
+  { animation: "animate-scroll-left", duration: "190s" },
+];
+const PER_ROW = 14; // enough covers to cover a wide screen twice over
+
+// Deal the covers out like cards (1st → row 1, 2nd → row 2…), so the first few
+// (the picks) land at the start of every row; repeat them if there are few
+const dealRows = (covers) =>
+  ROWS.map((_, row) => {
+    const mine = covers.filter((_, i) => i % ROWS.length === row);
+    const pool = mine.length ? mine : covers;
+    return Array.from({ length: PER_ROW }, (_, i) => pool[i % pool.length]);
+  });
+
+const PlayNextBackdrop = ({ covers }) => {
+  const rows = covers.length ? dealRows(covers) : [];
+  return (
+    <div
+      className="fixed inset-0 -z-10 overflow-hidden pointer-events-none"
+      aria-hidden="true"
+    >
+      {/* The wall: each row is doubled ([A, A]), because the scroll moves exactly 50% */}
+      <div className="absolute inset-0 flex flex-col justify-center gap-5 opacity-[0.16] saturate-[.8] -rotate-3 scale-110">
+        {rows.map((row, r) => (
+          <div
+            key={r}
+            className={`flex w-max gap-5 ${ROWS[r].animation} motion-reduce:animate-none`}
+            style={{ animationDuration: ROWS[r].duration }}
+          >
+            {[...row, ...row].map((cover, i) => (
+              <img
+                key={`${cover}-${i}`}
+                src={cover}
+                alt=""
+                loading="lazy"
+                className="h-[30vh] aspect-[3/4] object-cover rounded-xl shrink-0 animate-fade-in"
+              />
+            ))}
+          </div>
+        ))}
+      </div>
+
+      {/* A soft lime glow, and a vignette that keeps the middle (the chat) calm */}
+      <div className="absolute -top-40 -left-40 w-[42rem] h-[42rem] rounded-full bg-brand/[0.10] blur-[140px]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_65%_at_50%_45%,rgb(13_15_18/0.75),rgb(13_15_18/0.25))]" />
+      <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-transparent to-slate-950/80" />
+    </div>
+  );
 };
-
-const PlayNextBackdrop = ({ cover }) => (
-  <div
-    className="fixed inset-0 -z-10 overflow-hidden pointer-events-none"
-    aria-hidden="true"
-  >
-    {/* The Best Pick's colours: key replays the fade when the pick changes */}
-    {cover && (
-      <img
-        key={cover}
-        src={cover}
-        alt=""
-        className="absolute left-1/2 top-1/3 w-[120vw] max-w-none -translate-x-1/2 -translate-y-1/2 aspect-square object-cover blur-[110px] saturate-200 opacity-35 animate-fade-in"
-      />
-    )}
-
-    <div className="absolute -top-40 -left-40 w-[42rem] h-[42rem] rounded-full bg-brand/[0.13] blur-[140px] animate-drift motion-reduce:animate-none" />
-    <div className="absolute -bottom-48 -right-32 w-[38rem] h-[38rem] rounded-full bg-teal-400/[0.07] blur-[140px] animate-drift [animation-delay:-9s] motion-reduce:animate-none" />
-
-    <div className="absolute inset-0" style={GRID} />
-
-    {/* Keeps text readable over the brightest covers */}
-    <div className="absolute inset-0 bg-gradient-to-b from-slate-950/10 via-slate-950/35 to-slate-950/75" />
-  </div>
-);
 
 export default PlayNextBackdrop;
