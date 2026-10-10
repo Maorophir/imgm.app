@@ -211,16 +211,16 @@ body {
   .animate-xp-pop { animation: none; }
 }
 
-/* ── Light mode ──
+/* ── Light mode (PREVIEW: three options, picked with ?theme=…) ──
    The site is built dark: every surface and text colour comes from the slate scale,
-   white and a few accents. Light mode swaps those variables when <html> has
-   data-theme="light" (set in index.html before the page draws, so there's no flash):
-   surfaces turn light, white text turns ink. Then three fixes for what flipping breaks:
-     - lime TEXT is unreadable on white: text and borders get a deep lime, while solid
-       lime buttons keep the logo's bright lime (with dark text on them)
-     - gold badges (Game of the Week) keep their gold, also with dark text
-     - status colours (red errors, amber notes, green "done") use darker shades */
-:root[data-theme="light"] {
+   white and a few accents, so each option just swaps those variables on <html>
+   (set in index.html before the page draws, so there's no flash).
+     light    A · all light: light page, white cards, ink text
+     islands  B · light page, dark cards: cards and panels keep the dark look exactly
+     dim      C · dim: a softer charcoal instead of black, everything else unchanged */
+
+/* A and B: the light page */
+:root:is([data-theme="light"], [data-theme="islands"]) {
   --color-slate-50: #0d0f12;
   --color-slate-100: #181a1f;
   --color-slate-200: #262a31;
@@ -234,7 +234,7 @@ body {
   --color-slate-950: #f3f4f6; /* the page */
   --color-white: #0d0f12; /* "white" text = ink; white/5 tints = faint grey */
 
-  --color-brand: #4d7c0f; /* deep lime for text, borders and focus */
+  --color-brand: #4d7c0f; /* deep lime for text, borders and focus (bright lime is unreadable on white) */
 
   --color-red-200: #b91c1c;
   --color-red-300: #b91c1c;
@@ -249,11 +249,59 @@ body {
   --color-sky-400: #0369a1;
   --color-orange-400: #c2410c;
 }
-/* Solid lime and gold keep their bright colour, and the dark text that sits on them */
-:root[data-theme="light"] :is(.bg-brand, .bg-amber-300, .bg-amber-400) {
+
+/* B: every card and panel is a dark island, with the dark mode's own colours (only
+   real backgrounds count: a class starting the list or after a space, not hover:…) */
+:root[data-theme="islands"] :is([class^="bg-slate-900"], [class*=" bg-slate-900"], [class^="bg-slate-800"], [class*=" bg-slate-800"]) {
+  --color-slate-50: #f8f9fa;
+  --color-slate-100: #f1f2f4;
+  --color-slate-200: #e3e6ea;
+  --color-slate-300: #cfd3da;
+  --color-slate-400: #a0a6b1;
+  --color-slate-500: #707784;
+  --color-slate-600: #4f5560;
+  --color-slate-700: #353943;
+  --color-slate-800: #23262d;
+  --color-slate-900: #16181d;
+  --color-slate-950: #0d0f12;
+  --color-white: #ffffff;
   --color-brand: #b8f03a;
-  --color-amber-300: #fcd34d;
-  --color-amber-400: #fbbf24;
+  --color-red-200: oklch(88.5% 0.062 18.334);
+  --color-red-300: oklch(80.8% 0.114 19.571);
+  --color-red-400: oklch(70.4% 0.191 22.216);
+  --color-amber-200: oklch(92.4% 0.12 95.746);
+  --color-amber-300: oklch(87.9% 0.169 91.605);
+  --color-amber-400: oklch(82.8% 0.189 84.429);
+  --color-emerald-200: oklch(90.5% 0.093 164.15);
+  --color-emerald-300: oklch(84.5% 0.143 164.978);
+  --color-emerald-400: oklch(76.5% 0.177 163.223);
+  --color-yellow-400: oklch(85.2% 0.199 91.936);
+  --color-sky-400: oklch(74.6% 0.16 232.661);
+  --color-orange-400: oklch(75% 0.183 55.934);
+}
+
+/* B: islands are solid (see-through dark over a light page turns muddy grey) */
+:root[data-theme="islands"] :is([class^="bg-slate-900/"], [class*=" bg-slate-900/"]) {
+  background-color: #16181d;
+}
+:root[data-theme="islands"] :is([class^="bg-slate-800/"], [class*=" bg-slate-800/"]) {
+  background-color: #23262d;
+}
+
+/* A and B: solid lime and gold keep their bright colour, and the dark text on them */
+:root:is([data-theme="light"], [data-theme="islands"]) :is(.bg-brand, .bg-amber-300, .bg-amber-400) {
+  --color-brand: #b8f03a;
+  --color-amber-300: oklch(87.9% 0.169 91.605);
+  --color-amber-400: oklch(82.8% 0.189 84.429);
   --color-slate-950: #0d0f12;
   --color-slate-900: #0d0f12;
+}
+
+/* C: dim, a charcoal grey (like GitHub's "dark dimmed") */
+:root[data-theme="dim"] {
+  --color-slate-600: #5b636e;
+  --color-slate-700: #444c56;
+  --color-slate-800: #373e47;
+  --color-slate-900: #2d333b;
+  --color-slate-950: #22272e;
 }
