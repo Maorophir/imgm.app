@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
-import { getBallot, castGotwVote } from '../controllers/gotwController.js';
+import { getBallot, castGotwVote, nominateGame, getHistory } from '../controllers/gotwController.js';
 
 const router = Router();
 
@@ -17,5 +17,11 @@ const voteLimiter = rateLimit({
   message: { error: 'Too many votes. Slow down a little.' },
 });
 router.put('/vote', voteLimiter, castGotwVote);
+
+// PUT /api/gotw/nominate — nominate a game for next week's "Player pick" slot
+router.put('/nominate', voteLimiter, nominateGame);
+
+// GET /api/gotw/history — past Games of the Week
+router.get('/history', getHistory);
 
 export default router;

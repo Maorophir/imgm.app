@@ -1,7 +1,9 @@
 /**
  * Game of the Week — Route: /game-of-the-week
  *
- *   the crown     last week's winner: the Game of the Week for these 7 days
+ *   the crown     last week's winner: the Game of the Week for these 7 days, with
+ *                 what players think of it, its most helpful reviews, and past winners
+ *   your record   voting streak, winners picked (3 = Kingmaker), your nomination
  *   the ballot    this week's candidates (each from a different source, labelled);
  *                 players vote Sunday to Saturday, Israel time. A vote is final (the
  *                 card asks to confirm first), and results show once you've voted.
@@ -9,8 +11,11 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, Clock, Crown, Flame, Gem, Heart, Landmark, Sparkles, TrendingUp, Users } from 'lucide-react';
-import { getGotw, voteGotw } from '../lib/api';
+import PlayerVerdict from '../components/game/PlayerVerdict';
+import GamePicker from '../components/reviewQuest/GamePicker';
+import { getRarity } from '../components/reviewQuest/questOptions';
+import { Check, Clock, Crown, Flame, Gem, Heart, Landmark, PartyPopper, Sparkles, ThumbsUp, Trophy, TrendingUp, Users } from 'lucide-react';
+import { getGame, getGameReviews, getGotw, getGotwHistory, nominateGotw, voteGotw } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import LoadError from '../components/LoadError';
 
@@ -41,7 +46,7 @@ const useTimeLeft = (endsAt) => {
   return d > 0 ? `${d}d ${h}h left` : h > 0 ? `${h}h ${m}m left` : `${m}m left`;
 };
 
-const Crowned = ({ gotw, timeZone }) => {
+const Crowned = ({ gotw, timeZone, pickedWinner }) => {
   if (!gotw) {
     return (
       <div className="rounded-3xl border border-dashed border-slate-700 p-10 text-center">
@@ -71,7 +76,13 @@ const Crowned = ({ gotw, timeZone }) => {
           <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight text-white leading-none mt-1">{game.title}</h2>
           <p className="mt-3 text-slate-300">
             Chosen by IMGM players{share != null && <> · <span className="font-bold text-white">{share}%</span> of {gotw.totalVotes} votes</>}
+            {gotw.topRank && <> · <Link to="/top" className="font-bold text-white hover:text-brand">#{gotw.topRank} in Top Games</Link></>}
           </p>
+          {pickedWinner && (
+            <p className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/15 border border-brand/60 text-sm font-bold text-white">
+              <PartyPopper className="w-4 h-4 text-brand" aria-hidden="true" /> You picked the winner!
+            </p>
+          )}
         </div>
         <Link to={`/game/${game.id}`} className="self-start md:self-end px-6 py-3 rounded-full font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition whitespace-nowrap">
           See the game
@@ -81,7 +92,7 @@ const Crowned = ({ gotw, timeZone }) => {
   );
 };
 
-const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfirm, onCancel, busy }) => {
+const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfirm, onCancel, busy, xp }) => {
   const { game, slot, votes } = candidate;
   const { label, Icon } = SLOTS[slot] ?? SLOTS.popular;
   const share = voted && total ? Math.round((votes / total) * 100) : 0;
@@ -121,7 +132,7 @@ const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfir
         ) : voted ? null : confirming ? (
           // Votes are final: one more click to be sure
           <div className="mt-auto flex flex-col gap-2 animate-fade-in">
-            <p className="text-xs text-slate-300 text-center">Lock in your vote? You can't change it this week.</p>
+            <p className="text-xs text-slate-300 text-center">Lock in your vote for +{xp} XP? You can't change it this week.</p>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={onCancel} disabled={busy} className="py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-300 hover:text-white transition">
                 Cancel
@@ -142,6 +153,136 @@ const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfir
         )}
       </div>
     </li>
+  );
+};
+
+// The winner's 3 most helpful reviews, as short quotes
+const TopReviews = ({ gameId }) => {
+  const [reviews, setReviews] = useState(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    getGameReviews(gameId, { sort: 'helpful', offset: 0, limit: 3 }, controller.signal)
+      .then((page) => setReviews(page.reviews.filter((r) => r.reviewText?.trim())))
+      .catch(() => setReviews([]));
+    return () => controller.abort();
+  }, [gameId]);
+  if (!reviews?.length) return null;
+  return (
+    <div>
+      <h2 className="text-2xl font-bold text-white mb-6">
+        Most <span className="text-brand">helpful</span> reviews
+      </h2>
+      <ul className="grid md:grid-cols-3 gap-4">
+        {reviews.map((review) => {
+          const rarity = getRarity(review.rating);
+          const text = (review.masked?.reviewText ?? review.reviewText).trim();
+          return (
+            <li key={review.id} className="flex flex-col gap-3 p-5 rounded-2xl bg-slate-900/60 border border-slate-800" style={{ boxShadow: `inset 3px 0 0 ${rarity.color}` }}>
+              <p className="text-xs font-bold" style={{ color: rarity.color }}>
+                <span className="uppercase tracking-wider">{rarity.label}</span> {review.rating}/10
+              </p>
+              <p className="text-slate-200 leading-relaxed line-clamp-5">“{text}”</p>
+              <p className="mt-auto flex items-center justify-between text-xs text-slate-500">
+                <span>{review.user?.displayUsername ?? 'A player'}</span>
+                {review.helpfulCount > 0 && (
+                  <span className="inline-flex items-center gap-1"><ThumbsUp className="w-3.5 h-3.5" aria-hidden="true" /> {review.helpfulCount}</span>
+                )}
+              </p>
+            </li>
+          );
+        })}
+      </ul>
+      <Link to={`/game/${gameId}#reviews`} className="inline-block mt-4 text-sm font-bold text-brand hover:underline">Read every review →</Link>
+    </div>
+  );
+};
+
+// Everything about the reigning winner below its banner
+const CrownedDetails = ({ gameId }) => {
+  const navigate = useNavigate();
+  const [game, setGame] = useState(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    getGame(gameId, controller.signal).then(setGame).catch(() => {});
+    return () => controller.abort();
+  }, [gameId]);
+  return (
+    <>
+      {game && (
+        <PlayerVerdict
+          game={game}
+          embedded
+          title={<>Why <span className="text-brand">players</span> love it</>}
+          onRatingClick={() => navigate(`/game/${gameId}#reviews`)}
+        />
+      )}
+      <TopReviews gameId={gameId} />
+    </>
+  );
+};
+
+// Streak, winners picked, the Kingmaker title
+const MyRecord = ({ me }) => (
+  <div className="flex flex-wrap gap-2">
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-700 text-sm font-semibold text-slate-200">
+      <Flame className="w-4 h-4 text-orange-400" aria-hidden="true" /> Streak: {me.streak} {me.streak === 1 ? 'week' : 'weeks'}
+    </span>
+    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-slate-700 text-sm font-semibold text-slate-200">
+      <Trophy className="w-4 h-4 text-amber-300" aria-hidden="true" /> Winners picked: {me.winnersPicked}
+    </span>
+    {me.kingmaker && (
+      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-300/10 border border-amber-300/50 text-sm font-bold text-amber-200">
+        <Crown className="w-4 h-4" aria-hidden="true" /> Kingmaker
+      </span>
+    )}
+  </div>
+);
+
+// Nominate a game for next week's "Player pick" slot
+const Nominate = ({ nomination, onChange, busy }) => (
+  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 flex flex-col md:flex-row md:items-center gap-4">
+    <div className="md:w-1/2">
+      <p className="inline-flex items-center gap-2 font-bold text-white">
+        <Users className="w-4 h-4 text-brand" aria-hidden="true" /> Nominate a game for next week
+      </p>
+      <p className="text-sm text-slate-400 mt-1">The game players nominate most joins next week's ballot as the Player pick. You can change it all week.</p>
+    </div>
+    <div className={`md:w-1/2 ${busy ? 'opacity-60 pointer-events-none' : ''}`}>
+      <GamePicker value={nomination} onChange={onChange} placeholder="Search a game to nominate…" />
+    </div>
+  </div>
+);
+
+// Past Games of the Week
+const PastWinners = ({ timeZone }) => {
+  const [winners, setWinners] = useState(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    getGotwHistory(controller.signal).then(setWinners).catch(() => setWinners([]));
+    return () => controller.abort();
+  }, []);
+  if (!winners?.length) return null;
+  return (
+    <section>
+      <h2 className="text-2xl font-bold text-white mb-6">
+        Past <span className="text-brand">winners</span>
+      </h2>
+      <ul className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+        {winners.map((w) => (
+          <li key={w.votedIn}>
+            <Link to={`/game/${w.game.id}`} className="group flex flex-col gap-2">
+              {w.game.coverUrl ? (
+                <img src={w.game.coverUrl} alt="" loading="lazy" className="w-full aspect-[3/4] rounded-xl object-cover bg-slate-800 group-hover:ring-2 group-hover:ring-amber-300/70 transition" />
+              ) : (
+                <div className="w-full aspect-[3/4] rounded-xl bg-slate-800" />
+              )}
+              <span className="text-sm font-semibold text-slate-200 leading-tight line-clamp-2 group-hover:text-white">{w.game.title}</span>
+              <span className="text-xs text-slate-500">Week of {day(w.reignsFrom, timeZone)}</span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 };
 
@@ -186,6 +327,17 @@ const GameOfTheWeek = () => {
     }
   };
 
+  const nominate = async (game) => {
+    setBusy(true);
+    try {
+      setData(await nominateGotw(game?.id ?? null));
+    } catch {
+      setAttempt((n) => n + 1);
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (error) return <div className="max-w-7xl mx-auto px-6 py-16"><LoadError title="Couldn't load Game of the Week" onRetry={() => setAttempt((n) => n + 1)} /></div>;
   if (!data) return <div className="max-w-7xl mx-auto px-6 py-10"><div className="h-[360px] rounded-3xl bg-slate-900/50 animate-pulse" /></div>;
 
@@ -197,8 +349,10 @@ const GameOfTheWeek = () => {
     <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col gap-14">
       <section>
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand mb-4">Game of the Week</p>
-        <Crowned gotw={data.gameOfTheWeek} timeZone={week.timeZone} />
+        <Crowned gotw={data.gameOfTheWeek} timeZone={week.timeZone} pickedWinner={data.me?.pickedWinner} />
       </section>
+
+      {data.gameOfTheWeek && <CrownedDetails gameId={data.gameOfTheWeek.game.id} />}
 
       <section>
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
@@ -215,7 +369,8 @@ const GameOfTheWeek = () => {
             Voting closes Saturday at midnight · {timeLeft}
           </p>
         </div>
-        <ul className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {data.me && <div className="mb-6"><MyRecord me={data.me} /></div>}
+        <ul aria-label="This week's ballot" className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {candidates.map((candidate) => (
             <Candidate
               key={candidate.game.id}
@@ -228,13 +383,17 @@ const GameOfTheWeek = () => {
               onConfirm={vote}
               onCancel={() => setConfirming(null)}
               busy={busy}
+              xp={data.me?.voteXp ?? 5}
             />
           ))}
         </ul>
         <p className="mt-4 text-sm text-slate-500">
           {voted ? `${totalVotes} ${totalVotes === 1 ? 'player has' : 'players have'} voted so far.` : session ? 'Results show once you vote.' : 'Log in to vote. Results show once you vote.'}
         </p>
+        {session && <div className="mt-8"><Nominate nomination={data.me?.nomination ?? null} onChange={nominate} busy={busy} /></div>}
       </section>
+
+      <PastWinners timeZone={week.timeZone} />
     </div>
   );
 };

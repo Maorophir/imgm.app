@@ -35,6 +35,7 @@ model User {
   playNextChats PlayNextChat[]
   reviewVotes   ReviewVote[]
   gotwVotes     GotwVote[]
+  gotwNominations GotwNomination[]
 }
 
 model Session {
@@ -100,6 +101,7 @@ model Game {
   gotwCandidacies GotwCandidate[]
   gotwWins      GotwWeek[]  @relation("GotwWinner")
   gotwVotes     GotwVote[]
+  gotwNominations GotwNomination[]
 
   // Reviews that compared another game to this one ("It's like ___ meets ___")
   comparedInA   Review[] @relation("ComparedA")
@@ -259,6 +261,7 @@ model GotwWeek {
   closedAt   DateTime?       // set when the votes were counted
   candidates GotwCandidate[]
   votes      GotwVote[]
+  nominations GotwNomination[]
   createdAt  DateTime        @default(now())
 }
 
@@ -276,6 +279,22 @@ model GotwCandidate {
 
 // One player's vote in one week (changeable until the week closes)
 model GotwVote {
+  weekId    String
+  week      GotwWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId    Int
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([weekId, userId])
+  @@index([weekId, gameId])
+}
+
+// A player's nomination during a week: the most-nominated game gets next week's
+// "Player pick" slot on the ballot. One per player per week (changeable).
+model GotwNomination {
   weekId    String
   week      GotwWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
   userId    String

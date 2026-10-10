@@ -10,6 +10,7 @@
  * Each ballot slot comes from a different place, so every week has variety even while
  * IMGM is small (each slot is labelled on the ballot):
  *     hot          most new reviews on IMGM in the last two weeks
+ *     player_pick  the game players nominated most last week
  *     favorite     the best weighted score (Top Games)
  *     new_release  the most popular game released in the last 90 days (IGDB)
  *     hidden_gem   loved (8+) by the few who reviewed it
@@ -139,6 +140,15 @@ const pickCandidates = async (now) => {
     take: 10,
   });
   hot.some((h) => add(h.gameId, 'hot'));
+  // player_pick: last week's most-nominated game
+  const nominated = await prisma.gotwNomination.groupBy({
+    by: ['gameId'],
+    where: { weekId: weekOf(new Date(now - 7 * DAY)).id },
+    _count: { _all: true },
+    orderBy: { _count: { gameId: 'desc' } },
+    take: 10,
+  });
+  nominated.some((n) => add(n.gameId, 'player_pick'));
   // favorite: the best weighted score
   ranked.some((r) => add(r.gameId, 'favorite'));
   // new_release: the most popular recent release
@@ -192,6 +202,35 @@ export const currentWeek = () => {
     opening = null;
   });
   return opening;
+};
+
+// "2026-10-11" → "2026-10-04"
+const previousWeekId = (id) => {
+  const date = new Date(`${id}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - 7);
+  return date.toISOString().slice(0, 10);
+};
+
+export const KINGMAKER_AT = 3; // winners picked → the Kingmaker title
+
+/**
+ * A voter's record: their streak (weeks in a row they voted, up to this week or the
+ * last one) and how many of their votes picked the eventual winner.
+ */
+export const voterStats = async (userId, currentWeekId) => {
+  const votes = await prisma.gotwVote.findMany({
+    where: { userId },
+    select: { weekId: true, gameId: true, week: { select: { winnerId: true, closedAt: true } } },
+  });
+  const voted = new Set(votes.map((v) => v.weekId));
+  let streak = 0;
+  let id = voted.has(currentWeekId) ? currentWeekId : previousWeekId(currentWeekId);
+  while (voted.has(id)) {
+    streak += 1;
+    id = previousWeekId(id);
+  }
+  const winnersPicked = votes.filter((v) => v.week.closedAt && v.week.winnerId === v.gameId).length;
+  return { streak, winnersPicked, kingmaker: winnersPicked >= KINGMAKER_AT };
 };
 
 export { tallyOf };

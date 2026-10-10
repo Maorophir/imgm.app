@@ -59,16 +59,17 @@ const Histogram = ({ byRating, selected, onSelect }) => {
   );
 };
 
-const PlayerVerdict = ({ game, selectedRating, onRatingClick }) => {
+// embedded: placed inside another page's layout (no outer width/padding of its own)
+const PlayerVerdict = ({ game, selectedRating, onRatingClick, embedded = false, title }) => {
   const count = game.reviewStats?.count ?? 0;
   if (count === 0) return null;
   const average = game.ratings?.imgm;
   const rarity = getRarity(Math.round(average));
 
   return (
-    <section className="max-w-7xl mx-auto px-6 py-10">
+    <section className={embedded ? '' : 'max-w-7xl mx-auto px-6 py-10'}>
       <h2 className="text-2xl font-bold text-white mb-6">
-        What <span className="text-brand">players</span> think
+        {title ?? <>What <span className="text-brand">players</span> think</>}
       </h2>
       <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 md:p-8 flex flex-col gap-7">
         {/* Score + histogram */}

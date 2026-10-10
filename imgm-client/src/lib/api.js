@@ -48,6 +48,8 @@ export const voteOnReview = (reviewId, helpful) =>
 // Game of the Week: { week, candidates, myVote, totalVotes, gameOfTheWeek }
 export const getGotw = (signal) => fetchJson('/api/gotw', { signal });
 export const voteGotw = (gameId) => fetchJson('/api/gotw/vote', { method: 'PUT', body: { gameId } });
+export const nominateGotw = (gameId) => fetchJson('/api/gotw/nominate', { method: 'PUT', body: { gameId } });
+export const getGotwHistory = (signal) => fetchJson('/api/gotw/history', { signal });
 
 // IMGM Top Games: { games: [{ rank, average, reviewCount, myRating, …game }], size, insights }
 export const getTopGames = ({ sort, platform }, signal) =>
