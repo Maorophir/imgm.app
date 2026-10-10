@@ -245,6 +245,18 @@ export function useGameGuide(userId) {
       finishedRef.current = true;
     }, 5000);
 
+    // The answer's text, streamed in pieces of a few words: drawing each piece re-renders
+    // the chat, dozens of times a second. Pieces wait here and are drawn together once
+    // per screen refresh (requestAnimationFrame), which looks the same and costs far less.
+    let pending = null;
+    let frame = 0;
+    const flush = () => {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      if (pending) dispatch({ type: "token", data: pending });
+      pending = null;
+    };
+
     try {
       await streamGuide(
         { chat_id: chatIdRef.current, ...body },
@@ -252,6 +264,16 @@ export function useGameGuide(userId) {
           signal: controller.signal,
           onEvent: (event, data) => {
             lastEvent = Date.now();
+            // Text arrives in many small pieces: collect them and draw once per frame
+            if (event === "token") {
+              if (pending && pending.message_id !== data.message_id) flush();
+              pending = pending
+                ? { ...pending, text: pending.text + data.text }
+                : { ...data };
+              frame ||= requestAnimationFrame(flush);
+              return;
+            }
+            flush(); // any text still waiting goes before the next event
             if (event === "error")
               dispatch({ type: "error", message: data.message });
             // Only the events the page shows ("start" is just the server saying hello)
@@ -259,6 +281,7 @@ export function useGameGuide(userId) {
           },
         },
       );
+      flush();
       if (!controller.signal.aborted) dispatch({ type: "ended" });
     } catch (error) {
       if (!controller.signal.aborted)
@@ -283,13 +306,18 @@ export function useGameGuide(userId) {
     [run],
   );
 
-  // "Not for me" on one card: the AI remembers it for the rest of the chat and swaps it
+  // "Not for me" or "Played it" on one card: the AI remembers it for the rest of the
+  // chat and swaps just that game
   const notForMe = useCallback(
-    (pick, preferences = {}) =>
-      run(`Not for me: ${pick.title}`, "not_for_me", {
-        not_for_me: { game_id: pick.game_id, title: pick.title },
-        preferences,
-      }),
+    (pick, preferences = {}, reason = "not_for_me") =>
+      run(
+        reason === "played" ? `I already played ${pick.title}` : `Not for me: ${pick.title}`,
+        "not_for_me",
+        {
+          not_for_me: { game_id: pick.game_id, title: pick.title, reason },
+          preferences,
+        },
+      ),
     [run],
   );
 
@@ -314,8 +342,15 @@ export function useGameGuide(userId) {
     [run, turns.length],
   );
 
-  // The redo button: the latest question again, replacing the stopped (or failed) one
+  // The redo button: the latest question again, replacing the stopped (or failed) one.
+  // Reads the turns from a ref, so the button keeps one identity while text streams in
+  // (the chat's turns can then skip re-rendering).
+  const turnsRef = useRef(turns);
+  useEffect(() => {
+    turnsRef.current = turns;
+  }, [turns]);
   const retryLast = useCallback(() => {
+    const turns = turnsRef.current;
     const last = turns.at(-1);
     if (!last) return;
     const request = last.request ?? { message: last.question }; // chats saved before redo existed
@@ -324,7 +359,7 @@ export function useGameGuide(userId) {
       ...request,
       replace_turn: turns.length,
     });
-  }, [run, turns]);
+  }, [run]);
 
   // Switches the page to another chat (stopping any answer in progress)
   const show = useCallback((id, chatTurns, chatPrefs) => {

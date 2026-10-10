@@ -7,7 +7,7 @@
  * Large screens get an app-like layout: the page fits the window, the chat scrolls
  * inside its own panel, and the composer stays pinned at its bottom.
  */
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useSession } from "../lib/authClient";
 import { useGameGuide, MAX_QUESTIONS } from "../hooks/useGameGuide";
@@ -85,10 +85,29 @@ function PlayNextChat({ userId }) {
   const [lastAnswers, setLastAnswers] = useState(() => readLastAnswers(userId));
   const bottomRef = useRef(null);
   // Only the questions actually answered are sent (empty lists and un-picks dropped)
-  const preferences = Object.fromEntries(
-    Object.entries(prefs).filter(([, v]) =>
-      Array.isArray(v) ? v.length > 0 : Boolean(v),
-    ),
+  const preferences = useMemo(
+    () =>
+      Object.fromEntries(
+        Object.entries(prefs).filter(([, v]) =>
+          Array.isArray(v) ? v.length > 0 : Boolean(v),
+        ),
+      ),
+    [prefs],
+  );
+  // The chat's actions keep one identity while an answer streams in, so the earlier
+  // turns (memo) don't re-render for every piece of text
+  const onNotForMe = useCallback(
+    (pick, reason) => notForMe(pick, preferences, reason),
+    [notForMe, preferences],
+  );
+  const onAsk = useCallback(
+    (question) => ask(question, preferences),
+    [ask, preferences],
+  );
+  const { editLast } = guide;
+  const onEdit = useCallback(
+    (question) => editLast(question, preferences),
+    [editLast, preferences],
   );
 
   // Wake the AI service while the player is still typing (it sleeps when unused)
@@ -96,13 +115,19 @@ function PlayNextChat({ userId }) {
     wakeGuide();
   }, []);
 
-  // Keep the newest activity in view as the guide works
-  const activity = current
-    ? `${current.steps.length}-${current.answer.length}-${Boolean(current.cards)}`
+  // Keep the newest activity in view as the guide works: a smooth glide for each new
+  // step or the cards, an instant one while the text streams (restarting a smooth
+  // scroll for every few words made the typing look jerky)
+  const milestone = current
+    ? `${current.steps.length}-${Boolean(current.answer)}-${Boolean(current.cards)}`
     : "";
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [activity]);
+  }, [milestone]);
+  const answerLength = current?.answer.length ?? 0;
+  useEffect(() => {
+    if (answerLength) bottomRef.current?.scrollIntoView({ block: "end" });
+  }, [answerLength]);
 
   // The quest's last button: its answers become this chat's first question
   const reveal = (note) => {
@@ -120,18 +145,22 @@ function PlayNextChat({ userId }) {
       .then((games) => setFeatured(games.map((game) => game.coverUrl)))
       .catch(() => {}); // no featured games: the wall just uses the chat's own
   }, []);
-  const picks = [...(current?.cards?.games ?? [])].sort(
-    (a, b) => b.best_pick - a.best_pick,
-  );
-  const wallCovers = [
-    ...new Set(
-      [
-        ...picks.map((g) => g.cover),
-        ...(current?.games ?? []).map((g) => g.cover),
-        ...featured,
-      ].filter(Boolean),
-    ),
-  ].slice(0, 42);
+  // Worked out again only when the picks, candidates or featured games change (not
+  // for every piece of streamed text), so the wall itself doesn't re-render either
+  const cardGames = current?.cards?.games;
+  const candidates = current?.games;
+  const wallCovers = useMemo(() => {
+    const picks = [...(cardGames ?? [])].sort((a, b) => b.best_pick - a.best_pick);
+    return [
+      ...new Set(
+        [
+          ...picks.map((g) => g.cover),
+          ...(candidates ?? []).map((g) => g.cover),
+          ...featured,
+        ].filter(Boolean),
+      ),
+    ].slice(0, 42);
+  }, [cardGames, candidates, featured]);
 
   const history = (
     <ChatHistory
@@ -162,7 +191,9 @@ function PlayNextChat({ userId }) {
       </aside>
 
       {/* Chat */}
-      <section className="flex flex-col min-h-[75vh] lg:min-h-0 lg:rounded-3xl lg:border lg:border-white/10 lg:bg-slate-950/50 lg:backdrop-blur-sm lg:overflow-hidden">
+      {/* No blur on these panels: the cover wall behind them never stops moving, and blur
+          over moving content is recomputed every frame (it made the chat feel laggy) */}
+      <section className="flex flex-col min-h-[75vh] lg:min-h-0 lg:rounded-3xl lg:border lg:border-white/10 lg:bg-slate-950/75 lg:overflow-hidden">
         <header className="flex flex-wrap items-center justify-between gap-3 lg:px-6 lg:pt-5 pb-4 lg:border-b lg:border-white/5">
           <div className="min-w-0">
             <h1 className="font-display text-4xl md:text-5xl uppercase tracking-tight text-white leading-none">
@@ -209,9 +240,9 @@ function PlayNextChat({ userId }) {
               turn={turn}
               isLatest={turn === current}
               running={running}
-              onNotForMe={(pick) => notForMe(pick, preferences)}
-              onAsk={(question) => ask(question, preferences)}
-              onEdit={(question) => guide.editLast(question, preferences)}
+              onNotForMe={onNotForMe}
+              onAsk={onAsk}
+              onEdit={onEdit}
               onRetry={guide.retryLast}
               canAsk={!running && !full}
             />
@@ -221,7 +252,7 @@ function PlayNextChat({ userId }) {
 
         {/* The composer: pinned to the panel's bottom (large screens) or the screen's (small) */}
         {turns.length > 0 && (
-          <div className="sticky bottom-4 lg:static rounded-3xl lg:rounded-none bg-slate-950/90 lg:bg-slate-950/70 backdrop-blur p-3 lg:px-6 lg:py-4 border border-slate-800 lg:border-0 lg:border-t lg:border-white/5 shadow-2xl shadow-black/50 lg:shadow-none">
+          <div className="sticky bottom-4 lg:static rounded-3xl lg:rounded-none bg-slate-950/95 lg:bg-slate-950/80 p-3 lg:px-6 lg:py-4 border border-slate-800 lg:border-0 lg:border-t lg:border-white/5 shadow-2xl shadow-black/50 lg:shadow-none">
             {full && (
               <p className="px-2 pb-3 text-sm text-slate-300">
                 This chat is full ({MAX_QUESTIONS} questions).{" "}
@@ -238,7 +269,7 @@ function PlayNextChat({ userId }) {
             {/* key: another chat remounts it, so "Tune it" shows that chat's state */}
             <GuideComposer
               key={chatId}
-              onAsk={(question) => ask(question, preferences)}
+              onAsk={onAsk}
               onStop={guide.stop}
               running={running}
               disabled={running || full}
@@ -253,7 +284,7 @@ function PlayNextChat({ userId }) {
       <aside className="hidden lg:block min-h-0 overflow-y-auto pr-1">
         <GuidePanel
           turn={current}
-          onNotForMe={(pick) => notForMe(pick, preferences)}
+          onNotForMe={onNotForMe}
           disabled={running}
         />
       </aside>

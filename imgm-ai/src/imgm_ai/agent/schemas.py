@@ -37,11 +37,27 @@ class GameCard(BaseModel):
     )
 
 
+class PlayedGame(BaseModel):
+    """A game the player said they already played (or don't want)."""
+
+    game_id: int = Field(description="The game's id, copied exactly from verified_games.")
+    title: str = Field(description="The game's title.")
+
+
 class Recommendations(BaseModel):
     """The guide's full answer: an intro and exactly 5 game cards."""
 
     intro: str = Field(description="The guide's one-sentence intro.")
     games: list[GameCard] = Field(description="Exactly 5 games, Best Pick first.")
+    # "I already played the first two": remembered like "Not for me" (the format node
+    # adds them to `rejected`), so they're replaced now and never suggested again
+    played: list[PlayedGame] = Field(
+        default_factory=list,
+        description=(
+            "Games the player's LATEST request says they already played, finished or don't "
+            "want (positions count in the previous answer's order). Empty if none."
+        ),
+    )
     follow_up: str | None = Field(
         default=None,
         description="The guide's closing question to the player, if it asked one.",

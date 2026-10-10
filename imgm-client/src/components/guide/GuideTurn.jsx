@@ -11,7 +11,7 @@
  *                          and a redo button that asks the same question again
  * On small screens the latest turn also shows the full picks (the side panel is hidden).
  */
-import { useState } from "react";
+import { memo, useState } from "react";
 import GuideTimeline from "./GuideTimeline";
 import GuidePanel from "./GuidePanel";
 import RichText from "./RichText";
@@ -204,7 +204,7 @@ const GuideTurn = ({
           />
 
           {turn.cards ? (
-            <div className="rounded-2xl rounded-tl-md bg-slate-900/85 border border-white/10 px-5 py-4 shadow-xl shadow-black/30 backdrop-blur">
+            <div className="rounded-2xl rounded-tl-md bg-slate-900/90 border border-white/10 px-5 py-4 shadow-xl shadow-black/30">
               <p className="text-[17px] leading-relaxed text-slate-100">
                 {turn.cards.intro}
               </p>
@@ -289,4 +289,5 @@ const GuideTurn = ({
   );
 };
 
-export default GuideTurn;
+// memo: while an answer streams in, only the latest turn re-renders (not every earlier one)
+export default memo(GuideTurn);

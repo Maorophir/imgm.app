@@ -131,9 +131,12 @@ def new_turn(
     return turn
 
 
-def not_for_me_turn(game_id: int, title: str) -> dict:
-    """The turn sent when the player rejects one card: remember it, and ask for a swap."""
-    return new_turn(
-        f"Not for me: {title}. Replace it with something else, and keep the other picks if they still fit.",
-        rejected=[{"game_id": game_id, "title": title}],
+def not_for_me_turn(game_id: int, title: str, reason: str = "not_for_me") -> dict:
+    """The turn sent when the player rejects one card ("Not for me", or "Played it"):
+    remember it, and ask for a swap that keeps the other picks."""
+    asked = (
+        f"I already played {title}. Replace it with a game I haven't played, and keep the other picks."
+        if reason == "played"
+        else f"Not for me: {title}. Replace it with something else, and keep the other picks if they still fit."
     )
+    return new_turn(asked, rejected=[{"game_id": game_id, "title": title}])

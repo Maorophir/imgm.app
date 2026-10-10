@@ -13,8 +13,14 @@ const guideSchema = z
     // logged-in player's id + this, so it can only ever reach the player's own chats.
     chat_id: z.string().regex(/^[A-Za-z0-9-]{8,64}$/),
     message: z.string().trim().min(1).max(1000).optional(),
-    // "Not for me" on one card: it's remembered for the rest of the chat
-    not_for_me: z.object({ game_id: z.int().positive(), title: z.string().trim().min(1).max(200) }).optional(),
+    // "Not for me" (or "Played it") on one card: it's remembered for the rest of the chat
+    not_for_me: z
+      .object({
+        game_id: z.int().positive(),
+        title: z.string().trim().min(1).max(200),
+        reason: z.enum(['not_for_me', 'played']).optional(),
+      })
+      .optional(),
     // The AI service validates the exact shape (platforms, moods, …)
     preferences: z.record(z.string(), z.any()).default({}),
     // An edited question: it replaces the chat's question number N (the latest one)
