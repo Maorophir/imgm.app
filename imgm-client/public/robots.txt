@@ -1,0 +1,3 @@
+# IMGM welcomes search engines (the API isn't a page)
+User-agent: *
+Disallow: /api/

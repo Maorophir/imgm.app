@@ -14,12 +14,27 @@ import { safeRedirect } from '../lib/safeRedirect';
 import GamerTagField from '../components/GamerTagField';
 import { useGamerTagCheck } from '../hooks/useGamerTagCheck';
 
-// A few fun ideas for people who can't think of a name
-const ADJECTIVES = ['Pixel', 'Shadow', 'Turbo', 'Cosmic', 'Rogue', 'Silent', 'Lucky', 'Frost', 'Neon', 'Arcane'];
-const NOUNS = ['Paladin', 'Ranger', 'Goblin', 'Wizard', 'Drifter', 'Knight', 'Raccoon', 'Phoenix', 'Bard', 'Golem'];
+// A few fun ideas for people who can't think of a name: two words, no numbers
+// (a name that's already taken is flagged when picked, like any other)
+const ADJECTIVES = [
+  'Pixel', 'Shadow', 'Turbo', 'Cosmic', 'Rogue', 'Silent', 'Lucky', 'Frost', 'Neon', 'Arcane',
+  'Crimson', 'Iron', 'Mystic', 'Wild', 'Stormy', 'Golden', 'Sneaky', 'Brave', 'Lunar', 'Solar',
+  'Feral', 'Hidden', 'Rusty', 'Velvet', 'Ember',
+];
+const NOUNS = [
+  'Paladin', 'Ranger', 'Goblin', 'Wizard', 'Drifter', 'Knight', 'Raccoon', 'Phoenix', 'Bard', 'Golem',
+  'Ronin', 'Nomad', 'Wanderer', 'Fox', 'Dragon', 'Specter', 'Pilot', 'Alchemist', 'Owl', 'Hunter',
+  'Rogue', 'Titan', 'Sprite', 'Corsair', 'Warden',
+];
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
-const suggestTags = () =>
-  Array.from({ length: 3 }, () => `${pick(ADJECTIVES)}${pick(NOUNS)}${Math.floor(10 + Math.random() * 90)}`);
+const suggestTags = () => {
+  const ideas = new Set();
+  while (ideas.size < 3) {
+    const [adjective, noun] = [pick(ADJECTIVES), pick(NOUNS)];
+    if (adjective !== noun) ideas.add(`${adjective}${noun}`); // never "RogueRogue"
+  }
+  return [...ideas];
+};
 
 const Welcome = () => {
   const { data: session, isPending, refetch } = useSession();

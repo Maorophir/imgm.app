@@ -13,6 +13,7 @@
  *     posting updates that review (one review per person per game).
  */
 import { ArrowBigUp, BookmarkCheck, CircleCheck, Clapperboard, Combine, Drama, Gamepad2, Layers, ListChecks, Monitor, PartyPopper, PenLine, Pencil, Scale, Star, Timer, Trash2, Zap } from 'lucide-react';
+import { useBacklog } from '../context/BacklogContext';
 import ArtIcon from '../components/ArtIcon';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -111,6 +112,44 @@ const saveErrorMessage = (err) => {
   return err.message || "Couldn't post your review. Please try again.";
 };
 
+// After a review of a game in their Backlog: finished, or still playing? (Their call:
+// many players review mid-game, so it's never removed by itself.)
+const BacklogPrompt = ({ gameId, title }) => {
+  const backlog = useBacklog();
+  const [answer, setAnswer] = useState(null); // 'removed' | 'kept'
+  if (answer === 'removed') {
+    return (
+      <p className="mx-auto -mt-3 mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/15 border border-brand/60 text-sm font-bold text-white">
+        <BookmarkCheck className="w-4 h-4 text-brand" aria-hidden="true" /> Quest complete! {title} is off your Backlog.
+      </p>
+    );
+  }
+  if (answer === 'kept') return <p className="-mt-3 mb-6 text-sm text-slate-400">Kept in your Backlog. Enjoy the rest of it!</p>;
+  return (
+    <div className="mx-auto -mt-3 mb-6 max-w-sm rounded-2xl border border-slate-700 bg-slate-900/70 p-4">
+      <p className="text-sm text-slate-200">
+        <BookmarkCheck className="inline w-4 h-4 mr-1.5 -mt-0.5 text-brand" aria-hidden="true" />
+        {title} is in your Backlog. Finished playing?
+      </p>
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            backlog?.toggle(gameId);
+            setAnswer('removed');
+          }}
+          className="py-2 rounded-xl text-sm font-bold bg-brand text-slate-950 hover:brightness-110 transition"
+        >
+          Finished, remove it
+        </button>
+        <button type="button" onClick={() => setAnswer('kept')} className="py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-200 hover:text-white transition">
+          Still playing
+        </button>
+      </div>
+    </div>
+  );
+};
+
 const ReviewQuest = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -173,7 +212,7 @@ const ReviewQuest = () => {
         isNew: !isEditing,
         newBadges: saved.badges.filter((b) => !previousBadges.includes(b)),
         playerXp: saved.playerXp, // { before, after }
-        checkedOffBacklog: saved.checkedOffBacklog, // it was in their Backlog: now it's done
+        inBacklog: saved.inBacklog, // in their Backlog: offer to remove it (never automatic)
       });
       refreshMyProgress(); // the navbar's level updates too
       setExisting({ loaded: true, review: saved });
@@ -336,11 +375,7 @@ const ReviewQuest = () => {
                 {result.isNew ? 'Review posted!' : 'Review updated!'}
               </h1>
               <p className="text-slate-400 text-sm mb-6">It's live on {game.title}'s page. Thanks for helping other players!</p>
-              {result.checkedOffBacklog && (
-                <p className="mx-auto -mt-3 mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/15 border border-brand/60 text-sm font-bold text-white">
-                  <BookmarkCheck className="w-4 h-4 text-brand" aria-hidden="true" /> Quest complete! {game.title} is checked off your Backlog.
-                </p>
-              )}
+              {result.inBacklog && <BacklogPrompt gameId={game.id} title={game.title} />}
 
               {/* The score, as loot */}
               <div

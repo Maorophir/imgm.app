@@ -97,7 +97,7 @@ const Crowned = ({ gotw, timeZone, pickedWinner }) => {
   );
 };
 
-const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfirm, onCancel, busy, xp, canVote }) => {
+const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfirm, onCancel, busy, canVote }) => {
   const { game, slot, votes } = candidate;
   const { label, Icon } = SLOTS[slot] ?? SLOTS.popular;
   const share = voted && total ? Math.round((votes / total) * 100) : 0;
@@ -137,7 +137,7 @@ const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfir
         ) : voted || !canVote ? null : confirming ? (
           // Votes are final: one more click to be sure
           <div className="mt-auto flex flex-col gap-2 animate-fade-in">
-            <p className="text-xs text-slate-300 text-center">Lock in your vote for +{xp} XP? You can't change it this week.</p>
+            <p className="text-xs text-slate-300 text-center">Lock in your vote? You can't change it this week.</p>
             <div className="grid grid-cols-2 gap-2">
               <button type="button" onClick={onCancel} disabled={busy} className="py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-300 hover:text-white transition">
                 Cancel
@@ -297,6 +297,7 @@ const GameOfTheWeek = () => {
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirming, setConfirming] = useState(null); // the game whose vote awaits a confirm
+  const [xpToast, setXpToast] = useState(null); // "+5 XP" after voting
   const [attempt, setAttempt] = useState(0);
   const timeLeft = useTimeLeft(data?.week.endsAt);
 
@@ -316,7 +317,10 @@ const GameOfTheWeek = () => {
   const vote = async (gameId) => {
     setBusy(true);
     try {
-      setData(await voteGotw(gameId));
+      const result = await voteGotw(gameId);
+      setData(result);
+      setXpToast(result.me?.voteXp ?? 5);
+      setTimeout(() => setXpToast(null), 3500);
     } catch {
       setAttempt((n) => n + 1); // reload the ballot (e.g. the week just closed)
     } finally {
@@ -392,7 +396,6 @@ const GameOfTheWeek = () => {
               onConfirm={vote}
               onCancel={() => setConfirming(null)}
               busy={busy}
-              xp={data.me?.voteXp ?? 5}
               canVote={Boolean(session)}
             />
           ))}
@@ -423,6 +426,16 @@ const GameOfTheWeek = () => {
       </section>
 
       <PastWinners timeZone={week.timeZone} />
+
+      {/* The reward for voting: a little "+5 XP" that floats up and away */}
+      {xpToast && (
+        <div role="status" className="fixed bottom-24 left-1/2 -translate-x-1/2 z-50 animate-xp-pop pointer-events-none">
+          <p className="inline-flex items-center gap-2 px-5 py-3 rounded-full bg-brand text-slate-950 font-black shadow-[0_0_40px_-4px_var(--color-brand)]">
+            <Sparkles className="w-5 h-5" aria-hidden="true" /> +{xpToast} XP
+            <span className="font-bold text-slate-950/70">· thanks for voting!</span>
+          </p>
+        </div>
+      )}
     </div>
   );
 };

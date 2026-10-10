@@ -91,6 +91,7 @@ export const getBacklog = (signal) => fetchJson('/api/backlog', { signal });
 export const getBacklogIds = (signal) => fetchJson('/api/backlog/ids', { signal });
 export const addToBacklog = (gameId, source) => fetchJson(`/api/backlog/${gameId}`, { method: 'PUT', body: { source } });
 export const removeFromBacklog = (gameId) => fetchJson(`/api/backlog/${gameId}`, { method: 'DELETE' });
+export const reorderBacklog = (gameIds) => fetchJson('/api/backlog/order', { method: 'PUT', body: { gameIds } });
 
 // Your profile: { player, stats, reviews } and more reviews page by page
 export const getMyProfile = (signal) => fetchJson('/api/users/me/profile', { signal });

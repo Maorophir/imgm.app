@@ -325,17 +325,19 @@ model UserAvatar {
   updatedAt DateTime @updatedAt
 }
 
-// A game a player wants to play later (their Backlog). Reviewing it checks it off.
+// A game a player wants to play later (their Backlog). It stays until they remove it
+// ("Finished"): reviewing a game only offers to remove it, since many review mid-game.
 model BacklogItem {
   userId  String
   user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   gameId  Int
   game    Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  source  String?  // where it was added from: play_next, game_page, hall_of_fame, gotw…
-  addedAt DateTime @default(now())
+  source   String?  // where it was added from: play_next, game_page, hall_of_fame, gotw…
+  position Float    @default(0) // the player's own order (lowest first; new games go on top)
+  addedAt  DateTime @default(now())
 
   @@id([userId, gameId])
-  @@index([userId, addedAt])
+  @@index([userId, position])
 }
 
 // Messages from the Feedback button (bugs, ideas) during the beta

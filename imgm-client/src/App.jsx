@@ -12,6 +12,7 @@ import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
 import GameOfTheWeek from './pages/GameOfTheWeek';
 import Privacy from './pages/Privacy';
+import BackToTop from './components/BackToTop';
 import Footer from './components/Footer';
 import Feedback from './components/Feedback';
 import Backlog from './pages/Backlog';
@@ -84,6 +85,7 @@ function App() {
         </Routes>
         </GamerTagGate>
         <Footer />
+        <BackToTop />
         <Feedback />
       </div>
       </BacklogProvider>

@@ -174,8 +174,9 @@ export const saveReview = async (req, res) => {
       update: data,
       include: REVIEW_INCLUDE,
     });
-    // Played it and reviewed it: checked off the Backlog (the quest's done screen says so)
-    const { count: checkedOff } = await prisma.backlogItem.deleteMany({ where: { userId: user.id, gameId } });
+    // In their Backlog? The quest's done screen offers to remove it (never automatic:
+    // plenty of players review mid-game)
+    const inBacklog = (await prisma.backlogItem.count({ where: { userId: user.id, gameId } })) > 0;
     notifyReviewChanged(review.id); // Play Next's search picks up the new words
     refreshGameSummary(gameId); // the game's "what players think", if it's due
 
@@ -186,7 +187,7 @@ export const saveReview = async (req, res) => {
     const { xp: after } = await getPlayerXp(user.id);
     const playerXp = { before: after - xp + (existing?.xp ?? 0), after };
 
-    res.status(existing ? 200 : 201).json({ ...review, playerXp, checkedOffBacklog: checkedOff > 0 });
+    res.status(existing ? 200 : 201).json({ ...review, playerXp, inBacklog });
   } catch (error) {
     console.error('Error saving review:', error);
     res.status(500).json({ error: 'Internal server error' });

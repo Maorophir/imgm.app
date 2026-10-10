@@ -1,7 +1,8 @@
 /**
  * The Backlog: games a player wants to play later. The cycle the site is built around:
- * add (from Play Next, a game page, the Hall of Fame…) → play → review → checked off
- * (saving a review removes that game, see reviewsController.saveReview).
+ * add (from Play Next, a game page, the Hall of Fame…) → play → review → "Finished"
+ * (the player removes it; after a review the quest offers to, since many review mid-game).
+ * Games keep the player's own order (position): new ones go on top, and they can move them.
  */
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
@@ -24,7 +25,7 @@ export const getBacklog = async (req, res) => {
     if (!user) return;
     const items = await prisma.backlogItem.findMany({
       where: { userId: user.id },
-      orderBy: { addedAt: 'desc' },
+      orderBy: [{ position: 'asc' }, { addedAt: 'desc' }],
       include: { game: { select: { id: true, title: true, coverUrl: true, releaseDate: true, platforms: true, genres: true } } },
     });
     const stats = await prisma.review.groupBy({
@@ -34,11 +35,16 @@ export const getBacklog = async (req, res) => {
       _count: { _all: true },
     });
     const byGame = new Map(stats.map((s) => [s.gameId, s]));
+    const mine = new Map(
+      (await prisma.review.findMany({ where: { userId: user.id, gameId: { in: items.map((i) => i.gameId) } }, select: { gameId: true, rating: true } }))
+        .map((r) => [r.gameId, r.rating])
+    );
     res.json(
       items.map((item) => ({
         game: item.game,
         source: item.source,
         addedAt: item.addedAt,
+        myRating: mine.get(item.gameId) ?? null, // reviewed it already (maybe mid-game)
         average: byGame.get(item.gameId)?._avg.rating ?? null,
         reviewCount: byGame.get(item.gameId)?._count._all ?? 0,
       }))
@@ -75,9 +81,11 @@ export const addToBacklog = async (req, res) => {
     }
     const game = await ensureGame(gameId);
     if (!game) return res.status(404).json({ error: 'Game not found' });
+    // On top of the list: one place above the current first game
+    const first = await prisma.backlogItem.aggregate({ where: { userId: user.id }, _min: { position: true } });
     await prisma.backlogItem.upsert({
       where: { userId_gameId: { userId: user.id, gameId } },
-      create: { userId: user.id, gameId, source: body.data.source ?? 'other' },
+      create: { userId: user.id, gameId, source: body.data.source ?? 'other', position: (first._min.position ?? 1) - 1 },
       update: {},
     });
     res.status(204).end();
@@ -98,6 +106,27 @@ export const removeFromBacklog = async (req, res) => {
     res.status(204).end();
   } catch (error) {
     console.error('Error removing from the Backlog:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// PUT /api/backlog/order  { gameIds: [...] } — the player's new order (their whole list)
+const orderSchema = z.object({ gameIds: z.array(z.number().int().positive()).max(MAX_ITEMS) });
+export const reorderBacklog = async (req, res) => {
+  const body = orderSchema.safeParse(req.body);
+  if (!body.success) return res.status(400).json({ error: 'Invalid order' });
+  try {
+    const user = await requireLogin(req, res);
+    if (!user) return;
+    // Each game's place in the list; games missing from it (added meanwhile) stay above
+    await prisma.$transaction(
+      body.data.gameIds.map((gameId, position) =>
+        prisma.backlogItem.updateMany({ where: { userId: user.id, gameId }, data: { position } })
+      )
+    );
+    res.status(204).end();
+  } catch (error) {
+    console.error('Error reordering the Backlog:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
