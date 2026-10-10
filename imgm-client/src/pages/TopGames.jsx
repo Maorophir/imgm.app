@@ -136,9 +136,7 @@ const TopGames = () => {
         <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
           Top {chart?.size || ''} Games<span className="text-brand">.</span>
         </h1>
-        <p className="text-slate-400 mt-2 max-w-2xl">
-          As rated by IMGM players. Ranked with a weighted score, so a game needs more than one great review to climb.
-        </p>
+        <p className="text-slate-400 mt-2">As rated by IMGM players.</p>
 
         {/* Your progress through the chart */}
         {session && chart?.size > 0 && (

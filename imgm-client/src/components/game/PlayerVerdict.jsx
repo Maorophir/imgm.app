@@ -43,7 +43,7 @@ const Histogram = ({ byRating, selected, onSelect }) => {
           >
             <span className="w-full h-20 flex items-end">
               <span
-                className="w-full rounded-t-md transition-all group-enabled:group-hover:brightness-125"
+                className="w-full rounded-t-md transition-all group-enabled:group-hover:brightness-75"
                 style={{
                   height: count ? `${Math.max((count / most) * 100, 6)}%` : '3px',
                   background: count ? getRarity(rating).color : 'rgb(51 65 85)',
