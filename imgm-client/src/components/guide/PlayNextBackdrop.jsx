@@ -13,15 +13,17 @@ const ROWS = [
   { animation: "animate-scroll-right", duration: "130s" },
   { animation: "animate-scroll-left", duration: "190s" },
 ];
-const PER_ROW = 14; // enough covers to cover a wide screen twice over
+const PER_ROW = 14; // at least this many covers a row: a wide screen twice over
 
 // Deal the covers out like cards (1st → row 1, 2nd → row 2…), so the first few
-// (the picks) land at the start of every row; repeat them if there are few
+// (the picks) land at the start of every row. A short row repeats WHOLE (A B C A B C),
+// never just its first few: padding 13 covers to 14 put the first one again at the
+// end, right beside itself where the doubled row loops.
 const dealRows = (covers) =>
   ROWS.map((_, row) => {
     const mine = covers.filter((_, i) => i % ROWS.length === row);
     const pool = mine.length ? mine : covers;
-    return Array.from({ length: PER_ROW }, (_, i) => pool[i % pool.length]);
+    return Array.from({ length: Math.ceil(PER_ROW / pool.length) }, () => pool).flat();
   });
 
 const PlayNextBackdrop = ({ covers }) => {
