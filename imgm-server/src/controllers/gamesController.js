@@ -31,6 +31,10 @@ const toClientGame = (game) => {
     ratings,
     aiSummary: aiSummary?.summaryText ?? null,
     aiSentiment: aiSummary?.overallSentiment ?? null,
+    // The summary's chips and what it was based on (game pages)
+    aiAspects: aiSummary?.aspects ?? [],
+    aiSummaryReviews: aiSummary?.reviewCountAtGen ?? null,
+    aiSummaryAt: aiSummary?.generatedAt ?? null,
   };
 };
 

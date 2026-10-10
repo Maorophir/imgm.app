@@ -8,6 +8,7 @@ import { findSlurField, withMaskedText } from '../lib/reviewText.js';
 import { getPlayerXp, withAuthorXp } from '../lib/playerXp.js';
 import { notifyReviewChanged } from '../lib/aiIndex.js';
 import { castVote } from '../lib/reviewVotes.js';
+import { refreshGameSummary } from '../lib/aiSummary.js';
 
 // What we send back for each review: the author and the "X meets Y" games
 const REVIEW_INCLUDE = {
@@ -172,6 +173,7 @@ export const saveReview = async (req, res) => {
       include: REVIEW_INCLUDE,
     });
     notifyReviewChanged(review.id); // Play Next's search picks up the new words
+    refreshGameSummary(gameId); // the game's "what players think", if it's due
 
     // AI review analysis comes later (Phase 6), built on services/ai/ — until then
     // no sentiment at all, because a fake "Positive" is worse than none.
@@ -210,6 +212,7 @@ export const deleteMyReview = async (req, res) => {
     }
     await prisma.review.delete({ where: { id: review.id } });
     notifyReviewChanged(review.id); // and Play Next's search forgets it
+    refreshGameSummary(gameId); // and its summary, if that changed enough
 
     res.status(204).end(); // 204 = done, nothing to send back
   } catch (error) {

@@ -42,6 +42,7 @@ from imgm_ai.agent.state import Preferences, new_turn, not_for_me_turn
 from imgm_ai.data import imgm_api
 from imgm_ai.models.llm import model_names
 from imgm_ai.rag.store import index_review, sync_reviews
+from imgm_ai.summary import summarize_game
 
 log = logging.getLogger("imgm_ai.server")
 # Our own info/warning lines (model skips, catch-ups) show up in Cloud Run's logs
@@ -194,9 +195,18 @@ def before_question(config: dict, turn: int) -> dict:
         return config
     for snapshot in graph.get_state_history(config):
         finished = not snapshot.next  # the end of an answer, not halfway through one
-        if finished and count_questions(snapshot.values.get("messages", [])) == turn - 1:
+        if (
+            finished
+            and count_questions(snapshot.values.get("messages", [])) == turn - 1
+        ):
             # Keep our own settings (user_id…), add the checkpoint to branch from
-            return {**config, "configurable": {**config["configurable"], **snapshot.config["configurable"]}}
+            return {
+                **config,
+                "configurable": {
+                    **config["configurable"],
+                    **snapshot.config["configurable"],
+                },
+            }
     return config  # nothing to rewind (e.g. the old question was never saved)
 
 
@@ -442,6 +452,19 @@ def forget_chat(
     # The same thread id guide_events files the chat under
     graph.checkpointer.delete_thread(f"{x_user_id}:{chat_id}")
     return {"deleted": chat_id}
+
+
+# ── Game summaries (called by Express, never by browsers) ──
+
+
+@app.post("/summaries/games/{game_id}")
+def summarize(game_id: int, x_internal_key: str | None = Header(default=None)) -> dict:
+    """The "what players think" summary for a game page (summary.py). Express saves it."""
+    check_internal_key(x_internal_key)
+    result = summarize_game(game_id)
+    if result is None:
+        raise HTTPException(status_code=422, detail="Not enough reviews for a summary")
+    return result
 
 
 # ── Review index (called by Express, never by browsers) ──

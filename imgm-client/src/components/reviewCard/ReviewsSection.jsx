@@ -2,8 +2,8 @@
  * ReviewsSection — the game page's community reviews.
  *
  *   header      title + count, "Show strong language", the Review Quest button
- *   breakdown   how many reviews each rarity tier got (worst left, best right);
- *               click a tier to show only its reviews
+ *   tiers       a chip per rarity tier with its count (worst left, best right);
+ *               click one to show only its reviews
  *   sort        Most helpful (default) / Newest / Highest / Lowest
  *   list        your own review pinned on top, then 5 reviews, then "Show 10 more"
  *
@@ -63,20 +63,10 @@ const StrongLanguageSwitch = () => {
   );
 };
 
-// One bar split by tier (worst → best) and a chip per tier; both filter the list
-const RatingBreakdown = ({ tiers, total, selected, onSelect }) => (
+// A chip per tier (worst → best) with its count: click one to see only those reviews.
+// (The rating histogram above, in PlayerVerdict, shows the spread.)
+const RatingBreakdown = ({ tiers, selected, onSelect }) => (
   <div className="flex flex-col gap-3">
-    <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-800" aria-hidden="true">
-      {tiers.map((tier) =>
-        tier.count > 0 ? (
-          <span
-            key={tier.key}
-            className="transition-opacity"
-            style={{ width: `${(tier.count / total) * 100}%`, background: tier.color, opacity: selected && selected !== tier.key ? 0.25 : 1 }}
-          />
-        ) : null
-      )}
-    </div>
     <div className="flex flex-wrap gap-2" role="group" aria-label="Show only one rarity">
       {tiers.map((tier) => {
         const active = selected === tier.key;
@@ -177,7 +167,7 @@ const ReviewsSection = ({ game, gameId }) => {
         <>
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-8">
             <div className="flex-1 max-w-2xl">
-              <RatingBreakdown tiers={tiers} total={total} selected={tier} onSelect={setTier} />
+              <RatingBreakdown tiers={tiers} selected={tier} onSelect={setTier} />
             </div>
             <div className="flex rounded-xl border border-slate-700 p-1 self-start lg:self-auto" role="group" aria-label="Sort reviews">
               {SORTS.map((option) => (

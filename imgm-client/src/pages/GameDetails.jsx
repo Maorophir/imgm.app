@@ -4,13 +4,13 @@
  * Layout (top to bottom):
  *   1. Header — cover, title and details, with the game's artwork behind them
  *   2. Screenshots & Videos — tabs; screenshots first, videos filtered to the relevant few
- *   3. AI Summary — the glassmorphism AISummaryPanel
+ *   3. What players think — PlayerVerdict: score, rating histogram, AI summary + chips
  *   4. User Reviews — ReviewsSection: rating breakdown, sort, pages of rarity-card reviews
  */
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getGame } from '../lib/api';
-import AISummaryPanel from '../components/AISummaryPanel';
+import PlayerVerdict from '../components/game/PlayerVerdict';
 import LoadError from '../components/LoadError';
 import ReviewsSection from '../components/reviewCard/ReviewsSection';
 import GameHeader from '../components/game/GameHeader';
@@ -101,28 +101,8 @@ const GameDetailsContent = ({ id }) => {
       <GameHeader game={game} />
       <MediaSection game={game} />
 
-      {/* ══════════════════════════════════════════════════════════
-          AI SUMMARY — The core feature
-         ══════════════════════════════════════════════════════════ */}
-      <section className="max-w-7xl mx-auto px-6 py-10">
-        <h2 className="text-2xl font-bold text-white mb-6">
-          What the <span className="text-brand">AI</span> thinks
-        </h2>
-        {game.aiSummary ? (
-          <AISummaryPanel
-            aiSummary={game.aiSummary}
-            aiSentiment={game.aiSentiment}
-            reviewCount={game.reviewStats?.count ?? 0}
-          />
-        ) : (
-          <div className="bg-gradient-to-br from-slate-900/80 via-slate-900/60 to-slate-900/40 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 md:p-8 text-center">
-            <p className="text-slate-300 mb-1">No AI summary yet</p>
-            <p className="text-slate-500 text-sm">
-              Once the community has shared a few reviews, our AI will summarize what players think.
-            </p>
-          </div>
-        )}
-      </section>
+      {/* What players think: score, rating histogram, the AI summary and its chips */}
+      <PlayerVerdict game={game} />
 
       <ReviewsSection game={game} gameId={id} />
     </div>

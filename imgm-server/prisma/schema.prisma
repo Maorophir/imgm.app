@@ -199,6 +199,8 @@ model GameAISummary {
   overallSentiment       String
   summaryText            String
   reviewCountAtGen       Int
+  // What players praise, criticize or disagree on: [{ label, sentiment, support }]
+  aspects                Json     @default("[]")
   
   gameId                 Int      @unique
   game                   Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
