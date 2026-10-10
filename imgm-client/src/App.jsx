@@ -16,6 +16,7 @@ import Privacy from './pages/Privacy';
 import BackToTop from './components/BackToTop';
 import Footer from './components/Footer';
 import Feedback from './components/Feedback';
+import Settings from './pages/Settings';
 import Backlog from './pages/Backlog';
 import { BacklogProvider } from './context/BacklogContext';
 import TopGames from './pages/TopGames';
@@ -76,6 +77,7 @@ function App() {
           <Route path="/play-next" element={<PlayNextRoute />} />
           <Route path="/guide" element={<Navigate to="/play-next" replace />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="/backlog" element={<Backlog />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
