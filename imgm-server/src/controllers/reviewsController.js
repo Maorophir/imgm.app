@@ -10,6 +10,11 @@ import { notifyReviewChanged } from '../lib/aiIndex.js';
 import { castVote } from '../lib/reviewVotes.js';
 import { refreshGameSummary } from '../lib/aiSummary.js';
 
+// Until a player confirms their email they can post only this many reviews: enough to
+// try IMGM, too few for bots and throwaway accounts to flood a game with fake reviews.
+// Editing a review they already posted is always fine. (Google accounts arrive confirmed.)
+export const UNCONFIRMED_REVIEW_LIMIT = 3;
+
 // What we send back for each review: the author and the "X meets Y" games
 const REVIEW_INCLUDE = {
   analysis: true,
@@ -134,6 +139,20 @@ export const saveReview = async (req, res) => {
         error: `Your ${slurField} contain${slurField.endsWith('s') ? '' : 's'} a slur or hateful term. Please remove it. Casual swearing is fine.`,
         field: slurField,
       });
+    }
+
+    // Unconfirmed email: a new review only while under the limit
+    if (!user.emailVerified) {
+      const [posted, editing] = await Promise.all([
+        prisma.review.count({ where: { userId: user.id } }),
+        prisma.review.count({ where: { userId: user.id, gameId } }),
+      ]);
+      if (!editing && posted >= UNCONFIRMED_REVIEW_LIMIT) {
+        return res.status(403).json({
+          error: `Confirm your email to post more than ${UNCONFIRMED_REVIEW_LIMIT} reviews. We sent you a link when you signed up.`,
+          code: 'EMAIL_NOT_CONFIRMED',
+        });
+      }
     }
 
     // 2. Make sure the reviewed game — and any "X meets Y" games — are in our DB
