@@ -1,3 +1,4 @@
+import { getTopGames } from '../controllers/chartsController.js';
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { getSessionUser } from '../lib/session.js';
@@ -54,6 +55,9 @@ router.get('/search', searchLimiter, searchGames);
 
 // GET /api/games/featured
 router.get('/featured', igdbLimiter, getFeaturedGames);
+
+// GET /api/games/top — IMGM Top Games, the community chart (before /:id, or "top" would be an id)
+router.get('/top', getTopGames);
 
 // GET /api/games/:id
 router.get('/:id', igdbLimiter, getGameById);

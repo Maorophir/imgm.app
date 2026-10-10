@@ -45,6 +45,10 @@ export const getGame = (id, signal) => fetchJson(`/api/games/${id}`, { signal })
 export const voteOnReview = (reviewId, helpful) =>
   fetchJson(`/api/reviews/${reviewId}/vote`, { method: 'PUT', body: { helpful } });
 
+// IMGM Top Games: { games: [{ rank, average, reviewCount, myRating, …game }], size, insights }
+export const getTopGames = ({ sort, platform }, signal) =>
+  fetchJson(`/api/games/top?${new URLSearchParams({ sort, ...(platform && { platform }) })}`, { signal });
+
 // The newest reviews on any game (home page): [{ id, rating, snippet, createdAt, author, game }]
 export const getRecentReviews = (signal) => fetchJson('/api/reviews/recent?limit=8', { signal });
 
