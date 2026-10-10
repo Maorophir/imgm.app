@@ -14,7 +14,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import PlayerVerdict from '../components/game/PlayerVerdict';
 import GamePicker from '../components/reviewQuest/GamePicker';
 import { getRarity } from '../components/reviewQuest/questOptions';
-import { Check, Clock, Crown, LogIn, Vote, Flame, Gem, Heart, Landmark, PartyPopper, Sparkles, ThumbsUp, Trophy, TrendingUp, Users } from 'lucide-react';
+import { Check, Clock, Crown, LogIn, Send, Vote, Flame, Gem, Heart, Landmark, PartyPopper, Sparkles, ThumbsUp, Trophy, TrendingUp, Users } from 'lucide-react';
 import { getGame, getGameReviews, getGotw, getGotwHistory, nominateGotw, voteGotw } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import BacklogButton from '../components/BacklogButton';
@@ -244,19 +244,55 @@ const MyRecord = ({ me }) => (
 );
 
 // Nominate a game for next week's "Player pick" slot
-const Nominate = ({ nomination, onChange, busy }) => (
-  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 flex flex-col md:flex-row md:items-center gap-4">
-    <div className="md:w-1/2">
-      <p className="inline-flex items-center gap-2 font-bold text-white">
-        <Users className="w-4 h-4 text-brand" aria-hidden="true" /> Nominate a game for next week
-      </p>
-      <p className="text-sm text-slate-400 mt-1">The game players nominate most joins next week's ballot as the Player pick. You can change it all week.</p>
+// Nominate a game for next week's "Player pick" slot: pick it, then send it
+const Nominate = ({ nomination, onChange, busy }) => {
+  const [draft, setDraft] = useState(null); // picked but not sent yet
+  const [changing, setChanging] = useState(false);
+  const picking = !nomination || changing;
+  const send = async () => {
+    await onChange(draft);
+    setDraft(null);
+    setChanging(false);
+  };
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 flex flex-col md:flex-row md:items-center gap-4">
+      <div className="md:w-1/2">
+        <p className="inline-flex items-center gap-2 font-bold text-white">
+          <Users className="w-4 h-4 text-brand" aria-hidden="true" /> Nominate a game for next week
+        </p>
+        <p className="text-sm text-slate-400 mt-1">The game players nominate most joins next week's ballot as the Player pick. You can change it all week.</p>
+      </div>
+      <div className={`md:w-1/2 flex flex-col gap-3 ${busy ? 'opacity-60 pointer-events-none' : ''}`}>
+        {picking ? (
+          <>
+            <GamePicker value={draft} onChange={setDraft} placeholder="Search a game to nominate…" />
+            {draft && (
+              <div className="flex gap-2">
+                <button type="button" onClick={send} className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-bold bg-brand text-slate-950 hover:brightness-110 transition">
+                  <Send className="w-4 h-4" aria-hidden="true" /> Nominate
+                </button>
+                {nomination && (
+                  <button type="button" onClick={() => { setDraft(null); setChanging(false); }} className="px-4 py-2.5 rounded-xl font-bold border border-slate-700 text-slate-300 hover:text-white transition">
+                    Cancel
+                  </button>
+                )}
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex items-center gap-3 p-2 pr-3 rounded-xl bg-brand/10 border border-brand/60">
+            {nomination.coverUrl ? <img src={nomination.coverUrl} alt="" className="w-10 h-14 object-cover rounded-md shrink-0" /> : <div className="w-10 h-14 rounded-md bg-slate-800 shrink-0" />}
+            <div className="flex-1 min-w-0">
+              <p className="text-xs font-bold text-brand inline-flex items-center gap-1"><Check className="w-3.5 h-3.5" aria-hidden="true" /> Nominated</p>
+              <p className="font-bold text-white text-sm leading-tight line-clamp-2">{nomination.title}</p>
+            </div>
+            <button type="button" onClick={() => setChanging(true)} className="text-xs font-bold text-slate-300 hover:text-white">Change</button>
+          </div>
+        )}
+      </div>
     </div>
-    <div className={`md:w-1/2 ${busy ? 'opacity-60 pointer-events-none' : ''}`}>
-      <GamePicker value={nomination} onChange={onChange} placeholder="Search a game to nominate…" />
-    </div>
-  </div>
-);
+  );
+};
 
 // Past Games of the Week
 const PastWinners = ({ timeZone }) => {
