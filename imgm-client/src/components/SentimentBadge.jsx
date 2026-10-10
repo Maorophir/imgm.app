@@ -8,7 +8,6 @@
  * The sentiment config is centralized here so GameCard can import it
  * instead of duplicating the color/icon mapping.
  */
-import React from 'react';
 
 /**
  * Centralized sentiment styling — imported by GameCard and other components.

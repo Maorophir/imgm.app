@@ -18,7 +18,6 @@
  * The IMGM score is displayed prominently as the hero badge.
  * External scores appear as a compact comparison row in the card body.
  */
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getRarity } from './reviewQuest/questOptions';
 
