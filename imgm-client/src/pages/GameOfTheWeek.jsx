@@ -3,8 +3,8 @@
  *
  *   the crown     last week's winner: the Game of the Week for these 7 days
  *   the ballot    this week's candidates (each from a different source, labelled);
- *                 players vote Sunday to Saturday, Israel time, and can change their
- *                 vote until it closes. Results show once you've voted.
+ *                 players vote Sunday to Saturday, Israel time. A vote is final (the
+ *                 card asks to confirm first), and results show once you've voted.
  * Everything comes from /api/gotw; the server closes each week by itself (lib/gotw.js).
  */
 import { useEffect, useState } from 'react';
@@ -81,7 +81,7 @@ const Crowned = ({ gotw, timeZone }) => {
   );
 };
 
-const Candidate = ({ candidate, mine, voted, total, onVote, busy }) => {
+const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfirm, onCancel, busy }) => {
   const { game, slot, votes } = candidate;
   const { label, Icon } = SLOTS[slot] ?? SLOTS.popular;
   const share = voted && total ? Math.round((votes / total) * 100) : 0;
@@ -114,18 +114,32 @@ const Candidate = ({ candidate, mine, voted, total, onVote, busy }) => {
             </div>
           </div>
         )}
-        <button
-          type="button"
-          onClick={() => onVote(game.id)}
-          disabled={busy || mine}
-          className={`mt-auto inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold transition disabled:cursor-default ${
-            mine
-              ? 'bg-brand text-slate-950'
-              : 'border border-slate-700 text-white hover:border-brand/60 hover:bg-white/5 disabled:opacity-50'
-          }`}
-        >
-          {mine ? <><Check className="w-4 h-4" aria-hidden="true" /> Your vote</> : voted ? 'Switch my vote' : 'Vote'}
-        </button>
+        {mine ? (
+          <p className="mt-auto inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold bg-brand text-slate-950">
+            <Check className="w-4 h-4" aria-hidden="true" /> Your vote
+          </p>
+        ) : voted ? null : confirming ? (
+          // Votes are final: one more click to be sure
+          <div className="mt-auto flex flex-col gap-2 animate-fade-in">
+            <p className="text-xs text-slate-300 text-center">Lock in your vote? You can't change it this week.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={onCancel} disabled={busy} className="py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-300 hover:text-white transition">
+                Cancel
+              </button>
+              <button type="button" onClick={() => onConfirm(game.id)} disabled={busy} className="py-2 rounded-xl text-sm font-bold bg-brand text-slate-950 hover:brightness-110 transition disabled:opacity-50">
+                {busy ? '…' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => onPick(game.id)}
+            className="mt-auto py-2.5 rounded-xl text-sm font-bold border border-slate-700 text-white hover:border-brand/60 hover:bg-white/5 transition"
+          >
+            Vote
+          </button>
+        )}
       </div>
     </li>
   );
@@ -137,6 +151,7 @@ const GameOfTheWeek = () => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(null); // the game whose vote awaits a confirm
   const [attempt, setAttempt] = useState(0);
   const timeLeft = useTimeLeft(data?.week.endsAt);
 
@@ -151,11 +166,15 @@ const GameOfTheWeek = () => {
     return () => controller.abort();
   }, [session?.user?.id, attempt]);
 
-  const vote = async (gameId) => {
+  const pick = (gameId) => {
     if (!session) {
       navigate('/login?redirect=%2Fgame-of-the-week');
       return;
     }
+    setConfirming(gameId);
+  };
+
+  const vote = async (gameId) => {
     setBusy(true);
     try {
       setData(await voteGotw(gameId));
@@ -163,6 +182,7 @@ const GameOfTheWeek = () => {
       setAttempt((n) => n + 1); // reload the ballot (e.g. the week just closed)
     } finally {
       setBusy(false);
+      setConfirming(null);
     }
   };
 
@@ -187,7 +207,7 @@ const GameOfTheWeek = () => {
               Vote for <span className="text-brand">next week's</span> game
             </h1>
             <p className="text-slate-400 text-sm mt-1">
-              The winner is the Game of the Week from {day(nextReignStarts, week.timeZone)}. You can change your vote until voting closes.
+              The winner is the Game of the Week from {day(nextReignStarts, week.timeZone)}. One vote each, and it's final.
             </p>
           </div>
           <p className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-slate-700 text-sm font-semibold text-slate-200">
@@ -203,7 +223,10 @@ const GameOfTheWeek = () => {
               mine={myVote === candidate.game.id}
               voted={voted}
               total={totalVotes}
-              onVote={vote}
+              confirming={confirming === candidate.game.id}
+              onPick={pick}
+              onConfirm={vote}
+              onCancel={() => setConfirming(null)}
               busy={busy}
             />
           ))}

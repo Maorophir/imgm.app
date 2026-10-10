@@ -7,7 +7,7 @@ const router = Router();
 // GET /api/gotw — this week's ballot, your vote, and the current Game of the Week
 router.get('/', getBallot);
 
-// PUT /api/gotw/vote — vote (or change your vote) for this week
+// PUT /api/gotw/vote — vote for this week (once: votes are final)
 const voteLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 20,

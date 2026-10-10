@@ -64,7 +64,8 @@ export const getBallot = async (req, res) => {
   }
 };
 
-// PUT /api/gotw/vote  { gameId } — vote, or change your vote, for this week
+// PUT /api/gotw/vote  { gameId } — vote for this week. Final: no switching to the leader
+// after the results show (the page asks you to confirm first)
 const voteSchema = z.object({ gameId: z.number().int().positive() });
 export const castGotwVote = async (req, res) => {
   const body = voteSchema.safeParse(req.body);
@@ -76,11 +77,12 @@ export const castGotwVote = async (req, res) => {
     if (!week.candidates.some((c) => c.gameId === body.data.gameId)) {
       return res.status(400).json({ error: "That game isn't on this week's ballot." });
     }
-    await prisma.gotwVote.upsert({
-      where: { weekId_userId: { weekId: week.id, userId: user.id } },
-      create: { weekId: week.id, userId: user.id, gameId: body.data.gameId },
-      update: { gameId: body.data.gameId },
-    });
+    try {
+      await prisma.gotwVote.create({ data: { weekId: week.id, userId: user.id, gameId: body.data.gameId } });
+    } catch (error) {
+      if (error.code === 'P2002') return res.status(409).json({ error: "You've already voted this week." });
+      throw error;
+    }
     res.json(await ballotFor(user));
   } catch (error) {
     console.error('Error voting for Game of the Week:', error);

@@ -16,6 +16,7 @@
  *     classic      5+ years old and still rated highly
  *     popular      fills any empty slot from IGDB's popular games
  * A game that won in the last NO_REPEAT_WEEKS weeks can't be a candidate.
+ * Votes are final (no switching to the leader after seeing the results).
  */
 import { prisma } from './db.js';
 import { rankGames } from './ranking.js';
@@ -24,7 +25,7 @@ import { upsertGame } from '../services/gameStore.js';
 
 export const TIME_ZONE = 'Asia/Jerusalem';
 const BALLOT_SIZE = 6;
-const NO_REPEAT_WEEKS = 12;
+const NO_REPEAT_WEEKS = 4; // a winner sits out about a month
 const DAY = 24 * 60 * 60 * 1000;
 
 // ── The week, in Israel time ─────────────────────────────
