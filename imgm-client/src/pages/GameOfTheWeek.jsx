@@ -76,7 +76,7 @@ const Crowned = ({ gotw, timeZone, pickedWinner }) => {
           <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight text-white leading-none mt-1">{game.title}</h2>
           <p className="mt-3 text-slate-300">
             Chosen by IMGM players{share != null && <> · <span className="font-bold text-white">{share}%</span> of {gotw.totalVotes} votes</>}
-            {gotw.topRank && <> · <Link to="/top" className="font-bold text-white hover:text-brand">#{gotw.topRank} in Top Games</Link></>}
+            {gotw.topRank && <> · <Link to="/hall-of-fame" className="font-bold text-white hover:text-brand">#{gotw.topRank} in the Hall of Fame</Link></>}
           </p>
           {pickedWinner && (
             <p className="mt-3 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-brand/15 border border-brand/60 text-sm font-bold text-white">

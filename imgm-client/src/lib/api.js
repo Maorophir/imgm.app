@@ -51,7 +51,7 @@ export const voteGotw = (gameId) => fetchJson('/api/gotw/vote', { method: 'PUT',
 export const nominateGotw = (gameId) => fetchJson('/api/gotw/nominate', { method: 'PUT', body: { gameId } });
 export const getGotwHistory = (signal) => fetchJson('/api/gotw/history', { signal });
 
-// IMGM Top Games: { games: [{ rank, average, reviewCount, myRating, …game }], size, insights }
+// The Hall of Fame (top games): { games: [{ rank, average, reviewCount, myRating, …game }], size, insights }
 export const getTopGames = ({ sort, platform }, signal) =>
   fetchJson(`/api/games/top?${new URLSearchParams({ sort, ...(platform && { platform }) })}`, { signal });
 

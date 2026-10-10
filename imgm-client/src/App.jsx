@@ -59,7 +59,8 @@ function App() {
           <Route path="/game/:id" element={<GameDetails />} />
           <Route path="/game/:id/review" element={<ReviewQuest />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/top" element={<TopGames />} />
+          <Route path="/hall-of-fame" element={<TopGames />} />
+          <Route path="/top" element={<Navigate to="/hall-of-fame" replace />} />
           <Route path="/game-of-the-week" element={<GameOfTheWeek />} />
           {/* Trending is hidden until it has real content: old links go home */}
           <Route path="/trending" element={<Navigate to="/" replace />} />

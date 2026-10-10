@@ -19,7 +19,7 @@ const mobileNavClass = ({ isActive }) =>
 
 const BASE_LINKS = [
   // No Home link: the logo goes home
-  { to: '/top', label: 'Top Games' },
+  { to: '/hall-of-fame', label: 'Hall of Fame' },
   { to: '/game-of-the-week', label: 'Game of the Week' },
   // Trending is hidden until it has real content (pages/Trending.jsx)
 ];

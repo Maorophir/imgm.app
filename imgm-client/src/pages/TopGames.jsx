@@ -1,5 +1,5 @@
 /**
- * Top Games — Route: /top
+ * The Hall of Fame (top games) — Route: /hall-of-fame (/top redirects here)
  *
  * IMGM's own chart (inspired by IMDb's Top 250): games ranked by what IMGM players
  * scored them, with a weighted score so one glowing review can't top it (the server
@@ -132,9 +132,9 @@ const TopGames = () => {
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-10 items-start">
       <section>
-        <p className="text-xs font-black uppercase tracking-[0.25em] text-brand mb-2">IMGM Charts</p>
+        <p className="text-xs font-black uppercase tracking-[0.25em] text-brand mb-2">IMGM Hall of Fame</p>
         <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
-          Top {chart?.size || ''} Games<span className="text-brand">.</span>
+          The Top {chart?.size || ''}<span className="text-brand">.</span>
         </h1>
         <p className="text-slate-400 mt-2">As rated by IMGM players.</p>
 
@@ -203,7 +203,7 @@ const TopGames = () => {
             <InsightBar label="Your average score" value={insights?.myAverage ?? null} />
           ) : (
             <p className="text-sm text-slate-400">
-              <Link to="/login?redirect=%2Ftop" className="font-bold text-brand hover:underline">Log in</Link> to see your scores on the chart.
+              <Link to="/login?redirect=%2Fhall-of-fame" className="font-bold text-brand hover:underline">Log in</Link> to see your scores on the chart.
             </p>
           )}
         </div>
