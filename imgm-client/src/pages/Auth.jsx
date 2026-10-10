@@ -38,7 +38,8 @@ function Auth() {
         navigate(redirectTo);
       } else {
         // Better Auth needs a name; it stays private (the public gamer tag is chosen next)
-        const { error } = await signUp.email({ email, password, name: email.split('@')[0] });
+        // callbackURL: where the welcome email's "Confirm my email" button lands
+        const { error } = await signUp.email({ email, password, name: email.split('@')[0], callbackURL: `${window.location.origin}/?verified=1` });
         if (error) throw new Error(error.message || "Failed to sign up");
         // New player: wait for the login to register (or a login-only page would bounce
         // them back here), then straight to choosing a gamer tag, and on to where they were going
