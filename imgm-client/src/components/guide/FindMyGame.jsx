@@ -218,7 +218,7 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
       </div>
 
       {/* Back · the way out · Next */}
-      <div className="mt-auto lg:mt-0 pt-8 lg:sticky lg:-bottom-5 lg:z-10 lg:-mx-6 lg:px-6 lg:py-4 lg:bg-slate-950/90 lg:backdrop-blur lg:border-t lg:border-white/5 flex flex-wrap items-center gap-3">
+      <div className="mt-auto lg:mt-0 pt-8 lg:sticky lg:-bottom-5 lg:z-10 lg:-mx-6 lg:px-6 lg:py-4 lg:bg-slate-950/95 lg:border-t lg:border-white/5 flex flex-wrap items-center gap-3">
         <button
           type="button"
           onClick={() => go(step - 1)}

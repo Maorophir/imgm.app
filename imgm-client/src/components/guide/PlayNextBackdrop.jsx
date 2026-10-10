@@ -8,6 +8,8 @@
  * Fixed behind everything and ignores the mouse; the page wraps it with `isolate`
  * so it sits above the app's black background but below the content.
  */
+import { memo } from "react";
+
 const ROWS = [
   { animation: "animate-scroll-left", duration: "160s" },
   { animation: "animate-scroll-right", duration: "130s" },
@@ -62,4 +64,5 @@ const PlayNextBackdrop = ({ covers }) => {
   );
 };
 
-export default PlayNextBackdrop;
+// memo: the wall re-renders only when its covers change, not with every chat update
+export default memo(PlayNextBackdrop);
