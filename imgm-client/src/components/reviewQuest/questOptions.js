@@ -17,15 +17,13 @@ export const RATING_LABELS = {
 // Loot rarity — the review's verdict, from the reviewer's own score (not AI).
 // Replaces positive / mixed / negative everywhere. Legendary is a perfect 10 only.
 // `min` = lowest score of the tier; `range` is the label shown in the rarity index.
-// Light mode gets deeper shades (the bright ones vanish on white).
-const LIGHT = typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light';
 export const RARITIES = [
-  { key: 'junk',      label: 'Junk',      min: 1,  range: '1–2', color: LIGHT ? '#9ca3af' : '#8b93a7' },
-  { key: 'common',    label: 'Common',    min: 3,  range: '3–4', color: LIGHT ? '#64748b' : '#d4dae6' },
-  { key: 'uncommon',  label: 'Uncommon',  min: 5,  range: '5',   color: LIGHT ? '#16a34a' : '#4ade80' },
-  { key: 'rare',      label: 'Rare',      min: 6,  range: '6–7', color: LIGHT ? '#2563eb' : '#60a5fa' },
-  { key: 'epic',      label: 'Epic',      min: 8,  range: '8–9', color: LIGHT ? '#9333ea' : '#c084fc' },
-  { key: 'legendary', label: 'Legendary', min: 10, range: '10',  color: LIGHT ? '#d97706' : '#fbbf24' },
+  { key: 'junk',      label: 'Junk',      min: 1,  range: '1–2', color: '#8b93a7' },
+  { key: 'common',    label: 'Common',    min: 3,  range: '3–4', color: '#d4dae6' },
+  { key: 'uncommon',  label: 'Uncommon',  min: 5,  range: '5',   color: '#4ade80' },
+  { key: 'rare',      label: 'Rare',      min: 6,  range: '6–7', color: '#60a5fa' },
+  { key: 'epic',      label: 'Epic',      min: 8,  range: '8–9', color: '#c084fc' },
+  { key: 'legendary', label: 'Legendary', min: 10, range: '10',  color: '#fbbf24' },
 ];
 
 // The tier for a score. Averages are rounded first, so one table serves both:
