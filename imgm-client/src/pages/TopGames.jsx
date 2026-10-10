@@ -137,7 +137,8 @@ const TopGames = () => {
       <section className="min-w-0">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand mb-2">IMGM Hall of Fame</p>
         <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
-          The Top {chart?.size || ''}<span className="text-brand">.</span>
+          {/* "The Top 35" once the chart has some size; until then, just its name */}
+          {chart?.size >= 10 ? `The Top ${chart.size}` : 'The Hall of Fame'}<span className="text-brand">.</span>
         </h1>
         <p className="text-slate-400 mt-2">As rated by IMGM players.</p>
 
