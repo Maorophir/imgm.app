@@ -9,9 +9,10 @@ import { useEffect, useState } from 'react';
 import { BadgeCheck, KeyRound, Mail, TriangleAlert } from 'lucide-react';
 import { authClient, useSession } from '../../lib/authClient';
 import { deleteMyAccount, getMyAccount } from '../../lib/api';
+import { passwordProblems } from '../../lib/passwordRules';
+import PasswordChecklist from '../PasswordChecklist';
 
 const field = 'w-full rounded-xl bg-slate-950 border border-slate-700 focus:border-brand outline-none px-3 py-2.5 text-white placeholder:text-slate-500';
-const MIN_PASSWORD = 8;
 
 const REASONS = [
   { value: 'not_using', label: "I don't use it anymore" },
@@ -22,16 +23,18 @@ const REASONS = [
 ];
 
 const ChangePassword = () => {
+  const { data: session } = useSession();
+  const email = session?.user?.email ?? '';
   const [form, setForm] = useState({ current: '', next: '', again: '' });
   const [state, setState] = useState(null); // { ok, text }
   const [busy, setBusy] = useState(false);
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
-  const problem =
-    form.next && form.next.length < MIN_PASSWORD ? `At least ${MIN_PASSWORD} characters.` : form.again && form.again !== form.next ? "The new passwords don't match." : null;
+  const weak = form.next && passwordProblems(form.next, email).length > 0; // the checklist says what's missing
+  const problem = form.again && form.again !== form.next ? "The new passwords don't match." : null;
 
   const save = async (e) => {
     e.preventDefault();
-    if (problem || !form.current || !form.next) return;
+    if (weak || problem || !form.current || !form.next) return;
     setBusy(true);
     setState(null);
     const { error } = await authClient.changePassword({ currentPassword: form.current, newPassword: form.next, revokeOtherSessions: true });
@@ -47,12 +50,15 @@ const ChangePassword = () => {
   return (
     <form onSubmit={save} className="flex flex-col gap-3">
       <input type="password" autoComplete="current-password" placeholder="Current password" value={form.current} onChange={set('current')} className={field} />
-      <input type="password" autoComplete="new-password" placeholder="New password" value={form.next} onChange={set('next')} className={field} />
+      <div>
+        <input type="password" autoComplete="new-password" placeholder="New password" value={form.next} onChange={set('next')} className={field} />
+        <PasswordChecklist password={form.next} email={email} />
+      </div>
       <input type="password" autoComplete="new-password" placeholder="New password again" value={form.again} onChange={set('again')} className={field} />
       {(problem || state) && (
         <p role="status" className={`text-sm ${state?.ok && !problem ? 'text-emerald-300' : 'text-red-300'}`}>{problem ?? state.text}</p>
       )}
-      <button type="submit" disabled={busy || !!problem || !form.current || !form.next || !form.again} className="self-start px-5 py-2.5 rounded-xl font-bold bg-brand text-slate-950 hover:brightness-110 transition disabled:opacity-40">
+      <button type="submit" disabled={busy || weak || !!problem || !form.current || !form.next || !form.again} className="self-start px-5 py-2.5 rounded-xl font-bold bg-brand text-slate-950 hover:brightness-110 transition disabled:opacity-40">
         {busy ? 'Saving…' : 'Change password'}
       </button>
     </form>

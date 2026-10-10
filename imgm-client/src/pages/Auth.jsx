@@ -3,6 +3,8 @@ import { signIn, signUp, authClient, useSession } from '../lib/authClient';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getFeaturedGames } from '../lib/api';
 import { safeRedirect } from '../lib/safeRedirect';
+import { passwordProblems } from '../lib/passwordRules';
+import PasswordChecklist from '../components/PasswordChecklist';
 
 function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -37,6 +39,8 @@ function Auth() {
         await refreshSession(); // every page knows about the login before we move on
         navigate(redirectTo);
       } else {
+        const [weak] = passwordProblems(password, email); // the checklist shows them all
+        if (weak) throw new Error(weak);
         // Better Auth needs a name; it stays private (the public gamer tag is chosen next)
         // callbackURL: where the welcome email's "Confirm my email" button lands
         const { error } = await signUp.email({ email, password, name: email.split('@')[0], callbackURL: `${window.location.origin}/?verified=1` });
@@ -164,11 +168,16 @@ function Auth() {
             <input
               type="password"
               required
+              autoComplete={isLogin ? 'current-password' : 'new-password'}
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError(''); // an old "add a number" goes once they change it
+              }}
               className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/40 transition placeholder-slate-500"
               placeholder="••••••••"
             />
+            {!isLogin && <PasswordChecklist password={password} email={email} />}
           </div>
 
           <button
