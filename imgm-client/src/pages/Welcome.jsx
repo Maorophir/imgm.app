@@ -9,7 +9,8 @@ import { Gamepad2 } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
-import { setUsername } from '../lib/api';
+import { chooseAvatarPreset, setUsername } from '../lib/api';
+import AvatarPicker from '../components/profile/AvatarPicker';
 import { safeRedirect } from '../lib/safeRedirect';
 import GamerTagField from '../components/GamerTagField';
 import { useGamerTagCheck } from '../hooks/useGamerTagCheck';
@@ -44,6 +45,7 @@ const Welcome = () => {
 
   const [name, setName] = useState('');
   const [ideas, setIdeas] = useState(suggestTags);
+  const [avatar, setAvatar] = useState(null); // a character avatar (optional)
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const check = useGamerTagCheck(name);
@@ -60,7 +62,8 @@ const Welcome = () => {
     setError(null);
     try {
       await setUsername(name.trim());
-      await refetch(); // the session now includes the new tag
+      if (avatar) await chooseAvatarPreset(avatar).catch(() => {}); // a bonus: never blocks the tag
+      await refetch(); // the session now includes the new tag (and avatar)
       navigate(redirectTo, { replace: true });
     } catch (err) {
       setError(err.message || "Couldn't save your tag. Please try again.");
@@ -101,6 +104,11 @@ const Welcome = () => {
               ↻
             </button>
           </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Pick an avatar <span className="normal-case tracking-normal font-medium">(optional, change it any time)</span></p>
+          <AvatarPicker selected={avatar} onPick={(key) => setAvatar((current) => (current === key ? null : key))} size="w-11 h-11" />
         </div>
 
         {error && <p role="alert" className="text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-2.5">{error}</p>}

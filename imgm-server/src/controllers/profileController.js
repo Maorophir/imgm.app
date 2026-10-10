@@ -14,6 +14,7 @@ import { aiServiceUrl, internalApiKey } from '../lib/config.js';
 import { getPlayerXp } from '../lib/playerXp.js';
 import { withMaskedText } from '../lib/reviewText.js';
 import { voterStats, weekOf } from '../lib/gotw.js';
+import { AVATAR_PRESETS, presetByKey } from '../lib/avatarPresets.js';
 
 const MAX_PICTURE = 300_000; // bytes
 const PICTURE = /^data:(image\/(?:webp|jpeg|png));base64,([A-Za-z0-9+/=]+)$/;
@@ -25,11 +26,32 @@ const requireLogin = async (req, res) => {
   return user;
 };
 
-// PUT /api/users/me/avatar  { image: "data:image/webp;base64,…" }
+// GET /api/users/avatars/presets — the ready-made character avatars
+export const getAvatarPresets = (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.json(AVATAR_PRESETS.map(({ key, name, game, url }) => ({ key, name, game, url })));
+};
+
+// Saves the avatar row and its time (the time is in the picture's address)
+const saveAvatar = async (userId, row) => {
+  const now = new Date();
+  await prisma.$transaction([
+    prisma.userAvatar.upsert({ where: { userId }, create: { userId, ...row }, update: row }),
+    prisma.user.update({ where: { id: userId }, data: { avatarUpdatedAt: now } }),
+  ]);
+  return now;
+};
+
+// PUT /api/users/me/avatar  { image: "data:image/webp;base64,…" } or { preset: "geralt" }
 export const uploadAvatar = async (req, res) => {
   try {
     const user = await requireLogin(req, res);
     if (!user) return;
+    // A ready-made character: official art, nothing to check
+    if (req.body?.preset !== undefined) {
+      if (!presetByKey.has(req.body.preset)) return res.status(400).json({ error: 'Unknown avatar.' });
+      return res.json({ avatarUpdatedAt: await saveAvatar(user.id, { preset: req.body.preset, data: null, mime: null }) });
+    }
     const match = PICTURE.exec(req.body?.image ?? '');
     const data = match && Buffer.from(match[2], 'base64');
     if (!data || data.length === 0 || data.length > MAX_PICTURE) {
@@ -58,16 +80,7 @@ export const uploadAvatar = async (req, res) => {
       return res.status(422).json({ error: "This picture can't be used as a profile picture. Please choose another one." });
     }
 
-    const now = new Date();
-    await prisma.$transaction([
-      prisma.userAvatar.upsert({
-        where: { userId: user.id },
-        create: { userId: user.id, data, mime: match[1] },
-        update: { data, mime: match[1] },
-      }),
-      prisma.user.update({ where: { id: user.id }, data: { avatarUpdatedAt: now } }),
-    ]);
-    res.json({ avatarUpdatedAt: now });
+    res.json({ avatarUpdatedAt: await saveAvatar(user.id, { data, mime: match[1], preset: null }) });
   } catch (error) {
     console.error('Error saving a profile picture:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -95,6 +108,13 @@ export const getAvatar = async (req, res) => {
   try {
     const avatar = await prisma.userAvatar.findUnique({ where: { userId: req.params.id } });
     if (!avatar) return res.status(404).end();
+    // A character avatar lives on IGDB: send the browser there (cached like a picture)
+    if (avatar.preset) {
+      const preset = presetByKey.get(avatar.preset);
+      if (!preset) return res.status(404).end();
+      res.set('Cache-Control', 'public, max-age=31536000, immutable');
+      return res.redirect(302, preset.url);
+    }
     res.set({ 'Content-Type': avatar.mime, 'Cache-Control': 'public, max-age=31536000, immutable' });
     res.send(Buffer.from(avatar.data));
   } catch (error) {

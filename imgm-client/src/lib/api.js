@@ -99,6 +99,9 @@ export const getMyReviews = (offset, signal) => fetchJson(`/api/users/me/reviews
 // Profile picture: a data URL from resizeToAvatar (checked by the server before it's saved)
 export const uploadAvatar = (image) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { image } });
 export const deleteAvatar = () => fetchJson('/api/users/me/avatar', { method: 'DELETE' });
+// Ready-made character avatars: [{ key, name, game, url }], and choosing one
+export const getAvatarPresets = (signal) => fetchJson('/api/users/avatars/presets', { signal });
+export const chooseAvatarPreset = (preset) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { preset } });
 
 /**
  * Asks the Game Guide and streams its work. The server answers with Server-Sent

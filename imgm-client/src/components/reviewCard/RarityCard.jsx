@@ -28,7 +28,7 @@ export const Avatar = ({ name, user, size = 'w-8 h-8 text-sm' }) => {
         src={avatarUrl(user)}
         alt=""
         onError={() => setBroken(true)}
-        className={`${size} rounded-full object-cover bg-slate-800 shrink-0`}
+        className={`${size} rounded-full object-cover object-top bg-slate-800 shrink-0`}
       />
     );
   }

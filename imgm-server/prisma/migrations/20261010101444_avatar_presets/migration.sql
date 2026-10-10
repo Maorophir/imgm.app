@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "UserAvatar" ADD COLUMN     "preset" TEXT,
+ALTER COLUMN "data" DROP NOT NULL,
+ALTER COLUMN "mime" DROP NOT NULL;

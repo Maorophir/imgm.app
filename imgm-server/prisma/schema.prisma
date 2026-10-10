@@ -316,12 +316,14 @@ model GotwNomination {
   @@index([weekId, gameId])
 }
 
-// A player's profile picture: a small image (256px) that passed the SafeSearch check
+// A player's profile picture: an uploaded image (256px, passed the SafeSearch check),
+// or a ready-made character avatar (preset: its key in lib/avatarPresets.js)
 model UserAvatar {
   userId    String   @id
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  data      Bytes
-  mime      String
+  data      Bytes?
+  mime      String?
+  preset    String?
   updatedAt DateTime @updatedAt
 }
 

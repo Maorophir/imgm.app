@@ -4,12 +4,13 @@
  */
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Clock, Crown, Flame, Star, ThumbsUp, Trash2, Trophy } from 'lucide-react';
+import { Camera, Clock, Crown, Flame, Star, ThumbsUp, Trash2, Trophy, Users, X } from 'lucide-react';
 import { Avatar } from '../reviewCard/RarityCard';
 import { BADGES, getRarity } from '../reviewQuest/questOptions';
 import ArtIcon from '../ArtIcon';
 import { Histogram } from '../game/PlayerVerdict';
-import { deleteAvatar, getMyReviews, uploadAvatar } from '../../lib/api';
+import { chooseAvatarPreset, deleteAvatar, getMyReviews, uploadAvatar } from '../../lib/api';
+import AvatarPicker from './AvatarPicker';
 import { resizeToAvatar } from '../../lib/resizeImage';
 import { timeAgo } from '../../lib/timeAgo';
 
@@ -18,6 +19,7 @@ export const ProfilePicture = ({ player, onChanged }) => {
   const input = useRef(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null); // { ok, text }
+  const [picking, setPicking] = useState(false); // the character grid is open
 
   const choose = async (file) => {
     if (!file) return;
@@ -32,6 +34,21 @@ export const ProfilePicture = ({ player, onChanged }) => {
     } finally {
       setBusy(false);
       if (input.current) input.current.value = '';
+    }
+  };
+
+  const pickCharacter = async (key) => {
+    setBusy(true);
+    setMessage(null);
+    try {
+      await chooseAvatarPreset(key);
+      setPicking(false);
+      setMessage({ ok: true, text: 'Nice pick! Your new avatar is live.' });
+      await onChanged();
+    } catch (error) {
+      setMessage({ ok: false, text: error.message || "Couldn't save that avatar." });
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -63,6 +80,14 @@ export const ProfilePicture = ({ player, onChanged }) => {
         >
           <Camera className="w-3.5 h-3.5" aria-hidden="true" /> {player.avatarUpdatedAt ? 'Change picture' : 'Add a picture'}
         </button>
+        <button
+          type="button"
+          onClick={() => setPicking(true)}
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-700 text-slate-200 hover:text-white hover:border-slate-500 transition disabled:opacity-50"
+        >
+          <Users className="w-3.5 h-3.5" aria-hidden="true" /> Pick a character
+        </button>
         {player.avatarUpdatedAt && (
           <button
             type="button"
@@ -78,6 +103,22 @@ export const ProfilePicture = ({ player, onChanged }) => {
       <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => choose(e.target.files?.[0])} />
       {message && (
         <p role="status" className={`text-xs max-w-[16rem] ${message.ok ? 'text-emerald-300' : 'text-red-300'}`}>{message.text}</p>
+      )}
+      {picking && (
+        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in" onClick={() => setPicking(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Pick a character" onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 mb-4">
+              <div>
+                <h2 className="text-xl font-black text-white">Pick a character</h2>
+                <p className="text-sm text-slate-400 mt-1">Be your favorite hero. You can change it any time.</p>
+              </div>
+              <button type="button" onClick={() => setPicking(false)} aria-label="Close" className="text-slate-400 hover:text-white">
+                <X className="w-5 h-5" aria-hidden="true" />
+              </button>
+            </div>
+            <AvatarPicker onPick={pickCharacter} />
+          </div>
+        </div>
       )}
     </div>
   );
