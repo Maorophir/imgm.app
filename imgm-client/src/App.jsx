@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Analytics } from '@vercel/analytics/react';
 
 // Layout components
@@ -28,6 +28,7 @@ import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
+import { usePageTitle } from './hooks/usePageTitle';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -52,6 +53,27 @@ function PlayNextRoute() {
   return enabled ? <GameGuide /> : <Navigate to="/" replace />;
 }
 
+// Each page's title (tab and Google). Game pages set their own, with the game's name.
+const PAGE_TITLES = {
+  '/hall-of-fame': 'Hall of Fame: the best games, rated by players',
+  '/game-of-the-week': 'Game of the Week',
+  '/play-next': 'Play Next: find your next game',
+  '/backlog': 'Your Backlog',
+  '/profile': 'Your profile',
+  '/settings': 'Settings',
+  '/search': 'Search games',
+  '/terms': 'Terms of Use',
+  '/privacy': 'Privacy Policy',
+  '/login': 'Log in or sign up',
+  '/welcome': 'Welcome',
+};
+function RouteTitle() {
+  const { pathname } = useLocation();
+  const onGamePage = pathname.startsWith('/game/');
+  usePageTitle(onGamePage ? undefined : PAGE_TITLES[pathname]);
+  return null;
+}
+
 function App() {
   return (
     <Router>
@@ -59,6 +81,7 @@ function App() {
       <div className="bg-slate-950 min-h-screen text-white font-sans">
         {/* Navbar renders on EVERY page — it's outside <Routes> */}
         <Navbar />
+        <RouteTitle />
 
         {/* Only the matched route renders here. The gate sends logged-in users
             without a gamer tag to /welcome first. */}

@@ -20,7 +20,7 @@ import { getGame, getMyReview, saveReview, deleteMyReview, setBacklogFinished } 
 import { refreshMyProgress } from '../hooks/useMyProgress';
 import { getProgress } from '../lib/levels';
 import { XpBar } from '../components/LevelBadge';
-import { useSession } from '../lib/authClient';
+import { authClient, useSession } from '../lib/authClient';
 import LoadError from '../components/LoadError';
 import RarityStars from '../components/RarityStars';
 import {
@@ -111,6 +111,24 @@ const saveErrorMessage = (err) => {
   return err.message || "Couldn't post your review. Please try again.";
 };
 
+// Unconfirmed email over the review limit: send the confirmation link again from here
+const ResendEmailButton = ({ email }) => {
+  const [sent, setSent] = useState(null); // 'sent' | 'error'
+  if (sent === 'sent') return <span className="font-semibold text-white">Sent! Check your inbox (and spam).</span>;
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        const { error } = await authClient.sendVerificationEmail({ email, callbackURL: `${window.location.origin}/?verified=1` });
+        setSent(error ? 'error' : 'sent');
+      }}
+      className="font-bold text-white underline underline-offset-2 hover:text-brand"
+    >
+      {sent === 'error' ? "Couldn't send it. Try again" : 'Send the email again'}
+    </button>
+  );
+};
+
 // After a review of a game in their Backlog: finished, or still playing? (Their call:
 // many players review mid-game, so it's never marked by itself.) Finished games stay in
 // the Backlog, under Finished.
@@ -167,6 +185,7 @@ const ReviewQuest = () => {
   // Posting
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
+  const [saveErrorCode, setSaveErrorCode] = useState(null); // e.g. EMAIL_NOT_CONFIRMED: offer to resend
   const [result, setResult] = useState(null); // { isNew, newBadges, playerXp } after a successful post
 
   // Deleting (two taps: "Delete my review" → "Yes, delete it")
@@ -218,6 +237,7 @@ const ReviewQuest = () => {
       setStep(DONE);
     } catch (err) {
       setSaveError(saveErrorMessage(err));
+      setSaveErrorCode(err.data?.code ?? null);
     } finally {
       setSaving(false);
     }
@@ -415,6 +435,12 @@ const ReviewQuest = () => {
         {saveError && (
           <p role="alert" className="mt-6 text-sm text-red-300 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-2.5">
             {saveError}
+            {saveErrorCode === 'EMAIL_NOT_CONFIRMED' && (
+              <>
+                {' '}
+                <ResendEmailButton email={session?.user?.email} />
+              </>
+            )}
           </p>
         )}
 

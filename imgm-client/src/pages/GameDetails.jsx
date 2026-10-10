@@ -15,6 +15,7 @@ import LoadError from '../components/LoadError';
 import ReviewsSection from '../components/reviewCard/ReviewsSection';
 import GameHeader from '../components/game/GameHeader';
 import MediaSection from '../components/game/MediaSection';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 // Keyed by id so all page state (fetched data, media tabs…) resets on navigation
 const GameDetails = () => {
@@ -29,6 +30,7 @@ const GameDetailsContent = ({ id }) => {
   const [attempt, setAttempt] = useState(0);
   // Which reviews to show: one rarity tier, or one exact score (from the histogram)
   const [reviewFilter, setReviewFilter] = useState({ tier: null, rating: null });
+  usePageTitle(data?.game && `${data.game.title}: reviews and ratings`);
 
   // Fetch the game from our backend (which pulls from IGDB if it isn't cached locally)
   useEffect(() => {
