@@ -206,6 +206,16 @@ def is_little_known(search_line: str) -> bool:
     return not match.group(2) and int(match.group(1)) < MIN_POPULARITY
 
 
+def previous_answer(messages: list) -> str:
+    """The guide's final answer to the player's previous question ("" on the first turn)."""
+    starts = [i for i, message in enumerate(messages) if is_player_question(message)]
+    if len(starts) < 2:
+        return ""
+    turn = messages[starts[-2] : starts[-1]]
+    answers = [m for m in turn if isinstance(m, AIMessage) and not m.tool_calls and m.text.strip()]
+    return answers[-1].text if answers else ""
+
+
 def format_answer(state: RecommenderState) -> dict:
     """The format node: the guide's written answer → structured cards (Recommendations).
 
@@ -220,14 +230,26 @@ def format_answer(state: RecommenderState) -> dict:
         f"- {m.text}" for m in state["messages"] if is_player_question(m)
     )
     prompt = FORMAT_PROMPT.format(
-        answer=answer, verified_games=verified, requests=requests
+        answer=answer,
+        verified_games=verified,
+        requests=requests,
+        previous_answer=previous_answer(state["messages"]) or "(none: this is the first answer)",
     )
     recommendations = formatter.invoke([HumanMessage(content=prompt)])
-    if recommendations:  # a wrong id with a right title is repaired here, for free
-        recommendations = fix_game_ids(
-            recommendations, verified_games(state["messages"])
-        )
-    return {"recommendations": recommendations}
+    if not recommendations:
+        return {"recommendations": recommendations}
+    # a wrong id with a right title is repaired here, for free
+    recommendations = fix_game_ids(recommendations, verified_games(state["messages"]))
+    # "I already played the first two": remembered like "Not for me" (the reducer adds
+    # them), so the check replaces them now and later answers never bring them back.
+    # Only real, verified games count.
+    known = verified_games(state["messages"])
+    played = [
+        {"game_id": g.game_id, "title": g.title}
+        for g in recommendations.played
+        if g.game_id in known
+    ]
+    return {"recommendations": recommendations, "rejected": played}
 
 
 def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
@@ -272,7 +294,8 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
             problems.append(f"The player already reviewed {game.title}: replace it.")
         if game.game_id in rejected:
             problems.append(
-                f"The player said 'Not for me' to {game.title}: replace it."
+                f"The player doesn't want {game.title} (they said 'Not for me' or that "
+                "they already played it): replace it."
             )
         line = verified.get(game.game_id, "")
         # An id that belongs to another game (fix_game_ids couldn't tell which one)

@@ -67,6 +67,19 @@ Never do more than 2 rounds of search_games.
   fan-made versions of a game they named (e.g. "Celeste Classic" for a Celeste fan).
 </choosing_the_5>
 
+<follow_ups>
+After an answer, players often react to your picks: "I already played the first two",
+"not #3", "swap the last one for something shorter".
+- Positions count in your LATEST answer's order: the Best Pick is 1, then 2 to 5.
+- If they've played, finished or don't want some of your current picks: keep every other
+  pick exactly as it is, in the same order, and replace only those games (verify the
+  replacements with search_games). If the Best Pick goes, promote the strongest remaining
+  or new game to Best Pick. Say in your intro which games you kept and which you swapped.
+- A game they've played or don't want never comes back, in this answer or a later one.
+- Rebuild the whole list only when they ask for something different (a new mood, genre,
+  length or platform).
+</follow_ups>
+
 <evidence_rules>
 - Every rating, score or quote must come from a tool result in this conversation.
   Never use outside numbers. Web results never count as IMGM evidence.
@@ -129,8 +142,8 @@ aside. Platforms are the exception: they always apply (they can't play anything 
 </player_answers>
 
 <not_for_me>
-The player said "Not for me" to these games in this conversation. Never recommend
-them again, not even as a Best Pick, and don't argue for them:
+The player said "Not for me" to these games in this conversation, or told you they already
+played them. Never recommend them again, not even as a Best Pick, and don't argue for them:
 {rejected_games}
 </not_for_me>"""
 
@@ -146,10 +159,18 @@ Rules:
 - Exactly one game has best_pick = true: the guide's Best Pick.
 - max_hours: decide it from the player's requests below, not from the answer.
 - fit: grade every game severely against the player's requests (see the field's description).
+- played: only from the player's LATEST request (the last line of player_requests): the games
+  they say they already played, finished or don't want. Positions ("the first two", "#3",
+  "the last 2", "the best pick") count in the previous answer's order, Best Pick = 1.
+  Copy each id from verified_games. Leave it empty if they said nothing like that.
 
 <player_requests>
 {requests}
 </player_requests>
+
+<previous_answer>
+{previous_answer}
+</previous_answer>
 
 <answer>
 {answer}

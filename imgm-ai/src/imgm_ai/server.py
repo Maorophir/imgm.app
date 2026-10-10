@@ -30,6 +30,7 @@ import re
 import secrets
 import threading
 from contextlib import asynccontextmanager
+from typing import Literal
 
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.responses import StreamingResponse
@@ -89,6 +90,7 @@ class NotForMe(BaseModel):
 
     game_id: int = Field(gt=0)
     title: str = Field(min_length=1, max_length=200)
+    reason: Literal["not_for_me", "played"] = "not_for_me"  # "Played it" on the card
 
 
 class GuideRequest(BaseModel):
@@ -248,7 +250,9 @@ def guide_events(request: GuideRequest, user_id: str | None):
         return
 
     if request.not_for_me:
-        inputs = not_for_me_turn(request.not_for_me.game_id, request.not_for_me.title)
+        inputs = not_for_me_turn(
+            request.not_for_me.game_id, request.not_for_me.title, request.not_for_me.reason
+        )
         inputs["preferences"] = request.preferences
     else:
         inputs = new_turn(request.message, request.preferences)
