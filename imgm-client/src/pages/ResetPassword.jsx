@@ -8,8 +8,8 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { authClient } from '../lib/authClient';
 import AuthCard, { ErrorBox, buttonClass, inputClass } from '../components/AuthCard';
-
-const MIN_LENGTH = 8; // Better Auth's default minimum
+import PasswordChecklist from '../components/PasswordChecklist';
+import { passwordProblems } from '../lib/passwordRules';
 
 function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -39,7 +39,8 @@ function ResetPassword() {
   const submit = async (e) => {
     e.preventDefault();
     setError('');
-    if (password.length < MIN_LENGTH) return setError(`Use at least ${MIN_LENGTH} characters.`);
+    const [weak] = passwordProblems(password);
+    if (weak) return setError(weak);
     if (password !== confirm) return setError("The two passwords don't match.");
     setLoading(true);
     const { error } = await authClient.resetPassword({ newPassword: password, token });
@@ -54,7 +55,8 @@ function ResetPassword() {
       <form onSubmit={submit} className="space-y-5">
         <div>
           <label htmlFor="new-password" className="block text-sm font-semibold text-slate-300 mb-1">New password</label>
-          <input id="new-password" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} placeholder={`At least ${MIN_LENGTH} characters`} />
+          <input id="new-password" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
+          <PasswordChecklist password={password} />
         </div>
         <div>
           <label htmlFor="confirm-password" className="block text-sm font-semibold text-slate-300 mb-1">Repeat it</label>

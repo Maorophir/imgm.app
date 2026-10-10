@@ -1,32 +1,47 @@
 /**
  * Backlog — Route: /backlog
  *
- * The games you saved to play later. "My order" is yours to arrange (new games land
- * on top; move any game up, down, to the top or the bottom); the other views just
- * sort for a moment. Each game: Review (or edit your review) and ✕ to remove it.
- * Reviewing never removes a game by itself: plenty of players review mid-game.
+ * The games you saved to play later, in two lists: To play and Finished. "My order" is
+ * yours to arrange (new games land on top; move any game up, down, to the top or the
+ * bottom); the other views just sort for a moment. Each game: Review (or edit your
+ * review), Finished it (it moves to Finished, with a lime mark; it can go back) and ✕
+ * to remove it. Reviewing never marks a game by itself: plenty of players review mid-game.
  */
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Bookmark, ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, PenLine, Sparkles, Star, X } from 'lucide-react';
-import { getBacklog, reorderBacklog } from '../lib/api';
+import { Bookmark, Check, CircleCheck, ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, PenLine, RotateCcw, Sparkles, Star, X } from 'lucide-react';
+import { getBacklog, reorderBacklog, setBacklogFinished } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import { useBacklog } from '../context/BacklogContext';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import { timeAgo } from '../lib/timeAgo';
 
 const FROM = { play_next: 'Play Next', game_page: 'a game page', hall_of_fame: 'the Hall of Fame', gotw: 'Game of the Week' };
-const VIEWS = [
-  { value: 'mine', label: 'My order' },
-  { value: 'added', label: 'Recently added' },
-  { value: 'score', label: 'IMGM score' },
-  { value: 'title', label: 'A–Z' },
+const LISTS = [
+  { value: 'toPlay', label: 'To play' },
+  { value: 'finished', label: 'Finished' },
 ];
+const VIEWS = {
+  toPlay: [
+    { value: 'mine', label: 'My order' },
+    { value: 'added', label: 'Recently added' },
+    { value: 'score', label: 'IMGM score' },
+    { value: 'title', label: 'A–Z' },
+  ],
+  finished: [
+    { value: 'finished', label: 'Recently finished' },
+    { value: 'score', label: 'IMGM score' },
+    { value: 'title', label: 'A–Z' },
+  ],
+};
 const SORTS = {
   added: (a, b) => new Date(b.addedAt) - new Date(a.addedAt),
+  finished: (a, b) => new Date(b.finishedAt) - new Date(a.finishedAt),
   score: (a, b) => (b.average ?? -1) - (a.average ?? -1),
   title: (a, b) => a.game.title.localeCompare(b.game.title),
 };
+
+const ago = (date) => (timeAgo(date) === 'just now' ? 'just now' : `${timeAgo(date)} ago`);
 
 const MoveButton = ({ icon: Icon, label, onClick, disabled }) => (
   <button
@@ -45,7 +60,9 @@ const Backlog = () => {
   const { data: session, isPending } = useSession();
   const backlog = useBacklog();
   const [items, setItems] = useState(null);
-  const [view, setView] = useState('mine');
+  const [list, setList] = useState('toPlay');
+  const [views, setViews] = useState({ toPlay: 'mine', finished: 'finished' }); // each list keeps its own
+  const view = views[list];
   const userId = session?.user?.id;
 
   useEffect(() => {
@@ -60,15 +77,26 @@ const Backlog = () => {
 
   // Removed here or anywhere else on the page: it leaves the list
   const kept = (items ?? []).filter((item) => backlog?.has(item.game.id));
-  const shown = view === 'mine' ? kept : [...kept].sort(SORTS[view]);
+  const toPlay = kept.filter((item) => !item.finishedAt);
+  const finished = kept.filter((item) => item.finishedAt);
+  const inList = list === 'finished' ? finished : toPlay;
+  const shown = view === 'mine' ? inList : [...inList].sort(SORTS[view]);
 
-  // Move one game in "My order": update at once, then save the whole order
+  // Move one game in "My order" (To play): update at once, then save the whole order
   const move = (index, to) => {
-    const next = [...kept];
+    const next = [...toPlay];
     const [item] = next.splice(index, 1);
     next.splice(Math.max(0, Math.min(to, next.length)), 0, item);
-    setItems(next);
+    setItems([...next, ...finished]);
     reorderBacklog(next.map((i) => i.game.id)).catch(() => {});
+  };
+
+  // Finished it (or back to To play): moves list at once; back as it was if the server refuses
+  const markFinished = (gameId, done) => {
+    const set = (finishedAt) => setItems((current) => current.map((i) => (i.game.id === gameId ? { ...i, finishedAt } : i)));
+    const before = kept.find((i) => i.game.id === gameId)?.finishedAt ?? null;
+    set(done ? new Date().toISOString() : null);
+    setBacklogFinished(gameId, done).catch(() => set(before));
   };
 
   return (
@@ -79,21 +107,46 @@ const Backlog = () => {
           <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
             Backlog<span className="text-brand">.</span>
           </h1>
-          <p className="text-slate-400 mt-2">Games you saved to play later. Done with one? Take it off with the ✕.</p>
+          <p className="text-slate-400 mt-2">Games you saved to play later. Finished one? Mark it, and it moves to Finished.</p>
         </div>
-        {kept.length > 1 && (
+        {inList.length > 1 && (
           <label className="flex items-center gap-2 text-sm text-slate-400">
             Show
             <select
               value={view}
-              onChange={(e) => setView(e.target.value)}
+              onChange={(e) => setViews({ ...views, [list]: e.target.value })}
               className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-white font-semibold focus:border-brand outline-none"
             >
-              {VIEWS.map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
+              {VIEWS[list].map((v) => <option key={v.value} value={v.value}>{v.label}</option>)}
             </select>
           </label>
         )}
       </header>
+
+      {kept.length > 0 && (
+        <div className="flex gap-2" role="tablist" aria-label="Backlog lists">
+          {LISTS.map((l) => {
+            const count = l.value === 'finished' ? finished.length : toPlay.length;
+            const active = list === l.value;
+            return (
+              <button
+                key={l.value}
+                type="button"
+                role="tab"
+                aria-selected={active}
+                onClick={() => setList(l.value)}
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold border transition ${
+                  active ? 'bg-brand text-slate-950 border-brand' : 'border-slate-700 text-slate-300 hover:text-white hover:border-slate-500'
+                }`}
+              >
+                {l.value === 'finished' && <CircleCheck className="w-4 h-4" aria-hidden="true" />}
+                {l.label}
+                <span className={`tabular-nums ${active ? 'text-slate-950/70' : 'text-slate-500'}`}>{count}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {items === null ? (
         <div className="flex flex-col gap-3">{[0, 1, 2].map((i) => <div key={i} className="h-28 rounded-2xl bg-slate-900/50 animate-pulse" />)}</div>
@@ -105,6 +158,24 @@ const Backlog = () => {
           <Link to="/play-next" className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-full font-bold bg-brand hover:brightness-110 text-slate-950 transition">
             <Sparkles className="w-4 h-4" aria-hidden="true" /> Find games with Play Next
           </Link>
+        </div>
+      ) : inList.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-slate-700 p-10 text-center">
+          <CircleCheck className="w-10 h-10 mx-auto mb-3 text-brand" aria-hidden="true" />
+          {list === 'finished' ? (
+            <>
+              <p className="text-xl font-bold text-white">No finished games yet</p>
+              <p className="text-slate-400 mt-1">Done with a game? Press Finished it, and it lands here.</p>
+            </>
+          ) : (
+            <>
+              <p className="text-xl font-bold text-white">You finished them all</p>
+              <p className="text-slate-400 mt-1">Time for something new.</p>
+              <Link to="/play-next" className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-full font-bold bg-brand hover:brightness-110 text-slate-950 transition">
+                <Sparkles className="w-4 h-4" aria-hidden="true" /> Find games with Play Next
+              </Link>
+            </>
+          )}
         </div>
       ) : (
         <ol className="flex flex-col gap-3">
@@ -118,8 +189,8 @@ const Backlog = () => {
                   <div className="flex flex-col shrink-0" role="group" aria-label={`Move ${game.title}`}>
                     <MoveButton icon={ChevronsUp} label="Move to the top" onClick={() => move(index, 0)} disabled={index === 0} />
                     <MoveButton icon={ChevronUp} label="Move up" onClick={() => move(index, index - 1)} disabled={index === 0} />
-                    <MoveButton icon={ChevronDown} label="Move down" onClick={() => move(index, index + 1)} disabled={index === kept.length - 1} />
-                    <MoveButton icon={ChevronsDown} label="Move to the bottom" onClick={() => move(index, kept.length - 1)} disabled={index === kept.length - 1} />
+                    <MoveButton icon={ChevronDown} label="Move down" onClick={() => move(index, index + 1)} disabled={index === toPlay.length - 1} />
+                    <MoveButton icon={ChevronsDown} label="Move to the bottom" onClick={() => move(index, toPlay.length - 1)} disabled={index === toPlay.length - 1} />
                   </div>
                 )}
                 <Link to={`/game/${game.id}`} className="shrink-0">
@@ -134,6 +205,11 @@ const Backlog = () => {
                     {view === 'mine' && <span className="text-slate-500 mr-1.5 tabular-nums">{index + 1}.</span>}
                     {game.title}
                   </Link>
+                  {item.finishedAt && (
+                    <span className="self-start inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-brand/15 border border-brand/50 text-brand text-[11px] font-black uppercase tracking-wider">
+                      <Check className="w-3 h-3" strokeWidth={3} aria-hidden="true" /> Finished
+                    </span>
+                  )}
                   <p className="text-xs text-slate-400 truncate">{[year, ...(game.platforms ?? []).slice(0, 3)].filter(Boolean).join(' · ')}</p>
                   <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
                     {rarity ? (
@@ -150,8 +226,14 @@ const Backlog = () => {
                       </span>
                     )}
                     <span className="text-xs text-slate-500">
-                      Added {timeAgo(item.addedAt) === 'just now' ? 'just now' : `${timeAgo(item.addedAt)} ago`}
-                      {FROM[item.source] && ` from ${FROM[item.source]}`}
+                      {item.finishedAt ? (
+                        `Finished ${ago(item.finishedAt)}`
+                      ) : (
+                        <>
+                          Added {ago(item.addedAt)}
+                          {FROM[item.source] && ` from ${FROM[item.source]}`}
+                        </>
+                      )}
                     </span>
                   </p>
                 </div>
@@ -163,6 +245,27 @@ const Backlog = () => {
                   >
                     <PenLine className="w-4 h-4" aria-hidden="true" /> <span className="hidden sm:inline">{item.myRating ? 'Edit review' : 'Review'}</span>
                   </Link>
+                  {item.finishedAt ? (
+                    <button
+                      type="button"
+                      onClick={() => markFinished(game.id, false)}
+                      aria-label={`Move ${game.title} back to To play`}
+                      title="Not finished after all: back to To play"
+                      className="inline-flex items-center justify-center px-3 py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition"
+                    >
+                      <RotateCcw className="w-4 h-4" aria-hidden="true" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => markFinished(game.id, true)}
+                      aria-label={`Mark ${game.title} as finished`}
+                      title="Finished it: move it to Finished"
+                      className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold border border-brand/60 text-brand hover:bg-brand/10 transition"
+                    >
+                      <CircleCheck className="w-4 h-4" aria-hidden="true" /> <span className="hidden sm:inline">Finished it</span>
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => backlog.toggle(game.id)}
