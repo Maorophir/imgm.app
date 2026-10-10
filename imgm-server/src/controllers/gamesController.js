@@ -132,7 +132,8 @@ export const getGameById = async (req, res) => {
       include: GAME_INCLUDE,
     });
 
-    const isStale = game && Date.now() - game.updatedAt.getTime() > GAME_STALE_AFTER;
+    // Stale after a week; games saved before store links existed are refreshed once too
+    const isStale = game && (Date.now() - game.updatedAt.getTime() > GAME_STALE_AFTER || game.stores === null);
 
     if (!game || isStale) {
       try {

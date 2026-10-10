@@ -22,7 +22,8 @@ const TOKEN_EXPIRY_BUFFER = 60 * 1000;         // refresh 60s before actual expi
 const GAME_FIELDS = `fields name, slug, summary, first_release_date, cover.image_id,
   artworks.image_id, artworks.artwork_type, artworks.alpha_channel, artworks.width, artworks.height,
   screenshots.image_id, genres.name, platforms.name, videos.video_id, videos.name,
-  involved_companies.developer, involved_companies.publisher, involved_companies.company.name;`;
+  involved_companies.developer, involved_companies.publisher, involved_companies.company.name,
+  websites.url, websites.type;`;
 
 // Artwork types usable as a hero background, best first (IGDB /artwork_types).
 // Logos, icons, and alternative covers are excluded.
@@ -163,6 +164,32 @@ const pickHeroImages = (artworks = [], screenshots = []) => {
 /**
  * Maps a raw IGDB game object to our Prisma `Game` shape.
  */
+// Where to buy: IGDB's website types for stores, the order the game page shows them,
+// and each store's real domain (a link elsewhere is dropped: data can be wrong)
+const STORES = [
+  { type: 13, key: 'steam', name: 'Steam', domain: 'steampowered.com' },
+  { type: 17, key: 'gog', name: 'GOG', domain: 'gog.com' },
+  { type: 16, key: 'epic', name: 'Epic Games', domain: 'epicgames.com' },
+  { type: 23, key: 'playstation', name: 'PlayStation Store', domain: 'playstation.com' },
+  { type: 22, key: 'xbox', name: 'Xbox Store', domain: 'xbox.com' },
+  { type: 24, key: 'nintendo', name: 'Nintendo eShop', domain: 'nintendo.com' },
+  { type: 15, key: 'itch', name: 'itch.io', domain: 'itch.io' },
+];
+
+const pickStores = (websites = []) =>
+  STORES.flatMap((store) => {
+    const site = websites.find((w) => w.type === store.type && w.url);
+    if (!site) return [];
+    try {
+      const url = new URL(site.url);
+      const host = url.hostname.toLowerCase();
+      const ok = url.protocol === 'https:' && (host === store.domain || host.endsWith(`.${store.domain}`));
+      return ok ? [{ key: store.key, name: store.name, url: url.toString() }] : [];
+    } catch {
+      return [];
+    }
+  });
+
 export const mapIgdbGame = (raw) => {
   return {
     id: raw.id,
@@ -184,6 +211,7 @@ export const mapIgdbGame = (raw) => {
     videos: (raw.videos ?? [])
       .filter((v) => v.video_id)
       .map((v) => ({ name: v.name ?? 'Trailer', youtubeId: v.video_id })),
+    stores: pickStores(raw.websites), // [] = IGDB knows no store for it
   };
 };
 

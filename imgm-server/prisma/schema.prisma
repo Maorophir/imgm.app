@@ -100,6 +100,7 @@ model Game {
   artworks      String[] // Full hero image URLs (t_1080p)
   screenshots   String[] // In-game screenshot URLs (t_1080p) for the gallery
   videos        Json?    // [{ name, youtubeId }]
+  stores        Json?    // where to buy: [{ key, name, url }] (null = not fetched yet)
 
   reviews       Review[]
   aiSummary     GameAISummary?

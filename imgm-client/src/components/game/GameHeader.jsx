@@ -5,7 +5,7 @@
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Crown } from 'lucide-react';
+import { Crown, ExternalLink, ShoppingBag } from 'lucide-react';
 import SentimentBadge from '../SentimentBadge';
 import BacklogButton from '../BacklogButton';
 import ImgmRating from './ImgmRating';
@@ -141,6 +141,27 @@ const GameHeader = ({ game }) => {
               <ImgmRating average={game.ratings?.imgm} count={game.reviewStats?.count ?? 0} />
               <BacklogButton gameId={game.id} source="game_page" variant="pill" />
             </div>
+
+            {/* Where to buy: the stores IGDB lists for it (opens the store in a new tab) */}
+            {game.stores?.length > 0 && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">
+                  <ShoppingBag className="w-3.5 h-3.5" aria-hidden="true" /> Where to buy
+                </span>
+                {game.stores.map((store) => (
+                  <a
+                    key={store.key}
+                    href={store.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border border-slate-700 bg-slate-950/60 text-slate-200 hover:text-white hover:border-slate-400 transition"
+                  >
+                    {store.name}
+                    <ExternalLink className="w-3 h-3 text-slate-400" aria-hidden="true" />
+                  </a>
+                ))}
+              </div>
+            )}
 
             {ratings.length > 0 && (
               <div className="flex flex-wrap gap-3">
