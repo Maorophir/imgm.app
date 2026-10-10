@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { signIn, signUp, authClient } from '../lib/authClient';
+import { signIn, signUp, authClient, useSession } from '../lib/authClient';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getFeaturedGames } from '../lib/api';
 import { safeRedirect } from '../lib/safeRedirect';
@@ -13,6 +13,7 @@ function Auth() {
   // Real popular games for the scrolling background (stays empty if the request fails)
   const [bgGames, setBgGames] = useState([]);
   const navigate = useNavigate();
+  const { refetch: refreshSession } = useSession(); // the shared login state every page reads
   const [searchParams] = useSearchParams();
   const redirectTo = safeRedirect(searchParams.get('redirect'));
 
@@ -33,12 +34,16 @@ function Auth() {
       if (isLogin) {
         const { error } = await signIn.email({ email, password });
         if (error) throw new Error(error.message || "Failed to log in");
+        await refreshSession(); // every page knows about the login before we move on
         navigate(redirectTo);
       } else {
         // Better Auth needs a name; it stays private (the public gamer tag is chosen next)
         const { error } = await signUp.email({ email, password, name: email.split('@')[0] });
         if (error) throw new Error(error.message || "Failed to sign up");
-        navigate(redirectTo);
+        // New player: wait for the login to register (or a login-only page would bounce
+        // them back here), then straight to choosing a gamer tag, and on to where they were going
+        await refreshSession();
+        navigate(`/welcome?redirect=${encodeURIComponent(redirectTo)}`, { replace: true });
       }
     } catch (err) {
       setError(err.message);
