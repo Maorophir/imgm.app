@@ -27,6 +27,7 @@ app.use(express.json());
 import gamesRouter from './src/routes/games.js';
 import reviewsRouter from './src/routes/reviews.js';
 import feedbackRouter from './src/routes/feedback.js';
+import sitemapRouter from './src/routes/sitemap.js';
 import backlogRouter from './src/routes/backlog.js';
 import gotwRouter from './src/routes/gotw.js';
 import usersRouter from './src/routes/users.js';
@@ -49,6 +50,7 @@ app.use('/api/users', usersRouter);
 app.use('/api/gotw', gotwRouter);
 app.use('/api/backlog', backlogRouter);
 app.use('/api/feedback', feedbackRouter);
+app.use('/api', sitemapRouter); // /api/sitemap.xml (imgm.app/sitemap.xml forwards here)
 // Always mounted: the routes themselves check who may use Play Next (everyone, or the beta list)
 app.use('/api/guide', guideRouter);
 

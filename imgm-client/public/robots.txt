@@ -1,3 +1,5 @@
 # IMGM welcomes search engines (the API isn't a page)
 User-agent: *
 Disallow: /api/
+
+Sitemap: https://imgm.app/sitemap.xml

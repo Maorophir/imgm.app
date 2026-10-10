@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/sitemap.xml",
+      "destination": "https://imgm-server.onrender.com/api/sitemap.xml"
+    },
+    {
       "source": "/api/:path*",
       "destination": "https://imgm-server.onrender.com/api/:path*"
     },
