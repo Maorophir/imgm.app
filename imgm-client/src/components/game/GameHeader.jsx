@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Crown } from 'lucide-react';
 import SentimentBadge from '../SentimentBadge';
+import BacklogButton from '../BacklogButton';
 import ImgmRating from './ImgmRating';
 
 // Outside score sources shown under the details — only the ones this game has.
@@ -135,9 +136,10 @@ const GameHeader = ({ game }) => {
               </div>
             )}
 
-            {/* IMGM's own score, in the loot-rarity style */}
-            <div>
+            {/* IMGM's own score, in the loot-rarity style, and "play it later" */}
+            <div className="flex flex-wrap items-center gap-4">
               <ImgmRating average={game.ratings?.imgm} count={game.reviewStats?.count ?? 0} />
+              <BacklogButton gameId={game.id} source="game_page" variant="pill" />
             </div>
 
             {ratings.length > 0 && (

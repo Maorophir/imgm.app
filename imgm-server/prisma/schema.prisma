@@ -32,6 +32,7 @@ model User {
   // cache-buster: the picture's address carries this time, so a new one shows at once
   avatarUpdatedAt   DateTime?
   avatar            UserAvatar?
+  backlog           BacklogItem[]
   accounts      Account[]
   
   // Custom IMGM relations
@@ -106,6 +107,7 @@ model Game {
   gotwWins      GotwWeek[]  @relation("GotwWinner")
   gotwVotes     GotwVote[]
   gotwNominations GotwNomination[]
+  inBacklogs      BacklogItem[]
 
   // Reviews that compared another game to this one ("It's like ___ meets ___")
   comparedInA   Review[] @relation("ComparedA")
@@ -319,4 +321,17 @@ model UserAvatar {
   data      Bytes
   mime      String
   updatedAt DateTime @updatedAt
+}
+
+// A game a player wants to play later (their Backlog). Reviewing it checks it off.
+model BacklogItem {
+  userId  String
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId  Int
+  game    Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  source  String?  // where it was added from: play_next, game_page, hall_of_fame, gotw…
+  addedAt DateTime @default(now())
+
+  @@id([userId, gameId])
+  @@index([userId, addedAt])
 }

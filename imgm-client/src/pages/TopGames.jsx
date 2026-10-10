@@ -13,6 +13,7 @@ import { PenLine, Sparkles, Star } from 'lucide-react';
 import { getTopGames } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import { getRarity, RARITIES } from '../components/reviewQuest/questOptions';
+import BacklogButton from '../components/BacklogButton';
 import LoadError from '../components/LoadError';
 
 const SORTS = [
@@ -87,6 +88,7 @@ const ChartRow = ({ game, loggedIn }) => {
               <PenLine className="w-3.5 h-3.5" aria-hidden="true" /> Played it? Review it
             </Link>
           )}
+          {!game.myRating && <BacklogButton gameId={game.id} source="hall_of_fame" />}
         </p>
       </div>
     </li>

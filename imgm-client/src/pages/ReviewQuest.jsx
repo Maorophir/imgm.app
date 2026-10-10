@@ -12,7 +12,7 @@
  *   - If the user already reviewed this game, the quest opens pre-filled and
  *     posting updates that review (one review per person per game).
  */
-import { ArrowBigUp, CircleCheck, Clapperboard, Combine, Drama, Gamepad2, Layers, ListChecks, Monitor, PartyPopper, PenLine, Pencil, Scale, Star, Timer, Trash2, Zap } from 'lucide-react';
+import { ArrowBigUp, BookmarkCheck, CircleCheck, Clapperboard, Combine, Drama, Gamepad2, Layers, ListChecks, Monitor, PartyPopper, PenLine, Pencil, Scale, Star, Timer, Trash2, Zap } from 'lucide-react';
 import ArtIcon from '../components/ArtIcon';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -173,6 +173,7 @@ const ReviewQuest = () => {
         isNew: !isEditing,
         newBadges: saved.badges.filter((b) => !previousBadges.includes(b)),
         playerXp: saved.playerXp, // { before, after }
+        checkedOffBacklog: saved.checkedOffBacklog, // it was in their Backlog: now it's done
       });
       refreshMyProgress(); // the navbar's level updates too
       setExisting({ loaded: true, review: saved });
@@ -335,6 +336,11 @@ const ReviewQuest = () => {
                 {result.isNew ? 'Review posted!' : 'Review updated!'}
               </h1>
               <p className="text-slate-400 text-sm mb-6">It's live on {game.title}'s page. Thanks for helping other players!</p>
+              {result.checkedOffBacklog && (
+                <p className="mx-auto -mt-3 mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/15 border border-brand/60 text-sm font-bold text-white">
+                  <BookmarkCheck className="w-4 h-4 text-brand" aria-hidden="true" /> Quest complete! {game.title} is checked off your Backlog.
+                </p>
+              )}
 
               {/* The score, as loot */}
               <div

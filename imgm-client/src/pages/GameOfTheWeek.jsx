@@ -17,6 +17,7 @@ import { getRarity } from '../components/reviewQuest/questOptions';
 import { Check, Clock, Crown, LogIn, Vote, Flame, Gem, Heart, Landmark, PartyPopper, Sparkles, ThumbsUp, Trophy, TrendingUp, Users } from 'lucide-react';
 import { getGame, getGameReviews, getGotw, getGotwHistory, nominateGotw, voteGotw } from '../lib/api';
 import { useSession } from '../lib/authClient';
+import BacklogButton from '../components/BacklogButton';
 import LoadError from '../components/LoadError';
 
 // Why a game is on the ballot (the server's slot names)
@@ -84,9 +85,12 @@ const Crowned = ({ gotw, timeZone, pickedWinner }) => {
             </p>
           )}
         </div>
-        <Link to={`/game/${game.id}`} className="self-start md:self-end px-6 py-3 rounded-full font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition whitespace-nowrap">
-          See the game
-        </Link>
+        <div className="self-start md:self-end flex flex-col items-start md:items-end gap-3">
+          <Link to={`/game/${game.id}`} className="px-6 py-3 rounded-full font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition whitespace-nowrap">
+            See the game
+          </Link>
+          <BacklogButton gameId={game.id} source="gotw" variant="pill" />
+        </div>
       </div>
     </div>
     </div>

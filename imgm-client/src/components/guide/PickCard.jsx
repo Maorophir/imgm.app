@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronDown } from 'lucide-react';
 import { getRarity } from '../reviewQuest/questOptions';
+import BacklogButton from '../BacklogButton';
 import RichText from './RichText';
 
 export const ImgmBadge = ({ rating, reviewCount }) => {
@@ -114,6 +115,7 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
             </p>
             <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
             <Why text={pick.why} defaultOpen className="text-sm text-slate-200 leading-relaxed mt-1" />
+            <BacklogButton gameId={pick.game_id} source="play_next" className="self-start mt-1" />
           </div>
         </article>
       </Link>
@@ -135,6 +137,7 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
           {hoursText(pick.hours) && <span className="text-xs text-slate-400">· {hoursText(pick.hours)}</span>}
         </span>
         <Why text={pick.why} className="text-sm text-slate-300 leading-snug" />
+        <BacklogButton gameId={pick.game_id} source="play_next" className="self-start mt-1" />
       </div>
     </>
   );

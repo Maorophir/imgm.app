@@ -3,7 +3,7 @@
  * Clicking it opens a small dropdown: tier + XP bar, Profile, Log out. Closes on an outside
  * click, on Esc, or after picking an item.
  */
-import { LogOut, User } from 'lucide-react';
+import { Bookmark, LogOut, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { signOut } from '../lib/authClient';
@@ -82,6 +82,9 @@ function UserMenu({ user }) {
               </div>
             )}
           </div>
+          <Link to="/backlog" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
+            <Bookmark className="w-4 h-4" aria-hidden="true" /> Backlog
+          </Link>
           <Link to="/profile" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
             <User className="w-4 h-4" aria-hidden="true" /> Profile
           </Link>

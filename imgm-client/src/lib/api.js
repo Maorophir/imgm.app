@@ -83,6 +83,12 @@ export const setUsername = (name) => fetchJson('/api/users/me/username', { metho
 // Your XP and review count — { xp, reviews }
 export const getMyProgress = (signal) => fetchJson('/api/users/me/progress', { signal });
 
+// Your Backlog (games to play later)
+export const getBacklog = (signal) => fetchJson('/api/backlog', { signal });
+export const getBacklogIds = (signal) => fetchJson('/api/backlog/ids', { signal });
+export const addToBacklog = (gameId, source) => fetchJson(`/api/backlog/${gameId}`, { method: 'PUT', body: { source } });
+export const removeFromBacklog = (gameId) => fetchJson(`/api/backlog/${gameId}`, { method: 'DELETE' });
+
 // Your profile: { player, stats, reviews } and more reviews page by page
 export const getMyProfile = (signal) => fetchJson('/api/users/me/profile', { signal });
 export const getMyReviews = (offset, signal) => fetchJson(`/api/users/me/reviews?offset=${offset}&limit=12`, { signal });

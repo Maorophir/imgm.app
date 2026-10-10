@@ -11,6 +11,8 @@ import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
 import GameOfTheWeek from './pages/GameOfTheWeek';
+import Backlog from './pages/Backlog';
+import { BacklogProvider } from './context/BacklogContext';
 import TopGames from './pages/TopGames';
 import Search from './pages/Search';
 import Welcome from './pages/Welcome';
@@ -47,6 +49,7 @@ function PlayNextRoute() {
 function App() {
   return (
     <Router>
+      <BacklogProvider>
       <div className="bg-slate-950 min-h-screen text-white font-sans">
         {/* Navbar renders on EVERY page — it's outside <Routes> */}
         <Navbar />
@@ -68,6 +71,7 @@ function App() {
           <Route path="/play-next" element={<PlayNextRoute />} />
           <Route path="/guide" element={<Navigate to="/play-next" replace />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/backlog" element={<Backlog />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -76,6 +80,7 @@ function App() {
         </Routes>
         </GamerTagGate>
       </div>
+      </BacklogProvider>
       {/* Vercel Web Analytics: visitors and page views, cookieless (only counts on Vercel) */}
       <Analytics />
     </Router>
