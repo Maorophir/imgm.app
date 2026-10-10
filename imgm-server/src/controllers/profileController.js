@@ -8,6 +8,8 @@
  * avatarUpdatedAt, so it can be cached forever and a new one still shows at once.
  */
 import { z } from 'zod';
+import { fromNodeHeaders } from 'better-auth/node';
+import { auth } from '../lib/auth.js';
 import { prisma } from '../lib/db.js';
 import { getSessionUser } from '../lib/session.js';
 import { aiServiceUrl, internalApiKey } from '../lib/config.js';
@@ -196,6 +198,58 @@ export const getMyReviews = async (req, res) => {
     res.json({ reviews: reviews.map(asListItem), total, hasMore: query.data.offset + reviews.length < total });
   } catch (error) {
     console.error('Error loading your reviews:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// GET /api/users/me/account — how the player logs in (a password, Google, or both)
+export const getMyAccount = async (req, res) => {
+  try {
+    const user = await requireLogin(req, res);
+    if (!user) return;
+    const accounts = await prisma.account.findMany({ where: { userId: user.id }, select: { providerId: true, password: true } });
+    res.json({
+      hasPassword: accounts.some((a) => a.providerId === 'credential' && a.password),
+      providers: accounts.map((a) => a.providerId),
+    });
+  } catch (error) {
+    console.error('Error reading the account:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// DELETE /api/users/me  { password?, reason, details? } — delete the account for good.
+// Better Auth checks the password (or, for Google accounts, a login from the last day);
+// the reason is kept anonymously.
+const deleteSchema = z.object({
+  password: z.string().min(1).max(200).optional(),
+  reason: z.enum(['not_using', 'privacy', 'better_site', 'broken', 'other']),
+  details: z.string().trim().max(1000).optional(),
+});
+export const deleteMyAccount = async (req, res) => {
+  const body = deleteSchema.safeParse(req.body);
+  if (!body.success) return res.status(400).json({ error: 'Please choose a reason.' });
+  try {
+    const user = await requireLogin(req, res);
+    if (!user) return;
+    const reviews = await prisma.review.count({ where: { userId: user.id } });
+    try {
+      await auth.api.deleteUser({
+        body: body.data.password ? { password: body.data.password } : {},
+        headers: fromNodeHeaders(req.headers),
+      });
+    } catch (error) {
+      const code = error?.body?.code ?? error?.code;
+      if (code === 'INVALID_PASSWORD') return res.status(400).json({ error: "That password isn't right." });
+      if (code === 'SESSION_EXPIRED') {
+        return res.status(403).json({ error: 'For your safety, log out and log back in, then delete your account within a day.' });
+      }
+      throw error;
+    }
+    await prisma.accountDeletion.create({ data: { reason: body.data.reason, details: body.data.details || null, reviews } });
+    res.status(204).end();
+  } catch (error) {
+    console.error('Error deleting an account:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

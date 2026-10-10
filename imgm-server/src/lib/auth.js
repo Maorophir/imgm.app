@@ -1,3 +1,4 @@
+import { beforeAccountDeleted, afterAccountDeleted } from './accountCleanup.js';
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
@@ -34,6 +35,13 @@ export const auth = betterAuth({
   // pick one). input: false = Better Auth's own update routes can't change these;
   // only our /api/users routes can, and they enforce the name rules + 30-day limit.
   user: {
+    // "Delete my account" in the profile's settings: needs the password, or (Google
+    // accounts) a login from the last day. The hooks clean up around it.
+    deleteUser: {
+      enabled: true,
+      beforeDelete: beforeAccountDeleted,
+      afterDelete: afterAccountDeleted,
+    },
     additionalFields: {
       username: { type: "string", required: false, input: false },
       displayUsername: { type: "string", required: false, input: false },

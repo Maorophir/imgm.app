@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { checkUsername, setUsername, getMyProgress } from '../controllers/usersController.js';
-import { uploadAvatar, deleteAvatar, getAvatar, getAvatarPresets, getMyProfile, getMyReviews } from '../controllers/profileController.js';
+import { uploadAvatar, deleteAvatar, getAvatar, getAvatarPresets, getMyProfile, getMyReviews, getMyAccount, deleteMyAccount } from '../controllers/profileController.js';
 
 const router = Router();
 
@@ -26,6 +26,10 @@ router.get('/me/progress', getMyProgress);
 // Your profile: stats + reviews
 router.get('/me/profile', getMyProfile);
 router.get('/me/reviews', getMyReviews);
+
+// Your account: how you log in, and deleting it (password changes go through Better Auth)
+router.get('/me/account', getMyAccount);
+router.delete('/me', deleteMyAccount);
 
 // Profile pictures: upload (checked first), remove, and the picture itself
 const pictureLimiter = rateLimit({

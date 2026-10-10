@@ -10,6 +10,7 @@ import { Navigate } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
 import { getMyProfile, setUsername } from '../lib/api';
 import { MyReviews, ProfilePicture, StatsGrid } from '../components/profile/ProfileParts';
+import AccountSettings from '../components/profile/AccountSettings';
 import GamerTagField from '../components/GamerTagField';
 import { useGamerTagCheck } from '../hooks/useGamerTagCheck';
 import { useMyProgress } from '../hooks/useMyProgress';
@@ -186,6 +187,7 @@ function Profile() {
         </button>
       </form>
 
+      <AccountSettings />
     </div>
   );
 }

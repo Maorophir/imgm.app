@@ -14,6 +14,7 @@
  * - Easy to scan: you can see exactly what an element looks like without jumping to another file.
  */
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { getFeaturedGames } from '../lib/api';
 import GameCard from '../components/GameCard';
 import GameCardSkeleton from '../components/GameCardSkeleton';
@@ -83,8 +84,20 @@ const Home = () => {
   const goToPage = (next) => setPage((next + pageCount) % pageCount);
   const heroImage = currentGame?.artworks?.[0] ?? currentGame?.coverUrl;
 
+  // Just deleted their account: a goodbye (the page loaded fresh, logged out)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const goodbye = searchParams.get('goodbye') === '1';
+
   return (
     <>
+      {goodbye && (
+        <div role="status" className="relative z-20 max-w-3xl mx-auto mt-6 mx-4 md:mx-auto flex items-center justify-between gap-4 rounded-2xl border border-slate-700 bg-slate-900/90 px-5 py-4">
+          <p className="text-slate-200">
+            <span className="font-bold text-white">Your account is deleted.</span> Thanks for playing with us. You're always welcome back.
+          </p>
+          <button type="button" onClick={() => setSearchParams({})} className="text-sm font-bold text-slate-400 hover:text-white">Close</button>
+        </div>
+      )}
     <main className="relative flex flex-col items-center justify-center h-[90vh] text-center px-4 overflow-hidden">
       
       {/* Rotating background layer */}

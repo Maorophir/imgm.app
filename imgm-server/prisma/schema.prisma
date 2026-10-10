@@ -352,3 +352,14 @@ model Feedback {
   page      String?  // where it was sent from, e.g. /game/305152
   createdAt DateTime @default(now())
 }
+
+// Why players left (asked when they delete their account). Anonymous on purpose:
+// no user id, email or name, just the reason, so it helps improve IMGM without
+// keeping anything about the person.
+model AccountDeletion {
+  id        String   @id @default(cuid())
+  reason    String   // not_using | privacy | better_site | broken | other
+  details   String?
+  reviews   Int      // how many reviews the account had (how engaged they were)
+  createdAt DateTime @default(now())
+}
