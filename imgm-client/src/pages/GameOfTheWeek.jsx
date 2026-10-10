@@ -348,12 +348,12 @@ const GameOfTheWeek = () => {
       {/* The throne: this week's winner, in gold */}
       <section className="relative rounded-[2.5rem] border border-amber-300/20 bg-gradient-to-b from-amber-300/[0.07] via-slate-900/30 to-transparent px-4 py-8 md:p-10 flex flex-col gap-12">
         <header className="flex items-center justify-center gap-4 text-amber-300">
-          <span className="h-px w-16 md:w-32 bg-gradient-to-r from-transparent to-amber-300/60" />
+          <span className="h-px w-8 md:w-32 bg-gradient-to-r from-transparent to-amber-300/60" />
           <span className="flex flex-col items-center gap-1">
             <Crown className="w-7 h-7" aria-hidden="true" />
-            <span className="text-xs md:text-sm font-black uppercase tracking-[0.35em]">Game of the Week</span>
+            <span className="text-xs md:text-sm font-black uppercase tracking-[0.2em] md:tracking-[0.35em] whitespace-nowrap">Game of the Week</span>
           </span>
-          <span className="h-px w-16 md:w-32 bg-gradient-to-l from-transparent to-amber-300/60" />
+          <span className="h-px w-8 md:w-32 bg-gradient-to-l from-transparent to-amber-300/60" />
         </header>
         <Crowned gotw={data.gameOfTheWeek} timeZone={week.timeZone} pickedWinner={data.me?.pickedWinner} />
         {data.gameOfTheWeek && <CrownedDetails gameId={data.gameOfTheWeek.game.id} />}

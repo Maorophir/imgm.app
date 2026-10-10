@@ -83,6 +83,9 @@ export const setUsername = (name) => fetchJson('/api/users/me/username', { metho
 // Your XP and review count — { xp, reviews }
 export const getMyProgress = (signal) => fetchJson('/api/users/me/progress', { signal });
 
+// The Feedback button: { kind: bug | idea | other, message, page }
+export const sendFeedback = (feedback) => fetchJson('/api/feedback', { method: 'POST', body: feedback });
+
 // Your Backlog (games to play later)
 export const getBacklog = (signal) => fetchJson('/api/backlog', { signal });
 export const getBacklogIds = (signal) => fetchJson('/api/backlog/ids', { signal });

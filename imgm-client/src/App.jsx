@@ -11,6 +11,9 @@ import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
 import GameOfTheWeek from './pages/GameOfTheWeek';
+import Privacy from './pages/Privacy';
+import Footer from './components/Footer';
+import Feedback from './components/Feedback';
 import Backlog from './pages/Backlog';
 import { BacklogProvider } from './context/BacklogContext';
 import TopGames from './pages/TopGames';
@@ -72,6 +75,7 @@ function App() {
           <Route path="/guide" element={<Navigate to="/play-next" replace />} />
           <Route path="/profile" element={<Profile />} />
           <Route path="/backlog" element={<Backlog />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
@@ -79,6 +83,8 @@ function App() {
           <Route path="/welcome" element={<Welcome />} />
         </Routes>
         </GamerTagGate>
+        <Footer />
+        <Feedback />
       </div>
       </BacklogProvider>
       {/* Vercel Web Analytics: visitors and page views, cookieless (only counts on Vercel) */}

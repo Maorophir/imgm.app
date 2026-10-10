@@ -33,6 +33,7 @@ model User {
   avatarUpdatedAt   DateTime?
   avatar            UserAvatar?
   backlog           BacklogItem[]
+  feedback          Feedback[]
   accounts      Account[]
   
   // Custom IMGM relations
@@ -335,4 +336,15 @@ model BacklogItem {
 
   @@id([userId, gameId])
   @@index([userId, addedAt])
+}
+
+// Messages from the Feedback button (bugs, ideas) during the beta
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  kind      String   // bug | idea | other
+  message   String
+  page      String?  // where it was sent from, e.g. /game/305152
+  createdAt DateTime @default(now())
 }

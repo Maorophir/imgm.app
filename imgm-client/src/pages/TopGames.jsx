@@ -132,8 +132,9 @@ const TopGames = () => {
   const reviewed = insights?.reviewedByMe ?? 0;
 
   return (
-    <div className="max-w-7xl mx-auto px-6 py-10 grid lg:grid-cols-[minmax(0,1fr)_340px] gap-10 items-start">
-      <section>
+    <div className="max-w-7xl mx-auto px-6 py-10 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_340px] gap-10 items-start">
+      {/* min-w-0: the column may shrink to the phone screen (no sideways scrolling) */}
+      <section className="min-w-0">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand mb-2">IMGM Hall of Fame</p>
         <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
           The Top {chart?.size || ''}<span className="text-brand">.</span>
