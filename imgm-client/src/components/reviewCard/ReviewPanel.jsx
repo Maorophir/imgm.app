@@ -59,7 +59,7 @@ const ReviewPanel = ({ review: original }) => {
     <article className="flex-1 min-w-0 w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
-          <Avatar name={name} size="w-9 h-9 text-sm" />
+          <Avatar name={name} user={review.user} size="w-9 h-9 text-sm" />
           <span className="min-w-0">
             <span className="block font-bold text-white truncate">{name}</span>
             <span className="block text-xs text-slate-400">

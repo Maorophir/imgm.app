@@ -16,17 +16,32 @@ import MarqueeText from '../MarqueeText';
 import {
   getRarity, RATING_LABELS, VIBES, GOT_GOOD_AFTER, COMPLETION_STATUSES, BADGES, checklistColor,
 } from '../reviewQuest/questOptions';
-import { avatarColor, formatDate, tickedChecklist, isQuickReview, reviewerName } from './reviewDisplay';
+import { avatarColor, avatarUrl, formatDate, tickedChecklist, isQuickReview, reviewerName } from './reviewDisplay';
 
-export const Avatar = ({ name, size = 'w-8 h-8 text-sm' }) => (
-  <span
-    className={`${size} rounded-full flex items-center justify-center font-extrabold text-white shrink-0`}
-    style={{ background: avatarColor(name) }}
-    aria-hidden="true"
-  >
-    {name.charAt(0).toUpperCase()}
-  </span>
-);
+// A player's face: their profile picture if they set one, otherwise their coloured initial.
+// `user` = { id, avatarUpdatedAt }; the time in the address makes a new picture show at once.
+export const Avatar = ({ name, user, size = 'w-8 h-8 text-sm' }) => {
+  const [broken, setBroken] = useState(false);
+  if (user?.avatarUpdatedAt && user.id && !broken) {
+    return (
+      <img
+        src={avatarUrl(user)}
+        alt=""
+        onError={() => setBroken(true)}
+        className={`${size} rounded-full object-cover bg-slate-800 shrink-0`}
+      />
+    );
+  }
+  return (
+    <span
+      className={`${size} rounded-full flex items-center justify-center font-extrabold text-white shrink-0`}
+      style={{ background: avatarColor(name) }}
+      aria-hidden="true"
+    >
+      {name.charAt(0).toUpperCase()}
+    </span>
+  );
+};
 
 // The rarity-coloured 3px border around each face of the card
 const Frame = ({ rarity, className = '', children }) => (
@@ -78,7 +93,7 @@ const RarityCard = ({ review, game, artUrl }) => {
         <Frame rarity={rarity} className="card-face">
           <div className="flex items-center justify-between gap-2 px-3 py-2.5">
             <div className="flex items-center gap-2 min-w-0">
-              <Avatar name={name} />
+              <Avatar name={name} user={review.user} />
               <span className="min-w-0">
                 <span className="block text-[13px] font-bold text-white truncate">{name}</span>
                 <span className="block text-[11px] text-slate-400">{formatDate(review.createdAt)}</span>

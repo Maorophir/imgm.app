@@ -83,6 +83,13 @@ export const setUsername = (name) => fetchJson('/api/users/me/username', { metho
 // Your XP and review count — { xp, reviews }
 export const getMyProgress = (signal) => fetchJson('/api/users/me/progress', { signal });
 
+// Your profile: { player, stats, reviews } and more reviews page by page
+export const getMyProfile = (signal) => fetchJson('/api/users/me/profile', { signal });
+export const getMyReviews = (offset, signal) => fetchJson(`/api/users/me/reviews?offset=${offset}&limit=12`, { signal });
+// Profile picture: a data URL from resizeToAvatar (checked by the server before it's saved)
+export const uploadAvatar = (image) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { image } });
+export const deleteAvatar = () => fetchJson('/api/users/me/avatar', { method: 'DELETE' });
+
 /**
  * Asks the Game Guide and streams its work. The server answers with Server-Sent
  * Events; each one is handed to onEvent(name, data) the moment it arrives.

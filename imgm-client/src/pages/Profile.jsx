@@ -1,14 +1,15 @@
 /**
  * Profile page — Route: /profile
  *
- * Your level (tier, XP bar, the tier ladder) and your gamer tag, which you can
- * change once every 30 days (changing only its capitals is always allowed).
+ * Your picture, level (tier, XP bar, the tier ladder), stats and reviews, then your
+ * gamer tag, which you can change once every 30 days (capitals only: any time).
  */
 import { Hourglass } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
-import { setUsername } from '../lib/api';
+import { getMyProfile, setUsername } from '../lib/api';
+import { MyReviews, ProfilePicture, StatsGrid } from '../components/profile/ProfileParts';
 import GamerTagField from '../components/GamerTagField';
 import { useGamerTagCheck } from '../hooks/useGamerTagCheck';
 import { useMyProgress } from '../hooks/useMyProgress';
@@ -75,6 +76,22 @@ function Profile() {
   const current = session?.user.displayUsername ?? null;
   const check = useGamerTagCheck(name, current);
   const progress = useMyProgress(Boolean(session));
+  const [profile, setProfile] = useState(null); // { player, stats, reviews }
+  const [reload, setReload] = useState(0);
+  const userId = session?.user?.id;
+
+  useEffect(() => {
+    if (!userId) return undefined;
+    const controller = new AbortController();
+    getMyProfile(controller.signal).then(setProfile).catch(() => {});
+    return () => controller.abort();
+  }, [userId, reload]);
+
+  // A new or removed picture: refresh the menu (session) and this page
+  const pictureChanged = async () => {
+    await refetch();
+    setReload((n) => n + 1);
+  };
 
   if (isPending) return <div className="min-h-[70vh] animate-pulse" />;
   if (!session) return <Navigate to="/login?redirect=%2Fprofile" replace />;
@@ -105,10 +122,38 @@ function Profile() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12 flex flex-col gap-6">
-      <h1 className="text-3xl font-black text-white">Your <span className="text-brand">profile</span></h1>
+    <div className="max-w-4xl mx-auto px-6 py-12 flex flex-col gap-8">
+      <header className="flex flex-col sm:flex-row sm:items-center gap-6">
+        <ProfilePicture
+          player={{ id: session.user.id, name: current, avatarUpdatedAt: session.user.avatarUpdatedAt }}
+          onChanged={pictureChanged}
+        />
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.25em] text-brand">Your profile</p>
+          <h1 className="text-4xl font-black text-white mt-1 break-all">{current}</h1>
+          {profile && (
+            <p className="text-sm text-slate-400 mt-1">
+              Joined {new Date(profile.player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+            </p>
+          )}
+        </div>
+      </header>
 
       {progress && <LevelCard progress={progress} />}
+
+      {profile && <StatsGrid stats={profile.stats} />}
+
+      {profile && (
+        <section className="flex flex-col gap-4">
+          <h2 className="text-2xl font-bold text-white">
+            Your <span className="text-brand">reviews</span>
+            <span className="text-slate-500 text-lg font-normal ml-2">({profile.stats.reviews})</span>
+          </h2>
+          <MyReviews key={reload} first={profile.reviews} total={profile.stats.reviews} />
+        </section>
+      )}
+
+      <h2 className="text-2xl font-bold text-white mt-4">Settings</h2>
 
       <form onSubmit={save} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col gap-5">
         <div>
@@ -141,7 +186,6 @@ function Profile() {
         </button>
       </form>
 
-      <p className="text-sm text-slate-500">Your reviews and stats will show up here soon.</p>
     </div>
   );
 }

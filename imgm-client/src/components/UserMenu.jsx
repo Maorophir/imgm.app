@@ -52,7 +52,7 @@ function UserMenu({ user }) {
         }`}
       >
         <span className="relative">
-          <Avatar name={name} />
+          <Avatar name={name} user={user} />
           {progress && (
             <LevelBadge level={progress.level} tier={progress.tier} small className="absolute -bottom-1.5 -right-2" />
           )}

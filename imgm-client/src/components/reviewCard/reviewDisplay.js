@@ -4,6 +4,12 @@
 import { CHECKLIST } from '../reviewQuest/questOptions';
 
 // A steady colour per reviewer name, for the letter avatar
+// A profile picture's address (the time keeps browsers from showing an old picture)
+import { API_BASE } from '../../lib/api';
+
+export const avatarUrl = (user) =>
+  `${API_BASE}/api/users/${user.id}/avatar?v=${new Date(user.avatarUpdatedAt).getTime()}`;
+
 export const avatarColor = (name = '?') => {
   const hue = [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % 360;
   return `hsl(${hue} 50% 40%)`;

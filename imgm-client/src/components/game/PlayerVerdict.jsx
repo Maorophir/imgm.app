@@ -22,8 +22,9 @@ const ASPECT_STYLE = {
   negative: { Icon: CircleMinus, color: 'text-orange-400', verb: 'Criticized' },
 };
 
-// One bar per score, 1 (left) to 10. Click a bar to see only the reviews with that score.
-const Histogram = ({ byRating, selected, onSelect }) => {
+// One bar per score, 1 (left) to 10. Click a bar to see only the reviews with that score
+// (without onSelect it's read-only, e.g. a player's own scores on their profile).
+export const Histogram = ({ byRating, selected, onSelect }) => {
   const counts = Array.from({ length: 10 }, (_, i) => byRating?.[i + 1] ?? 0);
   const most = Math.max(...counts, 1);
   return (
@@ -35,10 +36,10 @@ const Histogram = ({ byRating, selected, onSelect }) => {
           <button
             key={rating}
             type="button"
-            disabled={count === 0}
-            onClick={() => onSelect(rating)}
+            disabled={count === 0 || !onSelect}
+            onClick={() => onSelect?.(rating)}
             aria-pressed={active}
-            title={`${count} ${count === 1 ? 'player' : 'players'} rated it ${rating}/10${count ? ' · click to read them' : ''}`}
+            title={`${count} ${count === 1 ? 'player' : 'players'} rated it ${rating}/10${count && onSelect ? ' · click to read them' : ''}`}
             className="group flex flex-col items-center gap-1.5 disabled:cursor-default"
           >
             <span className="w-full h-20 flex items-end">
