@@ -23,13 +23,11 @@ const REASONS = [
 ];
 
 const ChangePassword = () => {
-  const { data: session } = useSession();
-  const email = session?.user?.email ?? '';
   const [form, setForm] = useState({ current: '', next: '', again: '' });
   const [state, setState] = useState(null); // { ok, text }
   const [busy, setBusy] = useState(false);
   const set = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
-  const weak = form.next && passwordProblems(form.next, email).length > 0; // the checklist says what's missing
+  const weak = form.next && passwordProblems(form.next).length > 0; // the checklist says what's missing
   const problem = form.again && form.again !== form.next ? "The new passwords don't match." : null;
 
   const save = async (e) => {
@@ -52,7 +50,7 @@ const ChangePassword = () => {
       <input type="password" autoComplete="current-password" placeholder="Current password" value={form.current} onChange={set('current')} className={field} />
       <div>
         <input type="password" autoComplete="new-password" placeholder="New password" value={form.next} onChange={set('next')} className={field} />
-        <PasswordChecklist password={form.next} email={email} />
+        <PasswordChecklist password={form.next} />
       </div>
       <input type="password" autoComplete="new-password" placeholder="New password again" value={form.again} onChange={set('again')} className={field} />
       {(problem || state) && (
