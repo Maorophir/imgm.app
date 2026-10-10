@@ -27,6 +27,8 @@ const GameDetailsContent = ({ id }) => {
   const [data, setData] = useState(null);
   // Bumping this number re-runs the fetch effect below ("Try again")
   const [attempt, setAttempt] = useState(0);
+  // Which reviews to show: one rarity tier, or one exact score (from the histogram)
+  const [reviewFilter, setReviewFilter] = useState({ tier: null, rating: null });
 
   // Fetch the game from our backend (which pulls from IGDB if it isn't cached locally)
   useEffect(() => {
@@ -102,9 +104,17 @@ const GameDetailsContent = ({ id }) => {
       <MediaSection game={game} />
 
       {/* What players think: score, rating histogram, the AI summary and its chips */}
-      <PlayerVerdict game={game} />
+      <PlayerVerdict
+        game={game}
+        selectedRating={reviewFilter.rating}
+        onRatingClick={(rating) => {
+          // Same bar again = show every review
+          setReviewFilter((current) => ({ tier: null, rating: current.rating === rating ? null : rating }));
+          document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }}
+      />
 
-      <ReviewsSection game={game} gameId={id} />
+      <ReviewsSection game={game} gameId={id} filter={reviewFilter} onFilterChange={setReviewFilter} />
     </div>
   );
 };

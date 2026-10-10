@@ -11,7 +11,7 @@
  * carries the counts, in game.reviewStats).
  */
 import { useEffect, useState } from 'react';
-import { Medal, MessageSquareWarning } from 'lucide-react';
+import { Medal, MessageSquareWarning, X } from 'lucide-react';
 import { getGameReviews } from '../../lib/api';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
 import { RARITIES, getRarity } from '../reviewQuest/questOptions';
@@ -65,9 +65,22 @@ const StrongLanguageSwitch = () => {
 
 // A chip per tier (worst → best) with its count: click one to see only those reviews.
 // (The rating histogram above, in PlayerVerdict, shows the spread.)
-const RatingBreakdown = ({ tiers, selected, onSelect }) => (
+const RatingBreakdown = ({ tiers, selected, rating, onSelect, onClearRating }) => (
   <div className="flex flex-col gap-3">
     <div className="flex flex-wrap gap-2" role="group" aria-label="Show only one rarity">
+      {/* A score picked in the histogram above: shown here, click to clear */}
+      {rating && (
+        <button
+          type="button"
+          onClick={onClearRating}
+          aria-pressed="true"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border bg-white/10 transition"
+          style={{ borderColor: getRarity(rating).color, color: getRarity(rating).color }}
+        >
+          Rated {rating}/10
+          <X className="w-3.5 h-3.5 text-slate-300" aria-label="Show every review" />
+        </button>
+      )}
       {tiers.map((tier) => {
         const active = selected === tier.key;
         return (
@@ -91,34 +104,34 @@ const RatingBreakdown = ({ tiers, selected, onSelect }) => (
   </div>
 );
 
-const ReviewsSection = ({ game, gameId }) => {
+const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
+  const { tier, rating } = filter; // one tier, or one exact score (from the histogram above)
   const total = game.reviewStats?.count ?? 0;
   const tiers = tierCounts(game.reviewStats?.byRating);
   const [sort, setSort] = useState('helpful');
-  const [tier, setTier] = useState(null);
   // { key, reviews, mine, total, hasMore } for the current sort + filter (key = which one)
   const [list, setList] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
-  const key = `${sort}|${tier ?? ''}`;
+  const key = `${sort}|${tier ?? ''}|${rating ?? ''}`;
 
   // A new sort or filter starts over from the first page
   useEffect(() => {
     if (total === 0) return undefined;
     const controller = new AbortController();
-    getGameReviews(gameId, { sort, tier, offset: 0, limit: FIRST_PAGE }, controller.signal)
+    getGameReviews(gameId, { sort, tier, rating, offset: 0, limit: FIRST_PAGE }, controller.signal)
       .then((page) => {
         setError(false);
-        setList({ key: `${sort}|${tier ?? ''}`, ...page });
+        setList({ key: `${sort}|${tier ?? ''}|${rating ?? ''}`, ...page });
       })
       .catch((err) => err.name !== 'AbortError' && setError(true));
     return () => controller.abort();
-  }, [gameId, sort, tier, total]);
+  }, [gameId, sort, tier, rating, total]);
 
   const showMore = async () => {
     setLoadingMore(true);
     try {
-      const page = await getGameReviews(gameId, { sort, tier, offset: list.reviews.length, limit: NEXT_PAGE });
+      const page = await getGameReviews(gameId, { sort, tier, rating, offset: list.reviews.length, limit: NEXT_PAGE });
       setList((current) => ({ ...current, reviews: [...current.reviews, ...page.reviews], hasMore: page.hasMore }));
     } catch {
       setError(true);
@@ -129,12 +142,13 @@ const ReviewsSection = ({ game, gameId }) => {
 
   const current = list?.key === key ? list : null; // null while a new sort/filter loads
   const mine = list?.mine ?? null;
-  const pinned = mine && (!tier || getRarity(mine.rating).key === tier) ? mine : null;
+  const matches = (review) => (rating ? review.rating === rating : !tier || getRarity(review.rating).key === tier);
+  const pinned = mine && matches(mine) ? mine : null;
   const shown = current ? [...(pinned ? [pinned] : []), ...current.reviews] : [];
   const left = current ? current.total - current.reviews.length : 0;
 
   return (
-    <section className="max-w-7xl mx-auto px-6 py-10 pb-20">
+    <section id="reviews" className="max-w-7xl mx-auto px-6 py-10 pb-20 scroll-mt-20">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         <div className="flex flex-col items-start gap-2">
           <h2 className="text-2xl font-bold text-white">
@@ -167,7 +181,7 @@ const ReviewsSection = ({ game, gameId }) => {
         <>
           <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5 mb-8">
             <div className="flex-1 max-w-2xl">
-              <RatingBreakdown tiers={tiers} selected={tier} onSelect={setTier} />
+              <RatingBreakdown tiers={tiers} selected={tier} rating={rating} onSelect={(next) => onFilterChange({ tier: next, rating: null })} onClearRating={() => onFilterChange({ tier: null, rating: null })} />
             </div>
             <div className="flex rounded-xl border border-slate-700 p-1 self-start lg:self-auto" role="group" aria-label="Sort reviews">
               {SORTS.map((option) => (
@@ -192,7 +206,7 @@ const ReviewsSection = ({ game, gameId }) => {
             <div className="h-64 rounded-2xl bg-slate-900/50 animate-pulse" />
           ) : shown.length === 0 ? (
             <p className="text-slate-400 py-10 text-center">
-              No {RARITIES.find((t) => t.key === tier)?.label} reviews yet.
+              {rating ? `No ${rating}/10 reviews yet.` : `No ${RARITIES.find((t) => t.key === tier)?.label} reviews yet.`}
             </p>
           ) : (
             <div className="flex flex-col gap-10">

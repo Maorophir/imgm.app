@@ -49,8 +49,8 @@ export const voteOnReview = (reviewId, helpful) =>
 export const getRecentReviews = (signal) => fetchJson('/api/reviews/recent?limit=8', { signal });
 
 // One page of a game's reviews: { reviews, mine (the viewer's own, first page only), total, hasMore }
-export const getGameReviews = (gameId, { sort, tier, offset, limit }, signal) => {
-  const params = new URLSearchParams({ sort, offset, limit, ...(tier && { tier }) });
+export const getGameReviews = (gameId, { sort, tier, rating, offset, limit }, signal) => {
+  const params = new URLSearchParams({ sort, offset, limit, ...(tier && { tier }), ...(rating && { rating }) });
   return fetchJson(`/api/reviews/game/${gameId}?${params}`, { signal });
 };
 

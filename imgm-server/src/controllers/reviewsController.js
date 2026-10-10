@@ -38,6 +38,7 @@ const TIER_RATINGS = {
 const pageQuery = z.object({
   sort: z.enum(Object.keys(REVIEW_SORTS)).default('helpful'),
   tier: z.enum(Object.keys(TIER_RATINGS)).optional(),
+  rating: z.coerce.number().int().min(1).max(10).optional(), // one exact score (beats tier)
   offset: z.coerce.number().int().min(0).max(10000).default(0),
   limit: z.coerce.number().int().min(1).max(20).default(10),
 });
@@ -50,7 +51,7 @@ const withViewerVote = (userId) =>
 const forClient = async (reviews) =>
   (await withAuthorXp(reviews)).map(({ votes, ...review }) => withMaskedText({ ...review, myVote: votes?.[0]?.helpful ?? null }));
 
-// GET /api/reviews/game/:gameId?sort=&tier=&offset=&limit= — one page of a game's reviews.
+// GET /api/reviews/game/:gameId?sort=&tier=&rating=&offset=&limit= — one page of a game's reviews.
 // The viewer's own review isn't in the pages: the first page returns it as `mine`
 // (whatever the filter), so the page can pin it on top.
 export const getReviewsByGameId = async (req, res) => {
@@ -59,13 +60,13 @@ export const getReviewsByGameId = async (req, res) => {
   if (Number.isNaN(gameId) || !query.success) {
     return res.status(400).json({ error: 'Invalid request' });
   }
-  const { sort, tier, offset, limit } = query.data;
+  const { sort, tier, rating, offset, limit } = query.data;
 
   try {
     const user = await getUser(req).catch(() => null);
     const where = {
       gameId,
-      ...(tier && { rating: { gte: TIER_RATINGS[tier][0], lte: TIER_RATINGS[tier][1] } }),
+      ...(rating ? { rating } : tier && { rating: { gte: TIER_RATINGS[tier][0], lte: TIER_RATINGS[tier][1] } }),
       ...(user && { NOT: { userId: user.id } }),
     };
     const [page, total, mine] = await Promise.all([

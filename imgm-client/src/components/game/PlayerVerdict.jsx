@@ -2,7 +2,8 @@
  * PlayerVerdict — "What players think" on a game page (inspired by IMDb's user reviews):
  *
  *   score       the IMGM average, big, with the review count
- *   histogram   how many players gave each rating 1-10 (worst left), in rarity colours
+ *   histogram   how many players gave each rating 1-10 (worst left), in rarity colours;
+ *               click a bar to filter the reviews below to that score
  *   summary     what players praise, criticize and disagree on: written by AI from the
  *               reviews (imgm-ai summary.py), saved by the server once there are 3+
  *   aspects     chips: praised (+), mixed (•) or criticized (−), each backed by 2+ reviews
@@ -21,27 +22,44 @@ const ASPECT_STYLE = {
   negative: { Icon: CircleMinus, color: 'text-orange-400', verb: 'Criticized' },
 };
 
-const Histogram = ({ byRating }) => {
+// One bar per score, 1 (left) to 10. Click a bar to see only the reviews with that score.
+const Histogram = ({ byRating, selected, onSelect }) => {
   const counts = Array.from({ length: 10 }, (_, i) => byRating?.[i + 1] ?? 0);
   const most = Math.max(...counts, 1);
   return (
-    <div className="flex-1 min-w-0 grid grid-cols-10 gap-1.5 sm:gap-2 items-end" role="img" aria-label="How many players gave each rating, 1 to 10">
-      {counts.map((count, i) => (
-        <div key={i} className="flex flex-col items-center gap-1.5" title={`${count} ${count === 1 ? 'player' : 'players'} rated it ${i + 1}/10`}>
-          <div className="w-full h-20 flex items-end">
-            <div
-              className="w-full rounded-t-md transition-all"
-              style={{ height: count ? `${Math.max((count / most) * 100, 6)}%` : '3px', background: count ? getRarity(i + 1).color : 'rgb(51 65 85)' }}
-            />
-          </div>
-          <span className="text-xs text-slate-400 tabular-nums">{i + 1}</span>
-        </div>
-      ))}
+    <div className="flex-1 min-w-0 grid grid-cols-10 gap-1.5 sm:gap-2 items-end" role="group" aria-label="Show the reviews with one score">
+      {counts.map((count, i) => {
+        const rating = i + 1;
+        const active = selected === rating;
+        return (
+          <button
+            key={rating}
+            type="button"
+            disabled={count === 0}
+            onClick={() => onSelect(rating)}
+            aria-pressed={active}
+            title={`${count} ${count === 1 ? 'player' : 'players'} rated it ${rating}/10${count ? ' · click to read them' : ''}`}
+            className="group flex flex-col items-center gap-1.5 disabled:cursor-default"
+          >
+            <span className="w-full h-20 flex items-end">
+              <span
+                className="w-full rounded-t-md transition-all group-enabled:group-hover:brightness-125"
+                style={{
+                  height: count ? `${Math.max((count / most) * 100, 6)}%` : '3px',
+                  background: count ? getRarity(rating).color : 'rgb(51 65 85)',
+                  opacity: selected && !active ? 0.3 : 1,
+                }}
+              />
+            </span>
+            <span className={`text-xs tabular-nums ${active ? 'text-white font-bold' : 'text-slate-400'}`}>{rating}</span>
+          </button>
+        );
+      })}
     </div>
   );
 };
 
-const PlayerVerdict = ({ game }) => {
+const PlayerVerdict = ({ game, selectedRating, onRatingClick }) => {
   const count = game.reviewStats?.count ?? 0;
   if (count === 0) return null;
   const average = game.ratings?.imgm;
@@ -65,7 +83,7 @@ const PlayerVerdict = ({ game }) => {
               {count === 1 ? 'review' : 'reviews'}
             </p>
           </div>
-          <Histogram byRating={game.reviewStats?.byRating} />
+          <Histogram byRating={game.reviewStats?.byRating} selected={selectedRating} onSelect={onRatingClick} />
         </div>
 
         {/* The AI summary */}
