@@ -139,12 +139,14 @@ export const nominateGame = async (req, res) => {
   }
 };
 
-// GET /api/gotw/history — past Games of the Week, newest first
+// GET /api/gotw/history — past Games of the Week, newest first (not the one reigning now)
 export const getHistory = async (req, res) => {
   try {
+    await currentWeek(); // a week that just ended is counted first
     const weeks = await prisma.gotwWeek.findMany({
       where: { closedAt: { not: null }, winnerId: { not: null } },
       orderBy: { startsAt: 'desc' },
+      skip: 1, // the newest winner reigns this week: it's the Game of the Week, not a past one
       take: 12,
       include: { winner: { select: { id: true, title: true, coverUrl: true } } },
     });

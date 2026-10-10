@@ -19,8 +19,8 @@ const mobileNavClass = ({ isActive }) =>
 
 const BASE_LINKS = [
   // No Home link: the logo goes home
-  { to: '/hall-of-fame', label: 'Hall of Fame' },
   { to: '/game-of-the-week', label: 'Game of the Week' },
+  { to: '/hall-of-fame', label: 'Hall of Fame' },
   // Trending is hidden until it has real content (pages/Trending.jsx)
 ];
 const PLAY_NEXT_LINK = { to: '/play-next', label: <><span className="text-brand">✦</span> Play Next</> };

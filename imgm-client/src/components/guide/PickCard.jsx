@@ -4,7 +4,9 @@
  * (#2 Epic purple, #3 Rare blue). Every card links to the game's IMGM page.
  * With onNotForMe, each card also gets a "Not for me" button (swaps that game out).
  */
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronDown } from 'lucide-react';
 import { getRarity } from '../reviewQuest/questOptions';
 import RichText from './RichText';
 
@@ -58,6 +60,37 @@ const RANK_TIERS = {
   3: { frame: 'rarity-frame', color: '#60a5fa' }, // Rare: a plain frame in its blue
 };
 
+// Why the guide picked it. Long ones fold to 3 lines with "Read more"; the Best Pick
+// starts open (with "Show less"). The toggle sits inside the card's link, so it stops
+// the click from opening the game.
+const LONG_WHY = 140; // characters
+const Why = ({ text, defaultOpen = false, className = '' }) => {
+  const [open, setOpen] = useState(defaultOpen);
+  const long = (text?.length ?? 0) > LONG_WHY;
+  return (
+    <div className={className}>
+      <p className={long && !open ? 'line-clamp-3' : ''}>
+        <RichText text={text} />
+      </p>
+      {long && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setOpen((o) => !o);
+          }}
+          className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-white transition"
+        >
+          {open ? 'Show less' : 'Read more'}
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+        </button>
+      )}
+    </div>
+  );
+};
+
 const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
   const notForMe = onNotForMe && <NotForMeButton pick={pick} onNotForMe={onNotForMe} disabled={disabled} />;
 
@@ -80,7 +113,7 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
               {[pick.year, hoursText(pick.hours), platformsText(pick.platforms)].filter(Boolean).join(' · ')}
             </p>
             <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
-            <p className="text-sm text-slate-200 leading-relaxed mt-1"><RichText text={pick.why} /></p>
+            <Why text={pick.why} defaultOpen className="text-sm text-slate-200 leading-relaxed mt-1" />
           </div>
         </article>
       </Link>
@@ -101,7 +134,7 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
           <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
           {hoursText(pick.hours) && <span className="text-xs text-slate-400">· {hoursText(pick.hours)}</span>}
         </span>
-        <p className="text-sm text-slate-300 leading-snug line-clamp-3"><RichText text={pick.why} /></p>
+        <Why text={pick.why} className="text-sm text-slate-300 leading-snug" />
       </div>
     </>
   );

@@ -1,3 +1,4 @@
+import { reigningWeek } from '../lib/gotw.js';
 import { prisma } from '../lib/db.js';
 import * as igdb from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
@@ -156,7 +157,9 @@ export const getGameById = async (req, res) => {
       return res.status(404).json({ error: 'Game not found' });
     }
 
-    res.json(toClientGame(game));
+    // A gold "Game of the Week" badge on the page during its reign (never blocks the page)
+    const gameOfTheWeek = await reigningWeek(id).catch(() => null);
+    res.json({ ...toClientGame(game), gameOfTheWeek });
   } catch (error) {
     console.error(`Error fetching game ${req.params.id}:`, error);
     res.status(500).json({ error: 'Internal server error' });

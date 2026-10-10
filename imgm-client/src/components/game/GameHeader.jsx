@@ -5,6 +5,7 @@
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Crown } from 'lucide-react';
 import SentimentBadge from '../SentimentBadge';
 import ImgmRating from './ImgmRating';
 
@@ -74,6 +75,15 @@ const GameHeader = ({ game }) => {
                 )}
                 {releaseYear && <span className="text-slate-400">• {releaseYear}</span>}
                 {game.aiSentiment && <SentimentBadge sentiment={game.aiSentiment} size="sm" />}
+                {/* Its reign as Game of the Week: a gold badge for the whole week */}
+                {game.gameOfTheWeek && (
+                  <Link
+                    to="/game-of-the-week"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-300 text-slate-950 text-xs font-black uppercase tracking-[0.15em] shadow-[0_0_20px_-4px_rgb(251_191_36/0.7)] hover:brightness-110 transition"
+                  >
+                    <Crown className="w-3.5 h-3.5" aria-hidden="true" /> Game of the Week
+                  </Link>
+                )}
               </div>
             </div>
 

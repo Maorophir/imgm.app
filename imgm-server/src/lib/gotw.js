@@ -233,4 +233,17 @@ export const voterStats = async (userId, currentWeekId) => {
   return { streak, winnersPicked, kingmaker: winnersPicked >= KINGMAKER_AT };
 };
 
+// The reign of a game that's the Game of the Week right now: { from, until } or null
+export const reigningWeek = async (gameId) => {
+  await currentWeek(); // closes a week that just ended, crowning its winner
+  const crowned = await prisma.gotwWeek.findFirst({
+    where: { closedAt: { not: null }, winnerId: { not: null } },
+    orderBy: { startsAt: 'desc' },
+    select: { winnerId: true, endsAt: true },
+  });
+  if (crowned?.winnerId !== gameId) return null;
+  const until = new Date(crowned.endsAt.getTime() + 7 * DAY);
+  return Date.now() < until.getTime() ? { from: crowned.endsAt, until } : null;
+};
+
 export { tallyOf };
