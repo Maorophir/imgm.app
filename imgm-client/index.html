@@ -4,15 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>I Am Gaming (Beta)</title>
-    <!-- PREVIEW: ?look=glass tries the Liquid Glass look (remembered on this browser),
-         ?look=dark goes back -->
-    <script>
-      try {
-        var look = new URLSearchParams(location.search).get('look');
-        if (look === 'glass' || look === 'dark') localStorage.setItem('imgm-look', look);
-        if (localStorage.getItem('imgm-look') === 'glass') document.documentElement.dataset.look = 'glass';
-      } catch (e) {}
-    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- Brand fonts: Anton (the "I AM GAMING." headline) + Chakra Petch (the IMGM wordmark) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
