@@ -6,8 +6,8 @@
  * rule). Deleting asks why (anonymous) and is permanent.
  */
 import { useEffect, useState } from 'react';
-import { KeyRound, TriangleAlert } from 'lucide-react';
-import { authClient } from '../../lib/authClient';
+import { BadgeCheck, KeyRound, Mail, TriangleAlert } from 'lucide-react';
+import { authClient, useSession } from '../../lib/authClient';
 import { deleteMyAccount, getMyAccount } from '../../lib/api';
 
 const field = 'w-full rounded-xl bg-slate-950 border border-slate-700 focus:border-brand outline-none px-3 py-2.5 text-white placeholder:text-slate-500';
@@ -124,6 +124,37 @@ const DeleteAccount = ({ hasPassword }) => {
   );
 };
 
+// Your email, and whether it's confirmed (with "send it again")
+const EmailStatus = () => {
+  const { data: session } = useSession();
+  const [sent, setSent] = useState(null); // 'sent' | 'error'
+  const user = session?.user;
+  if (!user) return null;
+  const resend = async () => {
+    const { error } = await authClient.sendVerificationEmail({ email: user.email, callbackURL: `${window.location.origin}/?verified=1` });
+    setSent(error ? 'error' : 'sent');
+  };
+  return (
+    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col gap-2">
+      <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500"><Mail className="w-3.5 h-3.5" aria-hidden="true" /> Email</p>
+      <p className="text-white font-semibold break-all">{user.email}</p>
+      {user.emailVerified ? (
+        <p className="inline-flex items-center gap-1.5 text-sm text-emerald-300"><BadgeCheck className="w-4 h-4" aria-hidden="true" /> Confirmed</p>
+      ) : (
+        <p className="text-sm text-amber-200">
+          Not confirmed yet.{' '}
+          {sent === 'sent' ? (
+            <span className="text-emerald-300">Sent! Check your inbox.</span>
+          ) : (
+            <button type="button" onClick={resend} className="font-bold underline underline-offset-2 hover:text-white">Send the email again</button>
+          )}
+          {sent === 'error' && <span className="text-red-300"> Couldn't send it, please try later.</span>}
+        </p>
+      )}
+    </div>
+  );
+};
+
 const AccountSettings = () => {
   const [account, setAccount] = useState(null); // { hasPassword, providers }
   useEffect(() => {
@@ -135,6 +166,7 @@ const AccountSettings = () => {
   const google = account.providers.includes('google');
   return (
     <>
+      <EmailStatus />
       <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col gap-4">
         <div>
           <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500"><KeyRound className="w-3.5 h-3.5" aria-hidden="true" /> Password</p>

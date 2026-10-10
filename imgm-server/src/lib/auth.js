@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
 import { clientOrigins } from "./config.js";
-import { resetPasswordEmail, sendEmail } from "./email.js";
+import { resetPasswordEmail, sendEmail, welcomeEmail, welcomeVerifyEmail } from "./email.js";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000",
@@ -31,6 +31,30 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: clientOrigins,
+  // Email sign-ups get a welcome email with a "Confirm my email" button (logging in
+  // doesn't wait for it; Settings shows the status and can send it again)
+  emailVerification: {
+    sendOnSignUp: true,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      sendEmail({ to: user.email, ...welcomeVerifyEmail(url) }).catch((error) =>
+        console.error('Welcome email failed:', error.message)
+      );
+    },
+  },
+  // Google sign-ups arrive already confirmed: they get a plain welcome instead
+  databaseHooks: {
+    user: {
+      create: {
+        after: async (user) => {
+          if (!user.emailVerified) return; // email sign-ups: the confirm email is the welcome
+          sendEmail({ to: user.email, ...welcomeEmail(clientOrigins[0]) }).catch((error) =>
+            console.error('Welcome email failed:', error.message)
+          );
+        },
+      },
+    },
+  },
   // The gamer tag travels with the session (so the site knows who still needs to
   // pick one). input: false = Better Auth's own update routes can't change these;
   // only our /api/users routes can, and they enforce the name rules + 30-day limit.

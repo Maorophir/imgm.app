@@ -57,3 +57,50 @@ export const resetPasswordEmail = (url) => ({
   </div>
 </div>`,
 });
+
+// The frame every IMGM email shares: black card, white text, a lime button
+const emailFrame = (title, intro, button, note) => `
+<div style="background:#0a0a0a;padding:40px 16px;font-family:Arial,Helvetica,sans-serif">
+  <div style="max-width:480px;margin:0 auto;background:#141414;border:1px solid #262626;border-radius:16px;padding:32px">
+    <p style="margin:0 0 24px;font-size:22px;font-weight:900;letter-spacing:4px;color:#ffffff">IMGM<span style="color:#b8f03a">.</span></p>
+    <h1 style="margin:0 0 12px;font-size:22px;color:#ffffff">${title}</h1>
+    <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#d4d4d4">${intro}</p>
+    <a href="${button.url}" style="display:inline-block;background:#b8f03a;color:#0a0a0a;font-weight:700;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:10px">${button.label}</a>
+    ${note ? `<div style="margin:28px 0 0;padding:16px;border-radius:10px;background:#1c1c1c;border:1px solid #262626"><p style="margin:0;font-size:14px;line-height:1.6;color:#d4d4d4">${note}</p></div>` : ''}
+    <p style="margin:24px 0 0;font-size:13px;color:#737373">See you in the reviews,<br>IMGM</p>
+  </div>
+</div>`;
+
+const WHAT_TO_DO =
+  'Review the games you play as quick quests (and earn XP and badges), let Play Next pick your next 5 games, and vote for the Game of the Week.';
+
+/** After an email sign-up (and when asked again): welcome, and please confirm your email. */
+export const welcomeVerifyEmail = (url) => ({
+  subject: 'Welcome to IMGM: confirm your email',
+  text: [
+    'Welcome to IMGM, player one!',
+    '',
+    WHAT_TO_DO,
+    '',
+    'One quick thing: confirm this is your email address:',
+    url,
+    '',
+    "Didn't sign up? Just ignore this email.",
+    '',
+    'See you in the reviews,',
+    'IMGM',
+  ].join('\n'),
+  html: emailFrame(
+    'Welcome to IMGM, player one!',
+    `${WHAT_TO_DO}<br><br>One quick thing: confirm this is your email address.`,
+    { url, label: 'Confirm my email' },
+    "<strong style=\"color:#ffffff\">Didn't sign up?</strong> Just ignore this email: nothing happens without this link."
+  ),
+});
+
+/** After a Google sign-up (Google already confirmed the email): just a welcome. */
+export const welcomeEmail = (siteUrl) => ({
+  subject: 'Welcome to IMGM!',
+  text: ['Welcome to IMGM, player one!', '', WHAT_TO_DO, '', `Jump in: ${siteUrl}`, '', 'See you in the reviews,', 'IMGM'].join('\n'),
+  html: emailFrame('Welcome to IMGM, player one!', WHAT_TO_DO, { url: siteUrl, label: 'Start playing' }),
+});

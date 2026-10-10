@@ -84,16 +84,20 @@ const Home = () => {
   const goToPage = (next) => setPage((next + pageCount) % pageCount);
   const heroImage = currentGame?.artworks?.[0] ?? currentGame?.coverUrl;
 
-  // Just deleted their account: a goodbye (the page loaded fresh, logged out)
+  // A one-line notice after leaving or confirming an email (the address says which)
   const [searchParams, setSearchParams] = useSearchParams();
-  const goodbye = searchParams.get('goodbye') === '1';
+  const notice = searchParams.get('goodbye') === '1'
+    ? { title: 'Your account is deleted.', text: "Thanks for playing with us. You're always welcome back." }
+    : searchParams.get('verified') === '1'
+      ? { title: 'Email confirmed.', text: 'Welcome to IMGM, player one!' }
+      : null;
 
   return (
     <>
-      {goodbye && (
+      {notice && (
         <div role="status" className="relative z-20 max-w-3xl mx-auto mt-6 mx-4 md:mx-auto flex items-center justify-between gap-4 rounded-2xl border border-slate-700 bg-slate-900/90 px-5 py-4">
           <p className="text-slate-200">
-            <span className="font-bold text-white">Your account is deleted.</span> Thanks for playing with us. You're always welcome back.
+            <span className="font-bold text-white">{notice.title}</span> {notice.text}
           </p>
           <button type="button" onClick={() => setSearchParams({})} className="text-sm font-bold text-slate-400 hover:text-white">Close</button>
         </div>

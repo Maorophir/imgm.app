@@ -3,12 +3,12 @@
  *
  * The games you saved to play later. "My order" is yours to arrange (new games land
  * on top; move any game up, down, to the top or the bottom); the other views just
- * sort for a moment. "Finished" takes a game off the list. Reviewing never does it by
- * itself: plenty of players review mid-game.
+ * sort for a moment. Each game: Review (or edit your review) and ✕ to remove it.
+ * Reviewing never removes a game by itself: plenty of players review mid-game.
  */
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Bookmark, Check, ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, PenLine, Sparkles, Star, X } from 'lucide-react';
+import { Bookmark, ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, PenLine, Sparkles, Star, X } from 'lucide-react';
 import { getBacklog, reorderBacklog } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import { useBacklog } from '../context/BacklogContext';
@@ -79,7 +79,7 @@ const Backlog = () => {
           <h1 className="font-display text-5xl md:text-6xl uppercase tracking-tight text-white">
             Backlog<span className="text-brand">.</span>
           </h1>
-          <p className="text-slate-400 mt-2">Games you saved to play later. Done with one? Mark it finished.</p>
+          <p className="text-slate-400 mt-2">Games you saved to play later. Done with one? Take it off with the ✕.</p>
         </div>
         {kept.length > 1 && (
           <label className="flex items-center gap-2 text-sm text-slate-400">
@@ -156,18 +156,10 @@ const Backlog = () => {
                   </p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => backlog.toggle(game.id)}
-                    title="Finished it: take it off your Backlog"
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold bg-brand text-slate-950 hover:brightness-110 transition"
-                  >
-                    <Check className="w-4 h-4" aria-hidden="true" /> <span className="hidden sm:inline">Finished</span>
-                  </button>
                   <Link
                     to={`/game/${game.id}/review`}
                     title={item.myRating ? 'Edit your review' : 'Review it'}
-                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-200 hover:text-white hover:border-slate-500 transition"
+                    className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-sm font-bold bg-brand text-slate-950 hover:brightness-110 transition"
                   >
                     <PenLine className="w-4 h-4" aria-hidden="true" /> <span className="hidden sm:inline">{item.myRating ? 'Edit review' : 'Review'}</span>
                   </Link>
@@ -175,8 +167,8 @@ const Backlog = () => {
                     type="button"
                     onClick={() => backlog.toggle(game.id)}
                     aria-label={`Remove ${game.title} from your Backlog`}
-                    title="Not interested anymore: remove it"
-                    className="hidden sm:inline-flex items-center justify-center px-3 py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition"
+                    title="Remove it from your Backlog"
+                    className="inline-flex items-center justify-center px-3 py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 transition"
                   >
                     <X className="w-4 h-4" aria-hidden="true" />
                   </button>
