@@ -13,6 +13,7 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-6 py-8 flex flex-wrap items-center justify-between gap-4 text-sm text-slate-500">
         <p>IMGM · I Am Gaming <span className="text-slate-600">· beta</span></p>
         <nav className="flex gap-5">
+          <Link to="/terms" className="hover:text-white transition">Terms</Link>
           <Link to="/privacy" className="hover:text-white transition">Privacy</Link>
           <button type="button" onClick={openFeedback} className="hover:text-white transition">Send feedback</button>
         </nav>

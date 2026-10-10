@@ -193,6 +193,13 @@ function Auth() {
           Continue with Google
         </button>
 
+        {/* Signing up (or in with Google, which can create an account) means agreeing */}
+        <p className="mt-4 text-center text-xs text-slate-500">
+          By continuing, you agree to IMGM's{' '}
+          <Link to="/terms" className="text-slate-300 hover:text-white underline underline-offset-2">Terms of Use</Link> and{' '}
+          <Link to="/privacy" className="text-slate-300 hover:text-white underline underline-offset-2">Privacy Policy</Link>.
+        </p>
+
         <p className="mt-8 text-center text-sm text-slate-400">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button

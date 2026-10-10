@@ -11,6 +11,7 @@ import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
 import GameOfTheWeek from './pages/GameOfTheWeek';
+import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import BackToTop from './components/BackToTop';
 import Footer from './components/Footer';
@@ -77,6 +78,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           <Route path="/backlog" element={<Backlog />} />
           <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Auth />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
