@@ -14,7 +14,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import PlayerVerdict from '../components/game/PlayerVerdict';
 import GamePicker from '../components/reviewQuest/GamePicker';
 import { getRarity } from '../components/reviewQuest/questOptions';
-import { Check, Clock, Crown, Flame, Gem, Heart, Landmark, PartyPopper, Sparkles, ThumbsUp, Trophy, TrendingUp, Users } from 'lucide-react';
+import { Check, Clock, Crown, LogIn, Vote, Flame, Gem, Heart, Landmark, PartyPopper, Sparkles, ThumbsUp, Trophy, TrendingUp, Users } from 'lucide-react';
 import { getGame, getGameReviews, getGotw, getGotwHistory, nominateGotw, voteGotw } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import LoadError from '../components/LoadError';
@@ -61,16 +61,16 @@ const Crowned = ({ gotw, timeZone, pickedWinner }) => {
   const reignEnds = new Date(new Date(gotw.reignsFrom).getTime() + 6 * 24 * 60 * 60 * 1000);
   const share = gotw.totalVotes ? Math.round((gotw.votes / gotw.totalVotes) * 100) : null;
   return (
-    <div className="relative overflow-hidden rounded-3xl border border-amber-300/30 min-h-[360px] flex items-end">
+    // The animated gold foil frame of a Legendary review card (index.css .rarity-frame)
+    <div className="rarity-frame is-legendary !rounded-[28px] shadow-[0_0_60px_-10px_rgb(251_191_36/0.45)]">
+    <div className="relative overflow-hidden rounded-[25px] min-h-[380px] flex items-end bg-slate-950">
       {art && <img src={art} alt="" className="absolute inset-0 w-full h-full object-cover" />}
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/75 to-slate-950/20" />
       <div className="relative p-6 md:p-10 flex flex-col md:flex-row md:items-end gap-6 w-full">
         {game.coverUrl && <img src={game.coverUrl} alt="" className="hidden md:block w-36 rounded-xl shadow-2xl border border-white/10" />}
         <div className="flex-1 min-w-0">
-          <p className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-300 text-slate-950 text-xs font-black uppercase tracking-[0.2em]">
-            <Crown className="w-4 h-4" aria-hidden="true" /> Game of the Week
-          </p>
-          <p className="mt-3 text-sm font-semibold text-slate-300">
+          {/* (the "Game of the Week" crown header sits above the frame) */}
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-300">
             {day(gotw.reignsFrom, timeZone)} – {day(reignEnds, timeZone)}
           </p>
           <h2 className="font-display text-5xl md:text-7xl uppercase tracking-tight text-white leading-none mt-1">{game.title}</h2>
@@ -89,10 +89,11 @@ const Crowned = ({ gotw, timeZone, pickedWinner }) => {
         </Link>
       </div>
     </div>
+    </div>
   );
 };
 
-const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfirm, onCancel, busy, xp }) => {
+const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfirm, onCancel, busy, xp, canVote }) => {
   const { game, slot, votes } = candidate;
   const { label, Icon } = SLOTS[slot] ?? SLOTS.popular;
   const share = voted && total ? Math.round((votes / total) * 100) : 0;
@@ -129,7 +130,7 @@ const Candidate = ({ candidate, mine, voted, total, confirming, onPick, onConfir
           <p className="mt-auto inline-flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-sm font-bold bg-brand text-slate-950">
             <Check className="w-4 h-4" aria-hidden="true" /> Your vote
           </p>
-        ) : voted ? null : confirming ? (
+        ) : voted || !canVote ? null : confirming ? (
           // Votes are final: one more click to be sure
           <div className="mt-auto flex flex-col gap-2 animate-fade-in">
             <p className="text-xs text-slate-300 text-center">Lock in your vote for +{xp} XP? You can't change it this week.</p>
@@ -288,7 +289,6 @@ const PastWinners = ({ timeZone }) => {
 
 const GameOfTheWeek = () => {
   const { data: session } = useSession();
-  const navigate = useNavigate();
   const [data, setData] = useState(null);
   const [error, setError] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -307,13 +307,7 @@ const GameOfTheWeek = () => {
     return () => controller.abort();
   }, [session?.user?.id, attempt]);
 
-  const pick = (gameId) => {
-    if (!session) {
-      navigate('/login?redirect=%2Fgame-of-the-week');
-      return;
-    }
-    setConfirming(gameId);
-  };
+  const pick = (gameId) => setConfirming(gameId);
 
   const vote = async (gameId) => {
     setBusy(true);
@@ -347,14 +341,25 @@ const GameOfTheWeek = () => {
 
   return (
     <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col gap-14">
-      <section>
-        <p className="text-xs font-black uppercase tracking-[0.25em] text-brand mb-4">Game of the Week</p>
+      {/* The throne: this week's winner, in gold */}
+      <section className="relative rounded-[2.5rem] border border-amber-300/20 bg-gradient-to-b from-amber-300/[0.07] via-slate-900/30 to-transparent px-4 py-8 md:p-10 flex flex-col gap-12">
+        <header className="flex items-center justify-center gap-4 text-amber-300">
+          <span className="h-px w-16 md:w-32 bg-gradient-to-r from-transparent to-amber-300/60" />
+          <span className="flex flex-col items-center gap-1">
+            <Crown className="w-7 h-7" aria-hidden="true" />
+            <span className="text-xs md:text-sm font-black uppercase tracking-[0.35em]">Game of the Week</span>
+          </span>
+          <span className="h-px w-16 md:w-32 bg-gradient-to-l from-transparent to-amber-300/60" />
+        </header>
         <Crowned gotw={data.gameOfTheWeek} timeZone={week.timeZone} pickedWinner={data.me?.pickedWinner} />
+        {data.gameOfTheWeek && <CrownedDetails gameId={data.gameOfTheWeek.game.id} />}
       </section>
 
-      {data.gameOfTheWeek && <CrownedDetails gameId={data.gameOfTheWeek.game.id} />}
-
-      <section>
+      {/* The ballot: next week's vote, in lime */}
+      <section className="rounded-[2.5rem] border border-slate-800 bg-slate-900/40 px-4 py-8 md:p-10 shadow-[inset_0_3px_0_var(--color-brand)]">
+        <p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.3em] text-brand mb-3">
+          <Vote className="w-4 h-4" aria-hidden="true" /> The ballot · voting now
+        </p>
         <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
           <div>
             <h1 className="text-3xl font-bold text-white">
@@ -384,12 +389,32 @@ const GameOfTheWeek = () => {
               onCancel={() => setConfirming(null)}
               busy={busy}
               xp={data.me?.voteXp ?? 5}
+              canVote={Boolean(session)}
             />
           ))}
         </ul>
         <p className="mt-4 text-sm text-slate-500">
-          {voted ? `${totalVotes} ${totalVotes === 1 ? 'player has' : 'players have'} voted so far.` : session ? 'Results show once you vote.' : 'Log in to vote. Results show once you vote.'}
+          {voted ? `${totalVotes} ${totalVotes === 1 ? 'player has' : 'players have'} voted so far.` : session ? 'Results show once you vote.' : ''}
         </p>
+        {!session && (
+          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-950/60 p-6 flex flex-col md:flex-row md:items-center gap-5">
+            <span className="w-12 h-12 rounded-2xl grid place-items-center bg-brand/10 border border-brand/30 text-brand shrink-0">
+              <Vote className="w-6 h-6" aria-hidden="true" />
+            </span>
+            <div className="flex-1">
+              <p className="font-bold text-white text-lg">Log in to vote</p>
+              <p className="text-sm text-slate-400 mt-0.5">
+                Pick next week's Game of the Week, see the live results, nominate a game, and earn XP for every vote.
+              </p>
+            </div>
+            <Link
+              to="/login?redirect=%2Fgame-of-the-week"
+              className="inline-flex items-center gap-2 self-start md:self-auto px-6 py-3 rounded-full font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition"
+            >
+              <LogIn className="w-4 h-4" aria-hidden="true" /> Log in to vote
+            </Link>
+          </div>
+        )}
         {session && <div className="mt-8"><Nominate nomination={data.me?.nomination ?? null} onChange={nominate} busy={busy} /></div>}
       </section>
 

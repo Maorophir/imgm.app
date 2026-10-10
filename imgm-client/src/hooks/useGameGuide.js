@@ -262,7 +262,15 @@ export function useGameGuide(userId) {
       if (!controller.signal.aborted) dispatch({ type: "ended" });
     } catch (error) {
       if (!controller.signal.aborted)
-        dispatch({ type: "error", message: error.message });
+        dispatch({
+          type: "error",
+          // The browser's own words for a dropped connection ("network error",
+          // "Failed to fetch"…) mean nothing to a player
+          message:
+            error instanceof TypeError
+              ? "Lost the connection to Play Next. Please try again."
+              : error.message,
+        });
     }
     clearInterval(watchdog);
     if (!controller.signal.aborted) finishedRef.current = true;
