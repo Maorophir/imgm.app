@@ -38,6 +38,7 @@ export const auth = betterAuth({
       username: { type: "string", required: false, input: false },
       displayUsername: { type: "string", required: false, input: false },
       usernameChangedAt: { type: "date", required: false, input: false },
+      avatarUpdatedAt: { type: "date", required: false, input: false }, // set by /api/users/me/avatar
     },
   },
 });

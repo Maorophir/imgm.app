@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 
 from imgm_ai.data.db import connect
 from imgm_ai.models.llm import get_model
+from imgm_ai.moderation import mask_profanity
 from imgm_ai.summary.prompts import REQUEST, RETRY_PROMPT, REVIEW, SYSTEM_PROMPT
 
 log = logging.getLogger("imgm_ai.summary")
@@ -97,11 +98,12 @@ def load_reviews(game_id: int) -> tuple[str | None, int, list[dict]]:
 def clean(text: str | None, limit: int = TEXT_LIMIT) -> str:
     """Player text made safe to place in the prompt.
 
-    Tags are neutralized (a review can't close its <review> element or open a fake one),
-    links are dropped, control characters and runs of whitespace are flattened.
+    Swearing is masked, tags are neutralized (a review can't close its <review> element
+    or open a fake one), links are dropped, control characters and whitespace flattened.
     """
     if not text:
         return ""
+    text = mask_profanity(text)  # "f***ing": what the model never sees, it can't repeat
     text = text.replace("<", "‹").replace(">", "›")
     text = LINK.sub("[link]", text)
     text = re.sub(r"[\x00-\x1f\x7f]+", " ", text)

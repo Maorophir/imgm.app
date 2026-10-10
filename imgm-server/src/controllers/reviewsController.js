@@ -13,8 +13,9 @@ import { refreshGameSummary } from '../lib/aiSummary.js';
 // What we send back for each review: the author and the "X meets Y" games
 const REVIEW_INCLUDE = {
   analysis: true,
-  // Public author info = the gamer tag only (never the real name or Google photo)
-  user: { select: { id: true, displayUsername: true } },
+  // Public author info = the gamer tag + their IMGM profile picture (never the real
+  // name or the Google photo)
+  user: { select: { id: true, displayUsername: true, avatarUpdatedAt: true } },
   comparedA: { select: { id: true, title: true, coverUrl: true } },
   comparedB: { select: { id: true, title: true, coverUrl: true } },
 };

@@ -28,6 +28,10 @@ model User {
   username          String?   @unique
   displayUsername   String?
   usernameChangedAt DateTime? // for the 30-day change limit
+  // Profile picture (checked by SafeSearch; the image is in UserAvatar). Also its
+  // cache-buster: the picture's address carries this time, so a new one shows at once
+  avatarUpdatedAt   DateTime?
+  avatar            UserAvatar?
   accounts      Account[]
   
   // Custom IMGM relations
@@ -306,4 +310,13 @@ model GotwNomination {
 
   @@id([weekId, userId])
   @@index([weekId, gameId])
+}
+
+// A player's profile picture: a small image (256px) that passed the SafeSearch check
+model UserAvatar {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Bytes
+  mime      String
+  updatedAt DateTime @updatedAt
 }

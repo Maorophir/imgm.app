@@ -22,6 +22,7 @@ POST /guide/stream answers with Server-Sent Events (SSE), in this order:
     error    {message, code?}             something broke (code "chat_full": start a new chat)
 """
 
+import base64
 import json
 import logging
 import os
@@ -43,6 +44,7 @@ from imgm_ai.data import imgm_api
 from imgm_ai.models.llm import model_names
 from imgm_ai.rag.store import index_review, sync_reviews
 from imgm_ai.summary import summarize_game
+from imgm_ai.pictures import check_image
 
 log = logging.getLogger("imgm_ai.server")
 # Our own info/warning lines (model skips, catch-ups) show up in Cloud Run's logs
@@ -465,6 +467,26 @@ def summarize(game_id: int, x_internal_key: str | None = Header(default=None)) -
     if result is None:
         raise HTTPException(status_code=422, detail="Not enough reviews for a summary")
     return result
+
+
+# ── Profile pictures (called by Express, never by browsers) ──
+
+
+class ImageCheck(BaseModel):
+    image_base64: str = Field(max_length=450_000)  # ~300 KB of image
+
+
+@app.post("/moderation/image")
+def moderate_image(
+    body: ImageCheck, x_internal_key: str | None = Header(default=None)
+) -> dict:
+    """Is this picture fine to show as a profile picture? (pictures.py)"""
+    check_internal_key(x_internal_key)
+    try:
+        data = base64.b64decode(body.image_base64, validate=True)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Not a valid image")
+    return check_image(data)
 
 
 # ── Review index (called by Express, never by browsers) ──

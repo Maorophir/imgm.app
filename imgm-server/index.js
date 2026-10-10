@@ -19,6 +19,8 @@ app.use(cors({
 }));
 // A saved Play Next chat (up to 10 answers with their picks) can pass the default 100 KB
 app.use('/api/guide/chats', express.json({ limit: '400kb' }));
+// A profile picture (up to ~300 KB, sent as base64) passes the default 100 KB
+app.use('/api/users/me/avatar', express.json({ limit: '500kb' }));
 app.use(express.json());
 
 // Import routes
