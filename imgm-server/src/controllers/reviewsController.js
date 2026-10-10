@@ -174,9 +174,9 @@ export const saveReview = async (req, res) => {
       update: data,
       include: REVIEW_INCLUDE,
     });
-    // In their Backlog? The quest's done screen offers to remove it (never automatic:
-    // plenty of players review mid-game)
-    const inBacklog = (await prisma.backlogItem.count({ where: { userId: user.id, gameId } })) > 0;
+    // Still to play in their Backlog? The quest's done screen asks if they finished it
+    // (never automatic: plenty of players review mid-game)
+    const inBacklog = (await prisma.backlogItem.count({ where: { userId: user.id, gameId, finishedAt: null } })) > 0;
     notifyReviewChanged(review.id); // Play Next's search picks up the new words
     refreshGameSummary(gameId); // the game's "what players think", if it's due
 

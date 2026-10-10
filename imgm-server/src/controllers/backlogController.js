@@ -1,7 +1,8 @@
 /**
  * The Backlog: games a player wants to play later. The cycle the site is built around:
- * add (from Play Next, a game page, the Hall of Fame…) → play → review → "Finished"
- * (the player removes it; after a review the quest offers to, since many review mid-game).
+ * add (from Play Next, a game page, the Hall of Fame…) → play → review → "Finished it"
+ * (the game stays, under Finished; after a review the quest offers it, since many review
+ * mid-game). Removing (✕) is separate: for games the player gave up on or added by mistake.
  * Games keep the player's own order (position): new ones go on top, and they can move them.
  */
 import { z } from 'zod';
@@ -44,6 +45,7 @@ export const getBacklog = async (req, res) => {
         game: item.game,
         source: item.source,
         addedAt: item.addedAt,
+        finishedAt: item.finishedAt, // null = still to play
         myRating: mine.get(item.gameId) ?? null, // reviewed it already (maybe mid-game)
         average: byGame.get(item.gameId)?._avg.rating ?? null,
         reviewCount: byGame.get(item.gameId)?._count._all ?? 0,
@@ -106,6 +108,26 @@ export const removeFromBacklog = async (req, res) => {
     res.status(204).end();
   } catch (error) {
     console.error('Error removing from the Backlog:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// PUT /api/backlog/:gameId/finished  { finished } — finished it (or not after all)
+export const setFinished = async (req, res) => {
+  const gameId = Number.parseInt(req.params.gameId, 10);
+  const body = z.object({ finished: z.boolean() }).safeParse(req.body ?? {});
+  if (Number.isNaN(gameId) || !body.success) return res.status(400).json({ error: 'Invalid request' });
+  try {
+    const user = await requireLogin(req, res);
+    if (!user) return;
+    const { count } = await prisma.backlogItem.updateMany({
+      where: { userId: user.id, gameId },
+      data: { finishedAt: body.data.finished ? new Date() : null },
+    });
+    if (count === 0) return res.status(404).json({ error: 'That game is not in your Backlog.' });
+    res.status(204).end();
+  } catch (error) {
+    console.error('Error marking a Backlog game finished:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

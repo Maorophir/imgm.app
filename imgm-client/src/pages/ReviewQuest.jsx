@@ -13,11 +13,10 @@
  *     posting updates that review (one review per person per game).
  */
 import { ArrowBigUp, BookmarkCheck, CircleCheck, Clapperboard, Combine, Drama, Gamepad2, Layers, ListChecks, Monitor, PartyPopper, PenLine, Pencil, Scale, Star, Timer, Trash2, Zap } from 'lucide-react';
-import { useBacklog } from '../context/BacklogContext';
 import ArtIcon from '../components/ArtIcon';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { getGame, getMyReview, saveReview, deleteMyReview } from '../lib/api';
+import { getGame, getMyReview, saveReview, deleteMyReview, setBacklogFinished } from '../lib/api';
 import { refreshMyProgress } from '../hooks/useMyProgress';
 import { getProgress } from '../lib/levels';
 import { XpBar } from '../components/LevelBadge';
@@ -113,14 +112,14 @@ const saveErrorMessage = (err) => {
 };
 
 // After a review of a game in their Backlog: finished, or still playing? (Their call:
-// many players review mid-game, so it's never removed by itself.)
+// many players review mid-game, so it's never marked by itself.) Finished games stay in
+// the Backlog, under Finished.
 const BacklogPrompt = ({ gameId, title }) => {
-  const backlog = useBacklog();
-  const [answer, setAnswer] = useState(null); // 'removed' | 'kept'
-  if (answer === 'removed') {
+  const [answer, setAnswer] = useState(null); // 'finished' | 'kept'
+  if (answer === 'finished') {
     return (
       <p className="mx-auto -mt-3 mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-brand/15 border border-brand/60 text-sm font-bold text-white">
-        <BookmarkCheck className="w-4 h-4 text-brand" aria-hidden="true" /> Quest complete! {title} is off your Backlog.
+        <BookmarkCheck className="w-4 h-4 text-brand" aria-hidden="true" /> Quest complete! {title} is in your Finished games.
       </p>
     );
   }
@@ -135,12 +134,12 @@ const BacklogPrompt = ({ gameId, title }) => {
         <button
           type="button"
           onClick={() => {
-            backlog?.toggle(gameId);
-            setAnswer('removed');
+            setBacklogFinished(gameId, true).catch(() => {});
+            setAnswer('finished');
           }}
           className="py-2 rounded-xl text-sm font-bold bg-brand text-slate-950 hover:brightness-110 transition"
         >
-          Finished, remove it
+          Finished it
         </button>
         <button type="button" onClick={() => setAnswer('kept')} className="py-2 rounded-xl text-sm font-bold border border-slate-700 text-slate-200 hover:text-white transition">
           Still playing
