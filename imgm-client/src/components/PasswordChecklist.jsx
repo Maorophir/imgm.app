@@ -1,19 +1,15 @@
 /**
  * The password rules under a new-password field, ticking off live as the player types
- * (lime = met). Shown once they start typing. "Hard to guess" says why when it's the
- * only one missing (too common, or your email's name).
+ * (lime = met). Shown once they start typing.
  */
 import { Check } from 'lucide-react';
-import { passwordChecklist, passwordProblems } from '../lib/passwordRules';
+import { passwordChecklist } from '../lib/passwordRules';
 
-const PasswordChecklist = ({ password, email }) => {
+const PasswordChecklist = ({ password }) => {
   if (!password) return null;
-  const rules = passwordChecklist(password, email);
-  const why = rules.slice(0, -1).every((r) => r.ok) && !rules.at(-1).ok && passwordProblems(password, email)[0];
   return (
-    <>
     <ul className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs" aria-label="Password rules">
-      {rules.map((rule) => (
+      {passwordChecklist(password).map((rule) => (
         <li key={rule.label} className={`flex items-center gap-1.5 ${rule.ok ? 'text-brand' : 'text-slate-500'}`}>
           {rule.ok ? (
             <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={3} aria-hidden="true" />
@@ -27,8 +23,6 @@ const PasswordChecklist = ({ password, email }) => {
         </li>
       ))}
     </ul>
-    {why && <p className="mt-1.5 text-xs text-amber-300">{why}</p>}
-    </>
   );
 };
 

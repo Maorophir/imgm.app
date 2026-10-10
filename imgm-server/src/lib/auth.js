@@ -1,6 +1,6 @@
 import { beforeAccountDeleted, afterAccountDeleted } from './accountCleanup.js';
 import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { passwordProblems } from "./passwordRules.js";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
@@ -33,8 +33,7 @@ export const auth = betterAuth({
     before: createAuthMiddleware(async (ctx) => {
       const field = { "/sign-up/email": "password", "/change-password": "newPassword", "/reset-password": "newPassword" }[ctx.path];
       if (!field) return;
-      const email = ctx.body?.email ?? (ctx.path === "/change-password" ? (await getSessionFromCtx(ctx))?.user.email : "");
-      const [problem] = passwordProblems(ctx.body?.[field], email ?? "");
+      const [problem] = passwordProblems(ctx.body?.[field]);
       if (problem) throw new APIError("BAD_REQUEST", { message: problem, code: "WEAK_PASSWORD" });
     }),
   },

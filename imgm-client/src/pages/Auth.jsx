@@ -39,7 +39,7 @@ function Auth() {
         await refreshSession(); // every page knows about the login before we move on
         navigate(redirectTo);
       } else {
-        const [weak] = passwordProblems(password, email); // the checklist shows them all
+        const [weak] = passwordProblems(password); // the checklist shows them all
         if (weak) throw new Error(weak);
         // Better Auth needs a name; it stays private (the public gamer tag is chosen next)
         // callbackURL: where the welcome email's "Confirm my email" button lands
@@ -177,7 +177,7 @@ function Auth() {
               className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/40 transition placeholder-slate-500"
               placeholder="••••••••"
             />
-            {!isLogin && <PasswordChecklist password={password} email={email} />}
+            {!isLogin && <PasswordChecklist password={password} />}
           </div>
 
           <button

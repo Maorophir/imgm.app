@@ -1,5 +1,5 @@
 /**
- * Settings — Route: /settings (the cog on your profile, or the player menu)
+ * Settings — Route: /settings (reached from the cog on your profile)
  *
  *   gamer tag       change it once every 30 days (changing only its capitals: any time)
  *   password        change it (Google accounts manage theirs at Google)
