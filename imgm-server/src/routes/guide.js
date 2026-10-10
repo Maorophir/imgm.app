@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { requireUser, getSessionUser } from '../lib/session.js';
-import { canUsePlayNext } from '../lib/config.js';
+import { canUsePlayNext, playNextEnabled } from '../lib/config.js';
 import { streamGuide, wakeGuide } from '../controllers/guideController.js';
 import { listChats, getChat, saveChat, deleteChat } from '../controllers/playNextChatsController.js';
 
@@ -41,7 +41,10 @@ const playNextAccess = (req, res, next) =>
   canUsePlayNext(req.user.id) ? next() : res.status(404).json({ error: 'Not found' });
 
 // GET /api/guide/access — may the current visitor use Play Next? (the website asks)
+// Launched (PLAY_NEXT=on): everyone, logged out too (they see the page and a login
+// invitation). Before launch: only the beta players.
 router.get('/access', async (req, res) => {
+  if (playNextEnabled) return res.json({ enabled: true });
   const user = await getSessionUser(req).catch(() => null);
   res.json({ enabled: Boolean(user && canUsePlayNext(user.id)) });
 });

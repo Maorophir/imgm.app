@@ -1,9 +1,9 @@
 /**
  * usePlayNextAccess — may the current visitor use Play Next?
  *
- * After launch (VITE_PLAY_NEXT=on, or local dev) it's everyone. Before launch, the
- * server decides per player (its beta list) and the site asks it once per login.
- * Returns { enabled, loading }.
+ * The server decides (one switch on Render: PLAY_NEXT=on opens it to everyone, logged
+ * out too; before that, only its beta players), and the site asks it once per login
+ * (or once as a guest). Local development always has it. Returns { enabled, loading }.
  */
 import { useEffect, useState } from 'react';
 import { useSession } from '../lib/authClient';
@@ -12,22 +12,21 @@ import { PLAY_NEXT_ENABLED } from '../lib/features';
 
 export function usePlayNextAccess() {
   const { data: session, isPending } = useSession();
-  const userId = session?.user?.id ?? null;
-  const [answer, setAnswer] = useState({ userId: null, enabled: false }); // the server's answer, per player
+  const who = isPending ? null : (session?.user?.id ?? 'guest'); // whose answer we need
+  const [answer, setAnswer] = useState({ who: null, enabled: false }); // the server's answer
 
   useEffect(() => {
-    if (PLAY_NEXT_ENABLED || !userId) return undefined;
+    if (PLAY_NEXT_ENABLED || !who) return undefined;
     let ignore = false; // a late answer for an earlier login mustn't win
     fetchJson('/api/guide/access')
-      .then((data) => !ignore && setAnswer({ userId, enabled: Boolean(data.enabled) }))
-      .catch(() => !ignore && setAnswer({ userId, enabled: false }));
+      .then((data) => !ignore && setAnswer({ who, enabled: Boolean(data.enabled) }))
+      .catch(() => !ignore && setAnswer({ who, enabled: false }));
     return () => {
       ignore = true;
     };
-  }, [userId]);
+  }, [who]);
 
   if (PLAY_NEXT_ENABLED) return { enabled: true, loading: false };
-  if (isPending) return { enabled: false, loading: true };
-  if (!userId) return { enabled: false, loading: false };
-  return { enabled: answer.userId === userId && answer.enabled, loading: answer.userId !== userId };
+  if (!who) return { enabled: false, loading: true };
+  return { enabled: answer.who === who && answer.enabled, loading: answer.who !== who };
 }
