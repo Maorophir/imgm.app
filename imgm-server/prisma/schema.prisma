@@ -34,6 +34,7 @@ model User {
   reviews       Review[]
   playNextChats PlayNextChat[]
   reviewVotes   ReviewVote[]
+  gotwVotes     GotwVote[]
 }
 
 model Session {
@@ -96,6 +97,9 @@ model Game {
 
   reviews       Review[]
   aiSummary     GameAISummary?
+  gotwCandidacies GotwCandidate[]
+  gotwWins      GotwWeek[]  @relation("GotwWinner")
+  gotwVotes     GotwVote[]
 
   // Reviews that compared another game to this one ("It's like ___ meets ___")
   comparedInA   Review[] @relation("ComparedA")
@@ -239,4 +243,48 @@ model ReviewVote {
 
   @@id([userId, reviewId])
   @@index([reviewId])
+}
+
+// -----------------------------------------------------------------------------
+// Game of the Week: players vote Sunday to Saturday (Israel time) on a ballot of
+// candidates; the winner is next week's Game of the Week (lib/gotw.js).
+// -----------------------------------------------------------------------------
+
+model GotwWeek {
+  id         String          @id // the Sunday the voting week starts, "2026-10-11"
+  startsAt   DateTime        // Sunday 00:00 in Israel
+  endsAt     DateTime        // the next Sunday 00:00 (voting closes)
+  winnerId   Int?
+  winner     Game?           @relation("GotwWinner", fields: [winnerId], references: [id])
+  closedAt   DateTime?       // set when the votes were counted
+  candidates GotwCandidate[]
+  votes      GotwVote[]
+  createdAt  DateTime        @default(now())
+}
+
+// One game on a week's ballot, and why it's there (its slot: hot, favorite…)
+model GotwCandidate {
+  weekId String
+  week   GotwWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  gameId Int
+  game   Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  slot   String
+  order  Int      // its place on the ballot
+
+  @@id([weekId, gameId])
+}
+
+// One player's vote in one week (changeable until the week closes)
+model GotwVote {
+  weekId    String
+  week      GotwWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId    Int
+  game      Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([weekId, userId])
+  @@index([weekId, gameId])
 }

@@ -20,6 +20,7 @@ const mobileNavClass = ({ isActive }) =>
 const BASE_LINKS = [
   { to: '/', label: 'Home', end: true },
   { to: '/top', label: 'Top Games' },
+  { to: '/game-of-the-week', label: 'Game of the Week' },
   // Trending is hidden until it has real content (pages/Trending.jsx)
 ];
 const PLAY_NEXT_LINK = { to: '/play-next', label: <><span className="text-brand">✦</span> Play Next</> };

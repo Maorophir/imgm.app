@@ -1,20 +1,16 @@
 /**
  * IMGM Top Games — the community's chart (like IMDb's Top 250, on IMGM reviews only).
  *
- * Ranked by a weighted score, IMDb's own formula, so one glowing review can't top it:
- *     weighted = (v / (v + m)) × R  +  (m / (v + m)) × C
- *     R = the game's average · v = its number of reviews
- *     C = the average of every review on IMGM · m = PULL (how many reviews it takes
- *         before a game's own average counts more than the site's)
- * A game enters with MIN_REVIEWS review(s). Filters keep each game's chart rank.
+ * Ranked by a weighted score (lib/ranking.js, IMDb's own formula), so one glowing review
+ * can't top it. A game enters with MIN_REVIEWS review(s). Filters keep each game's rank.
  */
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
 import { getSessionUser } from '../lib/session.js';
+import { rankGames } from '../lib/ranking.js';
 
 const CHART_SIZE = 100;
 const MIN_REVIEWS = 1;
-const PULL = 3;
 
 // A platform filter shows what plays there (a PS4 game runs on a PS5, and so on)
 const PLATFORM_GROUPS = {
@@ -43,21 +39,7 @@ export const getTopGames = async (req, res) => {
   const { sort, platform } = params.data;
 
   try {
-    const [stats, site] = await Promise.all([
-      prisma.review.groupBy({ by: ['gameId'], _avg: { rating: true }, _count: { _all: true } }),
-      prisma.review.aggregate({ _avg: { rating: true } }),
-    ]);
-    const siteAverage = site._avg.rating ?? 0;
-    const ranked = stats
-      .filter((s) => s._count._all >= MIN_REVIEWS)
-      .map((s) => {
-        const v = s._count._all;
-        const average = s._avg.rating;
-        return { gameId: s.gameId, average, reviewCount: v, weighted: (v / (v + PULL)) * average + (PULL / (v + PULL)) * siteAverage };
-      })
-      .sort((a, b) => b.weighted - a.weighted || b.reviewCount - a.reviewCount)
-      .slice(0, CHART_SIZE)
-      .map((entry, i) => ({ ...entry, rank: i + 1 }));
+    const ranked = (await rankGames({ minReviews: MIN_REVIEWS })).slice(0, CHART_SIZE);
 
     const ids = ranked.map((r) => r.gameId);
     const user = await getSessionUser(req).catch(() => null);

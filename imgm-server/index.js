@@ -24,6 +24,7 @@ app.use(express.json());
 // Import routes
 import gamesRouter from './src/routes/games.js';
 import reviewsRouter from './src/routes/reviews.js';
+import gotwRouter from './src/routes/gotw.js';
 import usersRouter from './src/routes/users.js';
 import guideRouter from './src/routes/guide.js';
 import { toNodeHandler } from 'better-auth/node';
@@ -41,6 +42,7 @@ app.use("/api/auth", toNodeHandler(auth));
 app.use('/api/games', gamesRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/gotw', gotwRouter);
 // Always mounted: the routes themselves check who may use Play Next (everyone, or the beta list)
 app.use('/api/guide', guideRouter);
 

@@ -10,6 +10,7 @@ import Profile from './pages/Profile';
 import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
+import GameOfTheWeek from './pages/GameOfTheWeek';
 import TopGames from './pages/TopGames';
 import Search from './pages/Search';
 import Welcome from './pages/Welcome';
@@ -59,6 +60,7 @@ function App() {
           <Route path="/game/:id/review" element={<ReviewQuest />} />
           <Route path="/search" element={<Search />} />
           <Route path="/top" element={<TopGames />} />
+          <Route path="/game-of-the-week" element={<GameOfTheWeek />} />
           {/* Trending is hidden until it has real content: old links go home */}
           <Route path="/trending" element={<Navigate to="/" replace />} />
           {/* Play Next: live locally; in production only beta players until launch */}
