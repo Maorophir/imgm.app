@@ -4,6 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>I Am Gaming (Beta)</title>
+    <!-- Light or dark, set before the page draws (no flash). PREVIEW: ?theme=light or
+         ?theme=dark switches and remembers it on this browser; dark until chosen. -->
+    <script>
+      try {
+        var asked = new URLSearchParams(location.search).get('theme');
+        if (asked === 'light' || asked === 'dark') localStorage.setItem('imgm-theme', asked);
+        document.documentElement.dataset.theme = localStorage.getItem('imgm-theme') || 'dark';
+      } catch (e) {
+        document.documentElement.dataset.theme = 'dark';
+      }
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- Brand fonts: Anton (the "I AM GAMING." headline) + Chakra Petch (the IMGM wordmark) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />

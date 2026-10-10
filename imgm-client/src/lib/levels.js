@@ -7,13 +7,14 @@
  * Every few levels the player climbs a critic tier.
  */
 
-// `minLevel` = the first level of the tier. Worst → best.
+// `minLevel` = the first level of the tier. Worst → best. Light mode: deeper shades.
+const LIGHT = typeof document !== 'undefined' && document.documentElement.dataset.theme === 'light';
 export const TIERS = [
-  { key: 'casual',       label: 'Casual Player', minLevel: 1,  color: '#94a3b8' },
-  { key: 'reviewer',     label: 'Reviewer',      minLevel: 3,  color: '#2dd4bf' },
-  { key: 'critic',       label: 'Critic',        minLevel: 6,  color: '#38bdf8' },
-  { key: 'top_critic',   label: 'Top Critic',    minLevel: 10, color: '#e879f9' },
-  { key: 'hall_of_fame', label: 'Hall of Fame',  minLevel: 15, color: '#fbbf24' },
+  { key: 'casual',       label: 'Casual Player', minLevel: 1,  color: LIGHT ? '#64748b' : '#94a3b8' },
+  { key: 'reviewer',     label: 'Reviewer',      minLevel: 3,  color: LIGHT ? '#0d9488' : '#2dd4bf' },
+  { key: 'critic',       label: 'Critic',        minLevel: 6,  color: LIGHT ? '#0284c7' : '#38bdf8' },
+  { key: 'top_critic',   label: 'Top Critic',    minLevel: 10, color: LIGHT ? '#c026d3' : '#e879f9' },
+  { key: 'hall_of_fame', label: 'Hall of Fame',  minLevel: 15, color: LIGHT ? '#d97706' : '#fbbf24' },
 ];
 
 // Total XP needed to reach a level: 0, 200, 600, 1200, 2000, …

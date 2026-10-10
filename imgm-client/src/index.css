@@ -210,3 +210,50 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-xp-pop { animation: none; }
 }
+
+/* ── Light mode ──
+   The site is built dark: every surface and text colour comes from the slate scale,
+   white and a few accents. Light mode swaps those variables when <html> has
+   data-theme="light" (set in index.html before the page draws, so there's no flash):
+   surfaces turn light, white text turns ink. Then three fixes for what flipping breaks:
+     - lime TEXT is unreadable on white: text and borders get a deep lime, while solid
+       lime buttons keep the logo's bright lime (with dark text on them)
+     - gold badges (Game of the Week) keep their gold, also with dark text
+     - status colours (red errors, amber notes, green "done") use darker shades */
+:root[data-theme="light"] {
+  --color-slate-50: #0d0f12;
+  --color-slate-100: #181a1f;
+  --color-slate-200: #262a31;
+  --color-slate-300: #383d46;
+  --color-slate-400: #4d535e;
+  --color-slate-500: #6b717d;
+  --color-slate-600: #a7adb7;
+  --color-slate-700: #cdd2d9; /* borders */
+  --color-slate-800: #e2e5ea; /* inputs, raised parts */
+  --color-slate-900: #ffffff; /* cards */
+  --color-slate-950: #f3f4f6; /* the page */
+  --color-white: #0d0f12; /* "white" text = ink; white/5 tints = faint grey */
+
+  --color-brand: #4d7c0f; /* deep lime for text, borders and focus */
+
+  --color-red-200: #b91c1c;
+  --color-red-300: #b91c1c;
+  --color-red-400: #dc2626;
+  --color-amber-200: #92400e;
+  --color-amber-300: #b45309;
+  --color-amber-400: #b45309;
+  --color-emerald-200: #047857;
+  --color-emerald-300: #047857;
+  --color-emerald-400: #059669;
+  --color-yellow-400: #a16207;
+  --color-sky-400: #0369a1;
+  --color-orange-400: #c2410c;
+}
+/* Solid lime and gold keep their bright colour, and the dark text that sits on them */
+:root[data-theme="light"] :is(.bg-brand, .bg-amber-300, .bg-amber-400) {
+  --color-brand: #b8f03a;
+  --color-amber-300: #fcd34d;
+  --color-amber-400: #fbbf24;
+  --color-slate-950: #0d0f12;
+  --color-slate-900: #0d0f12;
+}
