@@ -52,14 +52,13 @@ OLLAMA_MODEL = os.getenv("OLLAMA_MODEL") or "gemma4:e4b"  # empty in .env = the 
 # Free tier: every model has its OWN free quota, so each one is extra free capacity.
 # Stable versions only (no previews or "-latest" aliases, which can change underneath
 # us). Free limits per model (AI Studio, 2026-10-08):
-#   3.8 / 3.6 / 3.5 Flash         5 per minute, 20 per day   (~3 answers a day each)
+#   3.8 / 3.6 Flash               5 per minute, 20 per day   (~3 answers a day each)
 #   3.5 / 3.1 Flash-Lite          15 per minute, 500 per day (~80 answers a day each)
 # The big Flash models go first (strongest), and once their daily 20 are used up they
 # are skipped until Google's reset, so the Lite models carry most of the free load.
 FREE_TIER_MODELS = [
     "gemini-3.8-flash",
     "gemini-3.6-flash",
-    "gemini-3.5-flash",
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
 ]
@@ -68,9 +67,9 @@ FREE_TIER_MODELS = [
 # Prices per 1M tokens (in / out, thinking counts as out), checked 2026-10-08:
 #   3.8 / 3.6 Flash        $0.75 / $3.75 until Dec 31, 2026, then $1.50 / $7.50
 #   3.5 Flash-Lite         $0.30 / $2.50
-# 3.5 Flash is left out of the paid chain: older AND pricier ($1.50 / $9.00) than 3.8.
-# 3.7 Flash is gone (2026-10, deprecated): Google sends its calls to 3.8, so as a backup
-# it would only repeat 3.8's failure.
+# 3.7 and 3.5 Flash are gone (2026-10, deprecated): Google sends their calls to 3.8 and
+# 3.6, so as backups they would only repeat those models' failures.
+# (3.5 Flash-LITE is a separate model and still available.)
 PAID_TIER_MODELS = [
     "gemini-3.8-flash",  # main
     "gemini-3.6-flash",  # same family, previous version

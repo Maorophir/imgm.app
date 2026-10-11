@@ -59,8 +59,8 @@ export const getTopGames = ({ sort, platform }, signal) =>
 export const getRecentReviews = (signal) => fetchJson('/api/reviews/recent?limit=8', { signal });
 
 // One page of a game's reviews: { reviews, mine (the viewer's own, first page only), total, hasMore }
-export const getGameReviews = (gameId, { sort, tier, rating, offset, limit }, signal) => {
-  const params = new URLSearchParams({ sort, offset, limit, ...(tier && { tier }), ...(rating && { rating }) });
+export const getGameReviews = (gameId, { sort, tier, rating, offset, limit, focus }, signal) => {
+  const params = new URLSearchParams({ sort, offset, limit, ...(tier && { tier }), ...(rating && { rating }), ...(focus && { focus }) });
   return fetchJson(`/api/reviews/game/${gameId}?${params}`, { signal });
 };
 

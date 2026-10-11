@@ -17,7 +17,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
 
-const SECTION_WAIT_MS = 4000;
+const SECTION_WAIT_MS = 10000; // a section can wait for a sleepy server, unless you scroll first
 const RESTORE_WAIT_MS = 4000; // a page's data usually loads well within this
 const STORE = 'imgm:scroll-positions';
 const MAX_SAVED = 50; // visits remembered per tab
@@ -58,13 +58,21 @@ if (openedBy === 'navigate') {
   }
 }
 
-// Repeats `step` every 100ms until it returns true or `ms` pass; returns a cancel function
+// Repeats `step` every 100ms until it returns true or `ms` pass, and stops early if the
+// player scrolls or clicks first (they've taken over). Returns a cancel function.
+const USER_INPUT = ['wheel', 'touchstart', 'keydown', 'mousedown'];
 const retry = (step, ms) => {
   const started = Date.now();
-  const timer = setInterval(() => {
-    if (step(Date.now() - started > ms)) clearInterval(timer);
+  let timer = 0;
+  const cancel = () => {
+    clearInterval(timer);
+    USER_INPUT.forEach((e) => window.removeEventListener(e, cancel));
+  };
+  USER_INPUT.forEach((e) => window.addEventListener(e, cancel, { passive: true }));
+  timer = setInterval(() => {
+    if (step(Date.now() - started > ms)) cancel();
   }, 100);
-  return () => clearInterval(timer);
+  return cancel;
 };
 
 const ScrollToTop = () => {
@@ -103,20 +111,11 @@ const ScrollToTop = () => {
     // Back/Forward (or a reload): where you were on that visit, once the page is tall enough
     if (navigationType === 'POP') {
       const target = readSaved()[key] ?? 0;
-      let touched = false; // the player scrolled first: leave them be
-      const stop = () => (touched = true);
-      const events = ['wheel', 'touchstart', 'keydown', 'mousedown'];
-      events.forEach((e) => window.addEventListener(e, stop, { passive: true, once: true }));
-      const cancel = retry((timeUp) => {
-        if (touched) return true;
+      return retry((timeUp) => {
         const reachable = document.documentElement.scrollHeight - window.innerHeight;
         window.scrollTo(0, Math.min(target, reachable));
         return reachable >= target || timeUp;
       }, RESTORE_WAIT_MS);
-      return () => {
-        cancel();
-        events.forEach((e) => window.removeEventListener(e, stop));
-      };
     }
     // A link: the top, or the section it names
     window.scrollTo(0, 0);
