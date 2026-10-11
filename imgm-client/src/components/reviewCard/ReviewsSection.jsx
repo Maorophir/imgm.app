@@ -115,7 +115,8 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
   const key = `${sort}|${tier ?? ''}|${rating ?? ''}`;
-  // A review opened from elsewhere (?review=… from the home page): shown first, highlighted
+  // A review opened from elsewhere (?review=… from the home page): shown first, so the
+  // page can scroll to it even when it isn't among the first reviews loaded
   const [searchParams] = useSearchParams();
   const focus = searchParams.get('review');
 
@@ -220,16 +221,9 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
             <div className="flex flex-col gap-10">
               {shown.map((review, i) => (
                 // id: links like /game/123#review-abc scroll straight here
-                <div
-                  key={review.id}
-                  id={`review-${review.id}`}
-                  className={`scroll-mt-24 ${review === opened ? 'rounded-3xl ring-2 ring-brand/60 ring-offset-8 ring-offset-slate-950 animate-fade-in' : ''}`}
-                >
+                <div key={review.id} id={`review-${review.id}`} className="scroll-mt-24">
                   {review === pinned && (
                     <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">Your review</p>
-                  )}
-                  {review === opened && (
-                    <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">The review you opened</p>
                   )}
                   {/* A different artwork/screenshot per review, so the cards don't all look the same */}
                   <ReviewEntry review={review} game={game} artUrl={cardArt(game, i)} />
