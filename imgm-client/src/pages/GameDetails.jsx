@@ -18,6 +18,17 @@ import MediaSection from '../components/game/MediaSection';
 import { usePageTitle } from '../hooks/usePageTitle';
 
 // Keyed by id so all page state (fetched data, media tabs…) resets on navigation
+// The game's line in Google: its IMGM numbers when it has reviews, an invitation when not
+const gameDescription = (game) => {
+  const year = game.releaseDate ? ` (${new Date(game.releaseDate).getFullYear()})` : '';
+  const count = game.reviewStats?.count ?? 0;
+  const average = game.ratings?.imgm;
+  if (count > 0 && average != null) {
+    return `${game.title}${year}: ${count} player review${count === 1 ? '' : 's'}, ${average.toFixed(1)}/10 average on IMGM. What players love, what they don't, and where to buy it.`;
+  }
+  return `${game.title}${year}: no IMGM reviews yet. Played it? Be the first to rate it and earn the First Reviewer badge.`;
+};
+
 const GameDetails = () => {
   const { id } = useParams();
   return <GameDetailsContent key={id} id={id} />;
@@ -30,7 +41,7 @@ const GameDetailsContent = ({ id }) => {
   const [attempt, setAttempt] = useState(0);
   // Which reviews to show: one rarity tier, or one exact score (from the histogram)
   const [reviewFilter, setReviewFilter] = useState({ tier: null, rating: null });
-  usePageTitle(data?.game && `${data.game.title}: reviews and ratings`);
+  usePageTitle(data?.game && `${data.game.title}: reviews and ratings`, data?.game && gameDescription(data.game));
 
   // Fetch the game from our backend (which pulls from IGDB if it isn't cached locally)
   useEffect(() => {
