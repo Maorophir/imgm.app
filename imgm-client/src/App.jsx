@@ -30,6 +30,7 @@ import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
 import { usePageTitle } from './hooks/usePageTitle';
+import { useSearchIndexing } from './hooks/useSearchIndexing';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -83,6 +84,7 @@ function RouteTitle() {
   const onGamePage = pathname.startsWith('/game/');
   const [title, description] = (!onGamePage && PAGES[pathname]) || [];
   usePageTitle(title, description);
+  useSearchIndexing(pathname); // canonical address, or noindex for private pages
   return null;
 }
 
