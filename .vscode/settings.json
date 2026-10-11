@@ -1,0 +1,5 @@
+{
+  // Read .css files as Tailwind (Tailwind CSS IntelliSense): @theme and other Tailwind
+  // rules stop showing "Unknown at rule" warnings, and classes get autocomplete
+  "files.associations": { "*.css": "tailwindcss" }
+}

@@ -1,0 +1,4 @@
+{
+  // VS Code suggests these when someone opens the project
+  "recommendations": ["bradlc.vscode-tailwindcss"]
+}
