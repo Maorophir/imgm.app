@@ -54,24 +54,35 @@ function PlayNextRoute() {
   return enabled ? <GameGuide /> : <Navigate to="/" replace />;
 }
 
-// Each page's title (tab and Google). Game pages set their own, with the game's name.
-const PAGE_TITLES = {
-  '/hall-of-fame': 'Hall of Fame: the best games, rated by players',
-  '/game-of-the-week': 'Game of the Week',
-  '/play-next': 'Play Next: find your next game',
-  '/backlog': 'Your Backlog',
-  '/profile': 'Your profile',
-  '/settings': 'Settings',
-  '/search': 'Search games',
-  '/terms': 'Terms of Use',
-  '/privacy': 'Privacy Policy',
-  '/login': 'Log in or sign up',
-  '/welcome': 'Welcome',
+// Each page's title and description (the tab, and Google's headline + grey line).
+// Game pages set their own, with the game's name and its IMGM numbers.
+const PAGES = {
+  '/hall-of-fame': [
+    'Hall of Fame: the best games, rated by players',
+    'The best games of all time, ranked by what IMGM players gave them. Filter by PC, PlayStation, Xbox or Switch.',
+  ],
+  '/game-of-the-week': [
+    'Game of the Week',
+    'Every week IMGM players vote on six games, and the winner reigns as Game of the Week. See this week\'s ballot and cast your vote.',
+  ],
+  '/play-next': [
+    'Play Next: find your next game',
+    'Answer a few questions and Play Next digs through your reviews and the IMGM community to pick 5 games you\'ll love, with a Best Pick.',
+  ],
+  '/backlog': ['Your Backlog'],
+  '/profile': ['Your profile'],
+  '/settings': ['Settings'],
+  '/search': ['Search games', 'Find any game and see what IMGM players think of it.'],
+  '/terms': ['Terms of Use', 'The rules for using IMGM (I Am Gaming).'],
+  '/privacy': ['Privacy Policy', 'What IMGM collects, why, and how to delete your account and data.'],
+  '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, earn XP and badges, and get picks from Play Next.'],
+  '/welcome': ['Welcome'],
 };
 function RouteTitle() {
   const { pathname } = useLocation();
   const onGamePage = pathname.startsWith('/game/');
-  usePageTitle(onGamePage ? undefined : PAGE_TITLES[pathname]);
+  const [title, description] = (!onGamePage && PAGES[pathname]) || [];
+  usePageTitle(title, description);
   return null;
 }
 
