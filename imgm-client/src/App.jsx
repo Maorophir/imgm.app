@@ -14,6 +14,7 @@ import GameOfTheWeek from './pages/GameOfTheWeek';
 import Terms from './pages/Terms';
 import Privacy from './pages/Privacy';
 import BackToTop from './components/BackToTop';
+import ScrollToTop from './components/ScrollToTop';
 import Footer from './components/Footer';
 import Feedback from './components/Feedback';
 import Settings from './pages/Settings';
@@ -82,6 +83,7 @@ function App() {
         {/* Navbar renders on EVERY page — it's outside <Routes> */}
         <Navbar />
         <RouteTitle />
+        <ScrollToTop />
 
         {/* Only the matched route renders here. The gate sends logged-in users
             without a gamer tag to /welcome first. */}
