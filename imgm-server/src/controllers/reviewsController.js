@@ -47,6 +47,8 @@ const pageQuery = z.object({
   rating: z.coerce.number().int().min(1).max(10).optional(), // one exact score (beats tier)
   offset: z.coerce.number().int().min(0).max(10000).default(0),
   limit: z.coerce.number().int().min(1).max(20).default(10),
+  // One review to show first, whatever the sort (a review clicked on the home page)
+  focus: z.string().trim().min(1).max(40).optional(),
 });
 
 // The viewer's own vote rides along on each review (as `myVote`: true / false / null)
@@ -66,7 +68,7 @@ export const getReviewsByGameId = async (req, res) => {
   if (Number.isNaN(gameId) || !query.success) {
     return res.status(400).json({ error: 'Invalid request' });
   }
-  const { sort, tier, rating, offset, limit } = query.data;
+  const { sort, tier, rating, offset, limit, focus } = query.data;
 
   try {
     const user = await getUser(req).catch(() => null);
@@ -75,15 +77,23 @@ export const getReviewsByGameId = async (req, res) => {
       ...(rating ? { rating } : tier && { rating: { gte: TIER_RATINGS[tier][0], lte: TIER_RATINGS[tier][1] } }),
       ...(user && { NOT: { userId: user.id } }),
     };
-    const [page, total, mine] = await Promise.all([
+    const [page, total, mine, focused] = await Promise.all([
       prisma.review.findMany({ where, include: withViewerVote(user?.id), orderBy: REVIEW_SORTS[sort], skip: offset, take: limit }),
       prisma.review.count({ where }),
       user && offset === 0
         ? prisma.review.findUnique({ where: { userId_gameId: { userId: user.id, gameId } }, include: REVIEW_INCLUDE })
         : null,
+      // Only a review of THIS game, and not the viewer's own (that one is `mine`)
+      focus && offset === 0
+        ? prisma.review.findFirst({ where: { id: focus, gameId, ...(user && { NOT: { userId: user.id } }) }, include: withViewerVote(user?.id) })
+        : null,
     ]);
-    const [reviews, [mineForClient = null]] = await Promise.all([forClient(page), forClient(mine ? [mine] : [])]);
-    res.json({ reviews, mine: mineForClient, total, hasMore: offset + page.length < total });
+    const [reviews, [mineForClient = null], [focusedForClient = null]] = await Promise.all([
+      forClient(page),
+      forClient(mine ? [mine] : []),
+      forClient(focused ? [focused] : []),
+    ]);
+    res.json({ reviews, mine: mineForClient, focused: focusedForClient, total, hasMore: offset + page.length < total });
   } catch (error) {
     console.error('Error fetching reviews:', error);
     res.status(500).json({ error: 'Internal server error' });

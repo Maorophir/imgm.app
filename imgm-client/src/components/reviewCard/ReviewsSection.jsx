@@ -11,6 +11,7 @@
  * carries the counts, in game.reviewStats).
  */
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Medal, MessageSquareWarning, X } from 'lucide-react';
 import { getGameReviews } from '../../lib/api';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
@@ -114,19 +115,22 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
   const key = `${sort}|${tier ?? ''}|${rating ?? ''}`;
+  // A review opened from elsewhere (?review=… from the home page): shown first, highlighted
+  const [searchParams] = useSearchParams();
+  const focus = searchParams.get('review');
 
   // A new sort or filter starts over from the first page
   useEffect(() => {
     if (total === 0) return undefined;
     const controller = new AbortController();
-    getGameReviews(gameId, { sort, tier, rating, offset: 0, limit: FIRST_PAGE }, controller.signal)
+    getGameReviews(gameId, { sort, tier, rating, offset: 0, limit: FIRST_PAGE, focus }, controller.signal)
       .then((page) => {
         setError(false);
         setList({ key: `${sort}|${tier ?? ''}|${rating ?? ''}`, ...page });
       })
       .catch((err) => err.name !== 'AbortError' && setError(true));
     return () => controller.abort();
-  }, [gameId, sort, tier, rating, total]);
+  }, [gameId, sort, tier, rating, total, focus]);
 
   const showMore = async () => {
     setLoadingMore(true);
@@ -144,7 +148,11 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
   const mine = list?.mine ?? null;
   const matches = (review) => (rating ? review.rating === rating : !tier || getRarity(review.rating).key === tier);
   const pinned = mine && matches(mine) ? mine : null;
-  const shown = current ? [...(pinned ? [pinned] : []), ...current.reviews] : [];
+  // The opened review leads (once loaded with the first page), and isn't repeated below
+  const opened = list?.focused && matches(list.focused) ? list.focused : null;
+  const shown = current
+    ? [...(opened ? [opened] : []), ...(pinned ? [pinned] : []), ...current.reviews.filter((r) => r.id !== opened?.id)]
+    : [];
   const left = current ? current.total - current.reviews.length : 0;
 
   return (
@@ -211,9 +219,17 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
           ) : (
             <div className="flex flex-col gap-10">
               {shown.map((review, i) => (
-                <div key={review.id}>
+                // id: links like /game/123#review-abc scroll straight here
+                <div
+                  key={review.id}
+                  id={`review-${review.id}`}
+                  className={`scroll-mt-24 ${review === opened ? 'rounded-3xl ring-2 ring-brand/60 ring-offset-8 ring-offset-slate-950 animate-fade-in' : ''}`}
+                >
                   {review === pinned && (
                     <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">Your review</p>
+                  )}
+                  {review === opened && (
+                    <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">The review you opened</p>
                   )}
                   {/* A different artwork/screenshot per review, so the cards don't all look the same */}
                   <ReviewEntry review={review} game={game} artUrl={cardArt(game, i)} />
