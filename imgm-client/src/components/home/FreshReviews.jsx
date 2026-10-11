@@ -24,7 +24,7 @@ const SectionTitle = ({ first, accent, subtitle }) => (
 const ReviewTile = ({ review }) => {
   const rarity = getRarity(review.rating);
   return (
-    // Opens the game page right at this review (pinned first and highlighted there)
+    // Opens the game page right at this review
     <Link
       to={`/game/${review.game.id}?review=${review.id}#review-${review.id}`}
       className="group flex gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-600 transition animate-fade-in"
