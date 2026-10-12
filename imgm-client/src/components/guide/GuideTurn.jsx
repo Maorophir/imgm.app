@@ -201,7 +201,8 @@ const GuideTurn = ({
 
           <GuideTimeline
             steps={withWritingStep(turn)}
-            running={working}
+            // A reply that streams without searching replaces "Warming up…" as it arrives
+            running={working && !(turn.answer && turn.steps.length === 0)}
             collapsible={Boolean(turn.cards)}
           />
 
@@ -233,9 +234,10 @@ const GuideTurn = ({
               )}
             </div>
           ) : (
-            // No cards: the guide's own words, once it's finished (e.g. it asked you something)
+            // No cards: the guide's own words. A reply that didn't search (a follow-up
+            // about the picks) shows live as it's written; a search's draft waits for the cards
             turn.answer &&
-            !working && (
+            (!working || turn.steps.length === 0) && (
               <div className="rounded-2xl rounded-tl-md bg-slate-900/85 border border-white/10 px-5 py-4 text-slate-100 leading-relaxed whitespace-pre-line">
                 <RichText text={turn.answer} />
               </div>

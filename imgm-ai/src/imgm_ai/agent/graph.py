@@ -2,7 +2,8 @@
 IMGM recommendation agent: how the nodes connect.
 
     START → screen ──off topic──► END   "I only help with games": no searching at all
-              │ about games
+              │  └──chat──► chat ──► END   a follow-up about the picks: answered, no search
+              │ find (first request, card buttons, "find others")
               ▼
             agent ⇄ tools               the reasoning loop: think, use tools, look again
               │ answer written
@@ -20,6 +21,7 @@ from langgraph.prebuilt import ToolNode, tools_condition
 from imgm_ai.agent.memory import make_checkpointer
 from imgm_ai.agent.nodes import (
     AGENT,
+    CHAT,
     CHECK,
     FORMAT,
     SCREEN,
@@ -28,6 +30,7 @@ from imgm_ai.agent.nodes import (
     check_answer,
     format_answer,
     route_after_check,
+    chat_reply,
     route_after_screen,
     screen_question,
 )
@@ -37,6 +40,7 @@ from imgm_ai.agent.tools import TOOLS
 builder = StateGraph(RecommenderState)
 
 builder.add_node(SCREEN, screen_question)
+builder.add_node(CHAT, chat_reply)
 builder.add_node(AGENT, call_model)
 # ToolNode runs every requested tool and returns their ToolMessages
 builder.add_node(TOOLS_NODE, ToolNode(TOOLS))
@@ -44,7 +48,8 @@ builder.add_node(FORMAT, format_answer)
 builder.add_node(CHECK, check_answer)
 
 builder.add_edge(START, SCREEN)
-builder.add_conditional_edges(SCREEN, route_after_screen, [AGENT, END])
+builder.add_conditional_edges(SCREEN, route_after_screen, [AGENT, CHAT, END])
+builder.add_edge(CHAT, END)
 # Tool calls? → "tools". A finished answer → "format" (instead of END)
 builder.add_conditional_edges(
     AGENT, tools_condition, {"tools": TOOLS_NODE, END: FORMAT}
