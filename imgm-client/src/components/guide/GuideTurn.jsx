@@ -20,7 +20,9 @@ import { PowerIcon } from "../Logo";
 // While the guide writes, its draft isn't shown (the cards replace it moments later):
 // the timeline gets a "Writing up your picks" step instead, just before the formatting
 const withWritingStep = (turn) => {
-  if (!turn.answer || turn.status === "error") return turn.steps;
+  // No steps = it never searched (e.g. an off-topic message got a one-line reply)
+  if (!turn.answer || turn.status === "error" || turn.steps.length === 0)
+    return turn.steps;
   const formatAt = turn.steps.findIndex((s) => s.id.startsWith("format-"));
   const writing = {
     id: "writing",

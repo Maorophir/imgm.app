@@ -3,6 +3,7 @@ The graph's nodes: the agent (model + tools), the formatter (answer → cards) a
 the checker (plain code that enforces the rules a prompt can only ask for).
 """
 
+import logging
 import re
 import time
 import unicodedata
@@ -11,8 +12,8 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END
 
-from imgm_ai.agent.prompts import FORMAT_PROMPT, build_system_prompt
-from imgm_ai.agent.schemas import Recommendations
+from imgm_ai.agent.prompts import FORMAT_PROMPT, SCREEN_PROMPT, build_system_prompt
+from imgm_ai.agent.schemas import Recommendations, Screening
 from imgm_ai.agent.state import (
     CHECK_FEEDBACK,
     GAME_LENGTH_TEXT,
@@ -33,6 +34,9 @@ model = get_model(lambda m: m.bind_tools(TOOLS))
 # the conversation already contains tool calls.
 writer = get_model(lambda m: m.bind_tools(TOOLS, tool_choice="none"))
 
+log = logging.getLogger("imgm_ai.agent")
+
+SCREEN = "screen"
 AGENT = "agent"
 # Must be exactly "tools": that's the name tools_condition routes to
 TOOLS_NODE = "tools"
@@ -66,6 +70,47 @@ PLAYS_ON = {
 
 # The format node needs no tools: it only reshapes the answer into Recommendations
 formatter = get_model(lambda m: m.with_structured_output(Recommendations))
+
+# The screen node: one small call that says if a message is for Play Next at all
+screener = get_model(lambda m: m.with_structured_output(Screening))
+OFF_TOPIC = "off_topic"  # names the screen's reply, so the server can tell it apart
+DEFAULT_DECLINE = (
+    "I can only help with games. Tell me what you're in the mood to play, and I'll find "
+    "you something great."
+)
+
+
+def screen_question(state: RecommenderState) -> dict:
+    """The screen node, before the agent: is the latest message about games at all?
+
+    Off-topic requests and trolling get a short friendly reply and the run ends
+    there: no tools, no searching, no 5 picks. Anything about games goes on to the
+    agent. If the screen itself fails, the message goes through: a real player must
+    never be blocked by a hiccup here.
+    """
+    questions = [m.text for m in state["messages"] if is_player_question(m)]
+    prompt = SCREEN_PROMPT.format(
+        latest=questions[-1] if questions else "",
+        earlier=questions[-2] if len(questions) > 1 else "None: this is their first message.",
+    )
+    try:
+        verdict = screener.invoke([HumanMessage(content=prompt)])
+    except Exception:
+        log.warning("The screen failed; letting the message through", exc_info=True)
+        return {}
+    if verdict.about_games:
+        return {}
+    text = verdict.reply.strip()
+    if len(text) < 20:  # a weak model sometimes writes just "no": use the standard line
+        text = DEFAULT_DECLINE
+    reply = AIMessage(content=text, name=OFF_TOPIC)
+    return {"messages": [reply]}
+
+
+def route_after_screen(state: RecommenderState) -> str:
+    """After the screen: on to the agent, or (it answered "I only do games") straight to the end."""
+    last = state["messages"][-1]
+    return END if isinstance(last, AIMessage) and last.name == OFF_TOPIC else AGENT
 
 
 def call_model(state: RecommenderState) -> dict:

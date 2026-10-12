@@ -260,6 +260,7 @@ def guide_events(request: GuideRequest, user_id: str | None):
     tools_by_call = {}  # tool_call_id → tool name, to label the "done" step
     games = {}  # game id → tile info (cover, platforms, rating), for the final cards
     recommendations, problems, rounds = None, [], 0
+    declined = False  # the screen turned the message away (off topic)
 
     yield sse("start", {})
     try:
@@ -316,6 +317,12 @@ def guide_events(request: GuideRequest, user_id: str | None):
             # Each node finishing: the timeline
             elif mode == "updates":
                 for node, update in chunk.items():
+                    # The screen said "not about games": its short reply is the whole answer
+                    if node == "screen" and update and update.get("messages"):
+                        reply = update["messages"][-1]
+                        declined = True
+                        yield sse("token", {"message_id": reply.id, "text": reply.text})
+                        continue
                     if node == "agent":
                         reply = update["messages"][-1]
                         for call in reply.tool_calls:
@@ -406,7 +413,7 @@ def guide_events(request: GuideRequest, user_id: str | None):
                     "follow_up": recommendations.follow_up,
                 },
             )
-        yield sse("done", {"problems": problems})
+        yield sse("done", {"problems": problems, "declined": declined})
     except Exception:
         log.exception("Play Next run failed")
         yield sse(
