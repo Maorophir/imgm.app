@@ -1,6 +1,8 @@
 /**
  * The pieces of the profile page: the picture (with change / remove), the stats, and
  * the player's reviews.
+ * Noir: stats as big numerals on hairlines (no boxes), square chips and buttons, and
+ * each review tile marked with its tier's mark and ink.
  */
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -8,6 +10,15 @@ import { Camera, Clock, Crown, Flame, Star, ThumbsUp, Trash2, Trophy, Users, X }
 import { Avatar } from '../reviewCard/RarityCard';
 import { BADGES, getRarity } from '../reviewQuest/questOptions';
 import ArtIcon from '../ArtIcon';
+import RarityMark from '../RarityMark';
+import { GHOST_BUTTON } from '../../lib/ui';
+
+// The picture's small ghost buttons
+const SMALL_BUTTON =
+  'inline-flex items-center gap-1.5 h-9 px-3 rounded-sm text-sm font-medium border border-slate-500 text-white hover:border-white transition-colors duration-120 disabled:opacity-50';
+// A group of stats: a quiet label on a hairline
+const GROUP = 'border-t border-slate-700 pt-4 flex flex-col gap-3';
+const GROUP_LABEL = 'text-sm text-slate-400';
 import { Histogram } from '../game/PlayerVerdict';
 import { chooseAvatarPreset, deleteAvatar, getMyReviews, uploadAvatar } from '../../lib/api';
 import AvatarPicker from './AvatarPicker';
@@ -69,24 +80,24 @@ export const ProfilePicture = ({ player, onChanged }) => {
     <div className="flex flex-col items-center sm:items-start gap-3">
       <div className="relative">
         <Avatar name={player.name ?? '?'} user={player} size="w-28 h-28 text-5xl" />
-        {busy && <span className="absolute inset-0 rounded-full bg-slate-950/60 grid place-items-center text-xs font-bold text-white">Checking…</span>}
+        {busy && <span className="absolute inset-0 rounded-full bg-slate-950/60 grid place-items-center text-xs font-medium text-white">Checking…</span>}
       </div>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-700 text-slate-200 hover:text-white hover:border-slate-500 transition disabled:opacity-50"
+          className={SMALL_BUTTON}
         >
-          <Camera className="w-3.5 h-3.5" aria-hidden="true" /> {player.avatarUpdatedAt ? 'Change picture' : 'Add a picture'}
+          <Camera className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> {player.avatarUpdatedAt ? 'Change picture' : 'Add a picture'}
         </button>
         <button
           type="button"
           onClick={() => setPicking(true)}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-700 text-slate-200 hover:text-white hover:border-slate-500 transition disabled:opacity-50"
+          className={SMALL_BUTTON}
         >
-          <Users className="w-3.5 h-3.5" aria-hidden="true" /> Pick a character
+          <Users className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Pick a character
         </button>
         {player.avatarUpdatedAt && (
           <button
@@ -94,26 +105,26 @@ export const ProfilePicture = ({ player, onChanged }) => {
             onClick={remove}
             disabled={busy}
             aria-label="Remove your picture"
-            className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-700 text-slate-400 hover:text-red-300 hover:border-red-400/60 transition disabled:opacity-50"
+            className="inline-flex items-center h-9 px-2.5 rounded-sm border border-slate-500 text-slate-400 hover:text-red-300 hover:border-red-400/60 transition-colors duration-120 disabled:opacity-50"
           >
-            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" />
           </button>
         )}
       </div>
       <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => choose(e.target.files?.[0])} />
       {message && (
-        <p role="status" className={`text-xs max-w-[16rem] ${message.ok ? 'text-emerald-300' : 'text-red-300'}`}>{message.text}</p>
+        <p role="status" className={`text-sm max-w-[16rem] ${message.ok ? 'text-rarity-uncommon' : 'text-red-300'}`}>{message.text}</p>
       )}
       {picking && (
-        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in" onClick={() => setPicking(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Pick a character" onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-slate-950/80 animate-fade-in" onClick={() => setPicking(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Pick a character" onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-sm border border-slate-600 bg-slate-900 p-6 shadow-[0_32px_64px_-24px_rgba(0,0,0,.85)]">
+            <div className="flex items-start justify-between gap-4 mb-5">
               <div>
-                <h2 className="text-xl font-black text-white">Pick a character</h2>
+                <h2 className="font-display text-[34px] leading-none tracking-[.005em] text-white">Pick a character</h2>
                 <p className="text-sm text-slate-400 mt-1">Be your favorite hero. You can change it any time.</p>
               </div>
-              <button type="button" onClick={() => setPicking(false)} aria-label="Close" className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" aria-hidden="true" />
+              <button type="button" onClick={() => setPicking(false)} aria-label="Close" className="w-11 h-11 -mt-2 -mr-3 shrink-0 grid place-items-center rounded-sm text-slate-400 hover:text-white transition-colors duration-120">
+                <X className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
               </button>
             </div>
             <AvatarPicker onPick={pickCharacter} />
@@ -124,12 +135,13 @@ export const ProfilePicture = ({ player, onChanged }) => {
   );
 };
 
-const Stat = ({ icon: Icon, label, value, color = 'text-brand', children }) => (
-  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col gap-1">
-    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-      <Icon className={`w-3.5 h-3.5 ${color}`} aria-hidden="true" /> {label}
+// One stat: a quiet label on a hairline, the number big in the display face
+const Stat = ({ icon: Icon, label, value, children }) => (
+  <div className="border-t border-slate-700 pt-3 flex flex-col gap-1">
+    <span className="inline-flex items-center gap-1.5 text-sm text-slate-400">
+      <Icon className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> {label}
     </span>
-    <span className="text-2xl font-black text-white tabular-nums">{value}</span>
+    <span className="font-display text-[34px] leading-none text-white tabular-nums">{value}</span>
     {children}
   </div>
 );
@@ -142,39 +154,44 @@ export const StatsGrid = ({ stats }) => {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat icon={Star} label="Reviews" value={stats.reviews} />
-        <Stat icon={Star} label="Average score" value={average != null ? average.toFixed(1) : '—'} color="text-amber-300">
-          {rarity && <span className="text-xs font-bold uppercase tracking-wider" style={{ color: rarity.color }}>{rarity.label}</span>}
+        <Stat icon={Star} label="Average score" value={average != null ? average.toFixed(1) : '—'}>
+          {rarity && (
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: rarity.color }}>
+              <RarityMark tier={rarity.key} />
+              {rarity.label}
+            </span>
+          )}
         </Stat>
         <Stat icon={Clock} label="Hours logged" value={stats.hoursLogged.toLocaleString()} />
         <Stat icon={ThumbsUp} label="Found helpful" value={stats.helpfulVotes} />
       </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col gap-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Game of the Week</span>
-          <div className="flex flex-wrap gap-2 text-sm font-semibold text-slate-200">
-            <span className="inline-flex items-center gap-1.5"><Flame className="w-4 h-4 text-orange-400" aria-hidden="true" /> {stats.gotw.streak}-week streak</span>
-            <span className="inline-flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-300" aria-hidden="true" /> {stats.gotw.winnersPicked} winners picked</span>
-            {stats.gotw.kingmaker && <span className="inline-flex items-center gap-1.5 text-amber-200"><Crown className="w-4 h-4" aria-hidden="true" /> Kingmaker</span>}
+      <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
+        <div className={GROUP}>
+          <span className={GROUP_LABEL}>Game of the Week</span>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium text-white">
+            <span className="inline-flex items-center gap-1.5"><Flame className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" /> {stats.gotw.streak}-week streak</span>
+            <span className="inline-flex items-center gap-1.5"><Trophy className="w-4 h-4 text-rarity-legendary" strokeWidth={1.8} aria-hidden="true" /> {stats.gotw.winnersPicked} winners picked</span>
+            {stats.gotw.kingmaker && <span className="inline-flex items-center gap-1.5 text-rarity-legendary"><Crown className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Kingmaker</span>}
           </div>
         </div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col gap-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Badges &amp; favourite genres</span>
+        <div className={GROUP}>
+          <span className={GROUP_LABEL}>Badges &amp; favourite genres</span>
           <div className="flex flex-wrap gap-2">
             {badges.map(([key, count]) => (
-              <span key={key} className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/35 text-amber-200">
-                <ArtIcon icon={BADGES[key].art} className="w-3.5 h-3.5" /> {BADGES[key].label} ×{count}
+              <span key={key} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xs border border-slate-600 text-sm font-medium text-white">
+                <ArtIcon icon={BADGES[key].art} className="w-3.5 h-3.5 text-rarity-legendary" /> {BADGES[key].label} <span className="text-slate-400 tabular-nums">×{count}</span>
               </span>
             ))}
             {stats.topGenres.map((genre) => (
-              <span key={genre} className="text-xs font-semibold px-2.5 py-1 rounded-full border border-slate-700 text-slate-300">{genre}</span>
+              <span key={genre} className="inline-flex items-center h-8 px-2.5 rounded-xs border border-slate-600 text-sm text-slate-300">{genre}</span>
             ))}
-            {badges.length === 0 && stats.topGenres.length === 0 && <span className="text-sm text-slate-500">Review games to earn badges.</span>}
+            {badges.length === 0 && stats.topGenres.length === 0 && <span className="text-sm text-slate-400">Review games to earn badges.</span>}
           </div>
         </div>
       </div>
       {stats.reviews > 0 && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">The scores you give</p>
+        <div className={GROUP}>
+          <p className={`${GROUP_LABEL} mb-1`}>The scores you give</p>
           <Histogram byRating={stats.byRating} />
         </div>
       )}
@@ -187,21 +204,22 @@ const ReviewTile = ({ review }) => {
   return (
     <Link
       to={`/game/${review.game.id}`}
-      className="flex gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-600 transition animate-fade-in"
-      style={{ boxShadow: `inset 3px 0 0 ${rarity.color}` }}
+      className="group flex gap-3 py-3 px-1 border-t border-slate-700 hover:bg-slate-800 transition-colors duration-120 animate-fade-in"
     >
       {review.game.coverUrl ? (
-        <img src={review.game.coverUrl} alt="" loading="lazy" className="w-14 h-20 rounded-lg object-cover bg-slate-800 shrink-0" />
+        <img src={review.game.coverUrl} alt="" loading="lazy" className="w-14 h-20 rounded-sm object-cover bg-slate-800 shrink-0" />
       ) : (
-        <div className="w-14 h-20 rounded-lg bg-slate-800 shrink-0" />
+        <div className="w-14 h-20 rounded-sm bg-slate-800 shrink-0" />
       )}
       <div className="min-w-0 flex flex-col gap-1">
-        <p className="font-bold text-white leading-tight truncate">{review.game.title}</p>
-        <p className="text-xs font-bold" style={{ color: rarity.color }}>
-          <span className="uppercase tracking-wider">{rarity.label}</span> {review.rating}/10
+        <p className="font-medium text-white leading-tight truncate underline decoration-1 underline-offset-4 decoration-transparent group-hover:decoration-white transition-[text-decoration-color] duration-120">{review.game.title}</p>
+        <p className="flex items-center gap-1.5 text-sm" style={{ color: rarity.color }}>
+          <RarityMark tier={rarity.key} />
+          <span className="font-semibold">{rarity.label}</span>
+          <span className="tabular-nums text-slate-400">{review.rating}/10</span>
         </p>
-        {review.snippet && <p className="text-sm text-slate-300 leading-snug line-clamp-2">“{review.snippet}”</p>}
-        <p className="mt-auto text-[11px] text-slate-500">
+        {review.snippet && <p className="font-serif italic text-base text-slate-200 leading-snug line-clamp-2">“{review.snippet}”</p>}
+        <p className="mt-auto text-sm text-slate-400">
           {timeAgo(review.createdAt)}
           {review.helpfulCount > 0 && ` · ${review.helpfulCount} found it helpful`}
         </p>
@@ -217,7 +235,7 @@ export const MyReviews = ({ first, total }) => {
   if (reviews.length === 0) {
     return (
       <p className="text-slate-400">
-        No reviews yet. Find a game you've played and start your first <span className="text-brand font-semibold">Review Quest</span>.
+        No reviews yet. Find a game you've played and start your first <span className="text-white font-medium">Review Quest</span>.
       </p>
     );
   }
@@ -232,11 +250,11 @@ export const MyReviews = ({ first, total }) => {
   };
   return (
     <div className="flex flex-col gap-4">
-      <div className="grid sm:grid-cols-2 gap-3">
+      <div className="grid sm:grid-cols-2 gap-x-8">
         {reviews.map((review) => <ReviewTile key={review.id} review={review} />)}
       </div>
       {reviews.length < total && (
-        <button type="button" onClick={more} disabled={loading} className="self-center px-5 py-2.5 rounded-full text-sm font-bold border border-slate-700 text-white hover:border-brand/60 transition disabled:opacity-50">
+        <button type="button" onClick={more} disabled={loading} className={`${GHOST_BUTTON} self-center`}>
           {loading ? 'Loading…' : `Show more (${total - reviews.length} left)`}
         </button>
       )}

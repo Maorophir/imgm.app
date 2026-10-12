@@ -1,8 +1,8 @@
 /**
  * GuideTurn — one question and Play Next's answer, as chat messages.
  *
- *   the player's question  a lime-tinted bubble on the right
- *   Play Next              a glowing avatar ("digging…" while it works), its steps,
+ *   the player's question  a raised bubble on the right
+ *   Play Next              the power-mark avatar ("digging…" while it works), its steps,
  *                          then the answer (the picks themselves are in the side panel)
  *   quick replies          under the latest answer: one tap asks a common follow-up
  *   edit                   the latest question can be edited and asked again (it
@@ -10,8 +10,11 @@
  *   stopped / failed       a quiet "You stopped this answer" divider (or the error),
  *                          and a redo button that asks the same question again
  * On small screens the latest turn also shows the full picks (the side panel is hidden).
+ * Noir: square message boxes on hairlines, no shadows, and no lime (Play Next keeps
+ * its lime for "Ask").
  */
 import { memo, useState } from "react";
+import { ChevronDown } from "lucide-react";
 import GuideTimeline from "./GuideTimeline";
 import GuidePanel from "./GuidePanel";
 import RichText from "./RichText";
@@ -38,12 +41,12 @@ const withWritingStep = (turn) => {
 
 const Avatar = ({ working }) => (
   <span
-    className={`relative w-9 h-9 rounded-xl flex items-center justify-center shrink-0 bg-gradient-to-br from-brand/25 to-slate-900 ring-1 ring-brand/40 shadow-[0_0_22px_-6px_var(--color-brand)] ${
-      working ? "animate-pulse" : ""
+    className={`relative w-9 h-9 rounded-sm flex items-center justify-center shrink-0 bg-slate-900 border border-slate-600 ${
+      working ? "motion-safe:animate-pulse" : ""
     }`}
     aria-hidden="true"
   >
-    <PowerIcon className="w-4.5 h-4.5 text-brand" />
+    <PowerIcon className="w-4.5 h-4.5 text-white" />
   </span>
 );
 
@@ -84,13 +87,13 @@ const Question = ({ text, editable, onEdit }) => {
           rows={2}
           autoFocus
           aria-label="Edit your question"
-          className="w-full rounded-2xl rounded-br-md bg-slate-900 border border-brand/60 text-white px-4 py-2.5 font-semibold outline-none resize-y"
+          className="w-full rounded-sm bg-slate-900 border border-white text-base text-white px-4 py-2.5 font-medium outline-none resize-y"
         />
         <div className="self-end flex gap-2">
           <button
             type="button"
             onClick={() => setDraft(null)}
-            className="px-4 py-1.5 rounded-xl text-sm font-bold text-slate-300 border border-slate-700 hover:text-white hover:border-slate-500 transition"
+            className="inline-flex items-center h-11 px-4 rounded-sm text-sm font-medium text-white border border-slate-500 hover:border-white transition-colors duration-120"
           >
             Cancel
           </button>
@@ -98,7 +101,7 @@ const Question = ({ text, editable, onEdit }) => {
             type="button"
             onClick={send}
             disabled={!draft.trim()}
-            className="px-4 py-1.5 rounded-xl text-sm font-bold bg-brand text-slate-950 hover:brightness-110 transition disabled:opacity-40"
+            className="inline-flex items-center h-11 px-4 rounded-sm text-sm font-semibold bg-white text-slate-950 hover:bg-slate-50 transition-colors duration-120 disabled:opacity-40"
           >
             Send
           </button>
@@ -109,14 +112,14 @@ const Question = ({ text, editable, onEdit }) => {
 
   return (
     <div className="group self-end max-w-[85%] flex flex-col items-end gap-1">
-      <p className="rounded-2xl rounded-br-md bg-gradient-to-br from-brand/25 to-brand/10 border border-brand/40 text-white px-4 py-2.5 font-semibold shadow-[0_8px_28px_-14px_var(--color-brand)]">
+      <p className="rounded-sm bg-slate-800 border border-slate-600 text-white px-4 py-2.5 font-medium">
         {text}
       </p>
       {editable && (
         <button
           type="button"
           onClick={() => setDraft(text)}
-          className="flex items-center gap-1.5 px-2 py-0.5 text-xs font-bold text-slate-500 hover:text-brand transition"
+          className="flex items-center gap-1.5 px-2 min-h-8 text-sm font-medium text-slate-400 hover:text-white transition-colors duration-120"
         >
           <svg
             viewBox="0 0 24 24"
@@ -144,7 +147,7 @@ const RetryButton = ({ onClick }) => (
     onClick={onClick}
     title="Try again"
     aria-label="Try again"
-    className="self-start w-9 h-9 rounded-full flex items-center justify-center text-slate-400 hover:text-brand hover:bg-white/5 transition"
+    className="self-start w-11 h-11 rounded-sm flex items-center justify-center text-slate-400 hover:text-white hover:bg-slate-800 transition-colors duration-120"
   >
     <svg
       viewBox="0 0 24 24"
@@ -188,10 +191,10 @@ const GuideTurn = ({
       <div className="flex gap-3">
         <Avatar working={working} />
         <div className="min-w-0 flex-1 flex flex-col gap-3">
-          <p className="text-sm font-bold text-white leading-9">
+          <p className="text-sm font-semibold text-white leading-9">
             Play Next
             {working && (
-              <span className="ml-2 font-semibold text-brand/90">
+              <span className="ml-2 font-normal text-slate-400">
                 is digging…
               </span>
             )}
@@ -204,8 +207,8 @@ const GuideTurn = ({
           />
 
           {turn.cards ? (
-            <div className="rounded-2xl rounded-tl-md bg-slate-900/90 border border-white/10 px-5 py-4 shadow-xl shadow-black/30">
-              <p className="text-[17px] leading-relaxed text-slate-100">
+            <div className="rounded-sm bg-slate-900 border border-slate-700 px-5 py-4">
+              <p className="text-[17px] leading-relaxed text-white">
                 {turn.cards.intro}
               </p>
 
@@ -217,15 +220,15 @@ const GuideTurn = ({
                 <button
                   type="button"
                   onClick={() => setShowFull((s) => !s)}
-                  className="mt-3 text-xs font-bold text-slate-500 hover:text-white transition"
+                  aria-expanded={showFull}
+                  className="mt-2 inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-slate-400 hover:text-white transition-colors duration-120"
                 >
-                  {showFull
-                    ? "Hide the full answer ▴"
-                    : "Read the full answer ▾"}
+                  {showFull ? "Hide the full answer" : "Read the full answer"}
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-120 ${showFull ? "rotate-180" : ""}`} strokeWidth={1.8} aria-hidden="true" />
                 </button>
               )}
               {showFull && (
-                <p className="mt-2 text-sm text-slate-300 whitespace-pre-line border-t border-white/10 pt-3">
+                <p className="mt-2 text-sm text-slate-300 whitespace-pre-line border-t border-slate-700 pt-3">
                   <RichText text={turn.answer} />
                 </p>
               )}
@@ -234,7 +237,7 @@ const GuideTurn = ({
             // No cards: the guide's own words, once it's finished (e.g. it asked you something)
             turn.answer &&
             !working && (
-              <div className="rounded-2xl rounded-tl-md bg-slate-900/85 border border-white/10 px-5 py-4 text-slate-100 leading-relaxed whitespace-pre-line">
+              <div className="rounded-sm bg-slate-900 border border-slate-700 px-5 py-4 text-white leading-relaxed whitespace-pre-line">
                 <RichText text={turn.answer} />
               </div>
             )
@@ -242,14 +245,14 @@ const GuideTurn = ({
 
           {/* Stopping is the player's choice, not a failure: one quiet line, like other AI chats */}
           {turn.stopped ? (
-            <p className="flex items-center gap-4 py-1 text-sm text-slate-500">
-              <span className="h-px flex-1 bg-white/10" aria-hidden="true" />
+            <p className="flex items-center gap-4 py-1 text-sm text-slate-400">
+              <span className="h-px flex-1 bg-slate-700" aria-hidden="true" />
               You stopped this answer
-              <span className="h-px flex-1 bg-white/10" aria-hidden="true" />
+              <span className="h-px flex-1 bg-slate-700" aria-hidden="true" />
             </p>
           ) : (
             turn.error && (
-              <p className="rounded-xl bg-red-500/10 border border-red-500/30 text-red-200 text-sm px-4 py-2.5">
+              <p className="rounded-sm border border-red-400/40 text-red-200 text-sm px-4 py-2.5">
                 {turn.error}
               </p>
             )
@@ -276,7 +279,7 @@ const GuideTurn = ({
                   key={reply}
                   type="button"
                   onClick={() => onAsk(reply)}
-                  className="px-3.5 py-1.5 rounded-full text-sm font-semibold text-slate-200 bg-white/5 border border-white/10 hover:border-brand/60 hover:text-white transition"
+                  className="inline-flex items-center min-h-9 px-3.5 py-1.5 rounded-sm text-sm font-medium text-white border border-slate-500 hover:border-white transition-colors duration-120"
                 >
                   {reply}
                 </button>

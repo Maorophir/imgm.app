@@ -11,12 +11,12 @@ const ConsideringTile = ({ game }) => (
       <img
         src={game.cover}
         alt=""
-        className={`w-full aspect-[3/4] object-cover rounded-lg transition ${game.verified ? "" : "opacity-60 saturate-50"}`}
+        className={`w-full aspect-[3/4] object-cover rounded-sm transition ${game.verified ? "" : "opacity-60 saturate-50"}`}
       />
     ) : (
-      <div className="w-full aspect-[3/4] rounded-lg bg-slate-800" />
+      <div className="w-full aspect-[3/4] rounded-sm bg-slate-800" />
     )}
-    <p className="mt-1 text-[11px] text-slate-400 truncate">{game.title}</p>
+    <p className="mt-1 text-xs text-slate-400 truncate">{game.title}</p>
   </div>
 );
 
@@ -24,8 +24,8 @@ const GuidePanel = ({ turn, onNotForMe, disabled }) => {
   // Nothing asked yet: a quiet preview of what will appear here
   if (!turn) {
     return (
-      <div className="rounded-3xl border border-dashed border-slate-700 p-6 text-center">
-        <p className="font-bold text-white">Your picks will appear here</p>
+      <div className="border-t border-slate-700 pt-6 text-center">
+        <p className="font-semibold text-white">Your picks will appear here</p>
         <p className="text-sm text-slate-400 mt-1">
           Five games chosen for you, with a Best Pick and exactly why each one
           fits.
@@ -40,7 +40,7 @@ const GuidePanel = ({ turn, onNotForMe, disabled }) => {
     );
     return (
       <div className="flex flex-col gap-3">
-        <h2 className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+        <h2 className="text-sm text-slate-400">
           Your 5 picks
         </h2>
         {picks.map((pick, i) => (
@@ -59,10 +59,10 @@ const GuidePanel = ({ turn, onNotForMe, disabled }) => {
   // Working (or failed before the picks): show what it's considering
   return (
     <div className="flex flex-col gap-3">
-      <h2 className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+      <h2 className="flex items-center gap-2 text-sm text-slate-400">
         {turn.status === "running" && (
           <span
-            className="w-2 h-2 rounded-full bg-brand animate-pulse"
+            className="w-2 h-2 rounded-full bg-white motion-safe:animate-pulse"
             aria-hidden="true"
           />
         )}
@@ -79,7 +79,7 @@ const GuidePanel = ({ turn, onNotForMe, disabled }) => {
           {Array.from({ length: 8 }, (_, i) => (
             <div
               key={i}
-              className="aspect-[3/4] rounded-lg bg-slate-800/60 animate-pulse"
+              className="aspect-[3/4] rounded-sm bg-slate-800/60 motion-safe:animate-pulse"
             />
           ))}
         </div>

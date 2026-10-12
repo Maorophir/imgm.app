@@ -9,6 +9,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { authClient } from '../lib/authClient';
 import AuthCard, { ErrorBox, buttonClass, inputClass } from '../components/AuthCard';
+import { TEXT_LINK } from '../lib/ui';
 
 function ForgotPassword() {
   const [email, setEmail] = useState('');
@@ -40,7 +41,7 @@ function ForgotPassword() {
           <p className="text-sm text-slate-400">
             Signed up with Google? There's no password to reset: just use Continue with Google on the login page.
           </p>
-          <Link to="/login" className={`${buttonClass} block text-center mt-6`}>
+          <Link to="/login" className={`${buttonClass} mt-6`}>
             Back to login
           </Link>
         </div>
@@ -53,7 +54,7 @@ function ForgotPassword() {
       {error && <ErrorBox>{error}</ErrorBox>}
       <form onSubmit={submit} className="space-y-5">
         <div>
-          <label htmlFor="reset-email" className="block text-sm font-semibold text-slate-300 mb-1">Email Address</label>
+          <label htmlFor="reset-email" className="block text-sm font-medium text-white mb-1.5">Email Address</label>
           <input
             id="reset-email"
             type="email"
@@ -70,7 +71,7 @@ function ForgotPassword() {
       </form>
       <p className="mt-8 text-center text-sm text-slate-400">
         Remembered it?{' '}
-        <Link to="/login" className="text-white hover:text-brand font-semibold underline underline-offset-4">Log in</Link>
+        <Link to="/login" className={`font-medium text-white ${TEXT_LINK}`}>Log in</Link>
       </p>
     </AuthCard>
   );
