@@ -7,6 +7,7 @@
  */
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Search } from 'lucide-react';
 import useGameSearch from '../hooks/useGameSearch';
 
 const MAX_DROPDOWN_RESULTS = 6;
@@ -54,53 +55,45 @@ const SearchBar = () => {
   const games = results.games.slice(0, MAX_DROPDOWN_RESULTS);
 
   return (
-    <div ref={containerRef} className="relative w-full md:max-w-md">
-      <form onSubmit={handleSubmit} role="search">
-        <div className="relative">
-          <svg
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none"
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z" />
-          </svg>
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setIsOpen(true);
-            }}
-            onFocus={() => setIsOpen(true)}
-            onKeyDown={(e) => {
-              if (e.key === 'Escape') setIsOpen(false);
-            }}
-            placeholder="Search games..."
-            aria-label="Search games"
-            className="
-              w-full bg-slate-800/60 border border-slate-700/50
-              rounded-full pl-11 pr-4 py-2 text-sm text-slate-200
-              placeholder:text-slate-500
-              focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500/40
-              transition
-            "
-          />
-        </div>
+    <div ref={containerRef} className="relative w-full">
+      {/* The field: a filled box with a control-grey edge that turns ivory while it has focus */}
+      <form
+        onSubmit={handleSubmit}
+        role="search"
+        className="flex items-center gap-2.5 h-11 px-3.5 rounded-sm bg-slate-900 border border-slate-500 focus-within:border-white transition-colors duration-120"
+      >
+        <Search className="w-4 h-4 shrink-0 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setIsOpen(true);
+          }}
+          onFocus={() => setIsOpen(true)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setIsOpen(false);
+          }}
+          placeholder="Search games"
+          aria-label="Search games"
+          autoComplete="off"
+          // 16px text, so phones don't zoom in when the field gets focus. The box's
+          // border shows focus, so the input itself draws no outline, and the
+          // browser's own clear button is hidden (it can't take our colours).
+          className="flex-1 min-w-0 h-10 bg-transparent text-base text-white placeholder:text-slate-400 appearance-none focus:outline-hidden [&::-webkit-search-cancel-button]:appearance-none"
+        />
       </form>
 
       {showDropdown && (
-        <div className="
-          absolute left-0 right-0 mt-2 z-50
-          bg-slate-900/90 backdrop-blur-md
-          border border-slate-700/50 rounded-2xl
-          shadow-2xl shadow-black/40
-          overflow-hidden
-        ">
+        // Floats like a printed slip over the page: card stock, a hairline edge, a soft
+        // shadow underneath (no glow), and a quick fade in
+        <div className="absolute left-0 right-0 top-full mt-2.5 z-50 p-2 rounded-sm bg-slate-900 border border-slate-600 shadow-[0_32px_64px_-24px_rgba(0,0,0,.85)] transition-[opacity,translate] duration-160 ease-out translate-y-0 starting:opacity-0 starting:-translate-y-1">
           {isLoading && (
-            <p className="px-4 py-3 text-sm text-slate-400 animate-pulse">Searching…</p>
+            <p className="px-2 py-2.5 text-sm text-slate-400 animate-pulse">Searching…</p>
           )}
 
           {!isLoading && results.error && (
-            <p className="px-4 py-3 text-sm text-red-400">
+            <p className="px-2 py-2.5 text-sm text-red-400">
               {results.error === 'rate-limited'
                 ? 'Too many searches — wait a moment and try again.'
                 : 'Search is unavailable right now.'}
@@ -108,47 +101,48 @@ const SearchBar = () => {
           )}
 
           {!isLoading && !results.error && games.length === 0 && (
-            <p className="px-4 py-3 text-sm text-slate-500">No games found for "{trimmed}"</p>
+            <p className="px-2 py-2.5 text-sm text-slate-400">No games found for “{trimmed}”</p>
           )}
 
           {!isLoading && games.length > 0 && (
             <ul>
               {games.map((game) => {
                 const year = game.releaseDate ? new Date(game.releaseDate).getFullYear() : null;
-                const subtitle = [year, game.genres?.[0]].filter(Boolean).join(' • ');
+                const subtitle = [year, game.genres?.[0]].filter(Boolean).join(' · ');
 
                 return (
                   <li key={game.id}>
                     <button
                       type="button"
                       onClick={() => handleSelect(game.id)}
-                      className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-white/5 transition"
+                      className="w-full flex items-center gap-3.5 p-2 rounded-sm text-left hover:bg-slate-800 transition-colors duration-120"
                     >
                       {game.coverUrl ? (
                         <img
                           src={game.coverUrl}
                           alt=""
                           loading="lazy"
-                          className="w-9 h-12 object-cover rounded-md border border-slate-700/50 shrink-0"
+                          className="w-9 h-12 object-cover rounded-sm bg-slate-800 shrink-0"
                         />
                       ) : (
-                        <div className="w-9 h-12 rounded-md bg-slate-800 shrink-0" />
+                        <div className="w-9 h-12 rounded-sm bg-slate-800 shrink-0" />
                       )}
                       <div className="min-w-0">
-                        <p className="text-sm font-semibold text-white truncate">{game.title}</p>
-                        {subtitle && <p className="text-xs text-slate-500">{subtitle}</p>}
+                        <p className="text-base font-medium leading-snug text-white truncate">{game.title}</p>
+                        {subtitle && <p className="text-sm text-slate-400">{subtitle}</p>}
                       </div>
                     </button>
                   </li>
                 );
               })}
-              <li className="border-t border-slate-800/80">
+              <li className="mt-1 pt-1 border-t border-slate-700">
                 <button
                   type="button"
                   onClick={handleSubmit}
-                  className="w-full px-4 py-2.5 text-sm font-semibold text-white hover:bg-white/5 text-left transition"
+                  className="w-full flex items-center gap-1.5 px-2 h-11 rounded-sm text-sm font-medium text-white text-left hover:bg-slate-800 transition-colors duration-120"
                 >
-                  See all results for "{trimmed}" →
+                  <span className="truncate">See all results for “{trimmed}”</span>
+                  <ArrowRight className="w-4 h-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
                 </button>
               </li>
             </ul>
