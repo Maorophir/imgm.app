@@ -8,3 +8,7 @@ export const igdbImage = (url, size) => url?.replace(/\/t_[a-z0-9_]+\//, `/${siz
 // A cover's srcSet: the browser picks the 264px or the 528px copy for the card's width
 export const coverSrcSet = (url) =>
   url ? `${igdbImage(url, 't_cover_big')} 264w, ${igdbImage(url, 't_cover_big_2x')} 528w` : undefined;
+
+// How wide a cover is in the game grids (Home's shelf, Search): two columns on phones,
+// up to about 230px each on desktop. The `sizes` for those covers' srcSet.
+export const COVER_SIZES = '(min-width: 1024px) 230px, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw';

@@ -4,25 +4,27 @@
  * long), best/worst moments (behind a spoiler veil if marked) and pros & cons.
  * Empty or partial reviews get one calm line instead of an empty box.
  * Swearing shows masked ("f***") unless the viewer turned on strong language.
+ *
+ * Noir: no box around it (the card beside it is the object), sentence-case grey
+ * labels, the tier as its mark and name in the ink, and plain square badges.
  */
 import { EyeOff, Sparkles, ThumbsDown, TriangleAlert } from 'lucide-react';
 import ArtIcon from '../ArtIcon';
 import HelpfulVote from './HelpfulVote';
+import RarityMark from '../RarityMark';
 import { useState } from 'react';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
 import { getRarity, RATING_LABELS, BADGES } from '../reviewQuest/questOptions';
 import { formatDate, tickedChecklist, reviewerName } from './reviewDisplay';
 import { Avatar } from './RarityCard';
 import { getProgress } from '../../lib/levels';
+import { TEXT_BUTTON_SM } from '../../lib/ui';
 
-const LONG_REVIEW = 420; // characters — longer reviews start collapsed
+const LONG_REVIEW = 420; // characters: longer reviews start collapsed
 
+// A quiet label over a group ("Moments"), on a hairline
 const SectionLabel = ({ children }) => (
-  <p className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-500 mb-2">
-    <span className="h-px flex-1 bg-slate-800" />
-    {children}
-    <span className="h-px flex-1 bg-slate-800" />
-  </p>
+  <p className="pt-3 mb-2 border-t border-slate-700 text-sm text-slate-400">{children}</p>
 );
 
 const ReviewPanel = ({ review: original }) => {
@@ -48,23 +50,23 @@ const ReviewPanel = ({ review: original }) => {
   const moment = (label, value) =>
     value && (
       <div className="text-sm">
-        <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">{label}</p>
-        <p className={`text-slate-200 break-words transition ${hidden ? 'blur-sm select-none' : ''}`} aria-hidden={hidden}>
+        <p className="text-sm text-slate-400">{label}</p>
+        <p className={`text-white break-words transition ${hidden ? 'blur-sm select-none' : ''}`} aria-hidden={hidden}>
           {value}
         </p>
       </div>
     );
 
   return (
-    <article className="flex-1 min-w-0 w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col gap-4">
+    <article className="flex-1 min-w-0 w-full flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar name={name} user={review.user} size="w-9 h-9 text-sm" />
           <span className="min-w-0">
-            <span className="block font-bold text-white truncate">{name}</span>
-            <span className="block text-xs text-slate-400">
+            <span className="block font-semibold text-white truncate">{name}</span>
+            <span className="block text-sm text-slate-400">
               {author && (
-                <span className="font-bold" style={{ color: author.tier.color }}>
+                <span className="font-medium" style={{ color: author.tier.color }}>
                   {author.tier.label} · Lv {author.level} ·{' '}
                 </span>
               )}
@@ -72,17 +74,20 @@ const ReviewPanel = ({ review: original }) => {
             </span>
           </span>
         </div>
-        <span className="flex items-baseline gap-2 shrink-0">
-          <span className="text-sm font-black uppercase tracking-[0.2em]" style={{ color: rarity.color }}>{rarity.label}</span>
-          <span className="text-sm text-slate-400 font-semibold">{review.rating}/10 · {RATING_LABELS[review.rating]}</span>
+        <span className="flex items-center gap-2 shrink-0 text-sm">
+          <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: rarity.color }}>
+            <RarityMark tier={rarity.key} />
+            {rarity.label}
+          </span>
+          <span className="text-slate-400 tabular-nums">{review.rating}/10 · {RATING_LABELS[review.rating]}</span>
         </span>
       </header>
 
       {review.badges?.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {review.badges.map((b) => (
-            <span key={b} className="inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/35 text-amber-200 whitespace-nowrap">
-              <ArtIcon icon={BADGES[b]?.art} className="w-3.5 h-3.5" /> {BADGES[b]?.label ?? b}
+            <span key={b} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xs border border-slate-600 text-sm font-medium text-white whitespace-nowrap">
+              <ArtIcon icon={BADGES[b]?.art} className="w-3.5 h-3.5 text-rarity-legendary" /> {BADGES[b]?.label ?? b}
             </span>
           ))}
         </div>
@@ -91,7 +96,7 @@ const ReviewPanel = ({ review: original }) => {
       {/* Final words — or a calm line when there are none */}
       {paragraphs.length > 0 ? (
         <div>
-          <div className={`text-[15px] leading-relaxed text-slate-100 break-words max-w-[68ch] ${isLong && !expanded ? 'line-clamp-6' : ''}`}>
+          <div className={`text-base leading-[1.6] text-white break-words max-w-[68ch] ${isLong && !expanded ? 'line-clamp-6' : ''}`}>
             {paragraphs.map((p, i) => (
               <p key={i} className="whitespace-pre-line mb-3 last:mb-0">{p}</p>
             ))}
@@ -101,9 +106,9 @@ const ReviewPanel = ({ review: original }) => {
               type="button"
               onClick={() => setExpanded((e) => !e)}
               aria-expanded={expanded}
-              className="mt-2 text-sm font-bold text-white hover:text-brand"
+              className={TEXT_BUTTON_SM}
             >
-              {expanded ? 'Show less ▴' : 'Read more ▾'}
+              {expanded ? 'Show less' : 'Read more'}
             </button>
           )}
         </div>
@@ -111,7 +116,7 @@ const ReviewPanel = ({ review: original }) => {
         !hasMoments && !hasProsCons && (
           <p className="text-sm text-slate-400">
             {tickedChecklist(review).length > 0
-              ? `No written review. Flip the card to see ${name}'s checklist ↻`
+              ? `No written review. Turn the card over to see ${name}'s checklist.`
               : `Rated it ${review.rating}/10 · ${RATING_LABELS[review.rating]}. No written review, the card says it all.`}
           </p>
         )
@@ -129,9 +134,11 @@ const ReviewPanel = ({ review: original }) => {
                   <button
                     type="button"
                     onClick={() => setSpoilersShown(true)}
-                    className="absolute inset-0 flex items-center justify-center rounded-lg bg-slate-900/40 text-xs font-bold text-amber-300 hover:text-amber-200"
+                    className="absolute inset-0 flex items-center justify-center rounded-sm bg-slate-950/60 text-sm font-medium text-white"
                   >
-                    <TriangleAlert className="w-3.5 h-3.5 mr-1.5" aria-hidden="true" /> Spoilers · tap to reveal
+                    <span className="inline-flex items-center gap-1.5 underline decoration-1 underline-offset-5 decoration-slate-500/80 hover:decoration-current">
+                      <TriangleAlert className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" /> Spoilers · tap to reveal
+                    </span>
                   </button>
                 )}
                 {/* Revealed: hide them again */}
@@ -139,9 +146,9 @@ const ReviewPanel = ({ review: original }) => {
                   <button
                     type="button"
                     onClick={() => setSpoilersShown(false)}
-                    className="self-start inline-flex items-center gap-1.5 mt-1 text-xs font-bold text-slate-400 hover:text-amber-300 transition"
+                    className={`self-start inline-flex items-center gap-1.5 ${TEXT_BUTTON_SM}`}
                   >
-                    <EyeOff className="w-3.5 h-3.5" aria-hidden="true" /> Hide spoilers
+                    <EyeOff className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" /> Hide spoilers
                   </button>
                 )}
               </div>
@@ -152,10 +159,10 @@ const ReviewPanel = ({ review: original }) => {
               <SectionLabel>Pros &amp; cons</SectionLabel>
               <ul className="flex flex-col gap-1 text-sm">
                 {review.pros?.map((p) => (
-                  <li key={`+${p}`} className="text-slate-200 break-words"><span className="font-black text-emerald-400 mr-1.5">+</span>{p}</li>
+                  <li key={`+${p}`} className="text-white break-words"><span className="font-semibold text-rarity-uncommon mr-1.5">+</span>{p}</li>
                 ))}
                 {review.cons?.map((c) => (
-                  <li key={`-${c}`} className="text-slate-200 break-words"><span className="font-black text-red-400 mr-1.5">−</span>{c}</li>
+                  <li key={`-${c}`} className="text-white break-words"><span className="font-semibold text-red-400 mr-1.5">−</span>{c}</li>
                 ))}
               </ul>
             </div>

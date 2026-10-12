@@ -1,6 +1,6 @@
 /**
  * RarityStars — 10 stars (one per point) whose fill takes the colour of the
- * score's loot rarity. Legendary scores make the stars shimmer gold.
+ * score's loot rarity. Legendary scores make the stars float, one after another.
  *
  * Interactive by default: tap a star, drag across them, or use the arrow keys.
  * Pass `readOnly` to display a score — including averages: 8.4 shows 8 full
@@ -11,7 +11,7 @@ import { getRarity } from './reviewQuest/questOptions';
 
 const STAR_PATH = 'M12 2.5l2.94 6.1 6.56.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.2 1.2-6.5-4.8-4.6 6.56-.9z';
 const STAR_COUNT = 10;
-const EMPTY_COLOR = '#475569'; // slate-600, before any score is picked
+const EMPTY_COLOR = '#6b645a'; // slate-500 (the control-border grey), before any score is picked
 
 // Star size + gap per size. `lg` still fits 10 stars on a phone.
 const SIZES = {
@@ -82,7 +82,7 @@ const RarityStars = ({ value, onChange, size = 'lg', readOnly = false }) => {
       aria-valuemin={readOnly ? undefined : 1}
       aria-valuemax={readOnly ? undefined : STAR_COUNT}
       aria-valuenow={readOnly ? undefined : value ?? undefined}
-      className={`flex ${gap} ${readOnly ? '' : 'cursor-pointer touch-none select-none p-1.5 rounded-xl focus-visible:outline-2 focus-visible:outline-brand'}`}
+      className={`flex ${gap} ${readOnly ? '' : 'cursor-pointer touch-none select-none p-1.5 rounded-sm'}`}
     >
       {Array.from({ length: STAR_COUNT }, (_, i) => {
         // How much of this star is filled, 0–1 (fractions happen for averages, e.g. 8.4)
@@ -93,9 +93,8 @@ const RarityStars = ({ value, onChange, size = 'lg', readOnly = false }) => {
             key={pop.index === i ? `${i}-${pop.count}` : i}
             ref={(el) => (starRefs.current[i] = el)}
             viewBox="0 0 24 24"
-            className={`${starSize} shrink-0 overflow-visible transition-[filter] duration-300 ${pop.index === i ? 'animate-pop' : ''} ${legendary && !readOnly ? 'animate-shimmer' : ''}`}
+            className={`${starSize} shrink-0 overflow-visible ${pop.index === i ? 'animate-pop' : ''} ${legendary && !readOnly ? 'animate-shimmer' : ''}`}
             style={{
-              filter: shown && size !== 'sm' ? `drop-shadow(0 0 6px ${color}66)` : 'none',
               animationDelay: legendary ? `${i * 0.08}s` : undefined,
               opacity: preview != null ? 0.75 : 1,
             }}

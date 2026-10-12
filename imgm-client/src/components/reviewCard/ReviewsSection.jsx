@@ -9,6 +9,9 @@
  *
  * Reviews come page by page from /api/reviews/game/:id (the game itself only
  * carries the counts, in game.reviewStats).
+ *
+ * Noir: the section heading in Big Shoulders, the sort as a segmented control, the
+ * tiers as square chips in their inks, and a hairline between reviews.
  */
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -16,6 +19,9 @@ import { Medal, MessageSquareWarning, X } from 'lucide-react';
 import { getGameReviews } from '../../lib/api';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
 import { RARITIES, getRarity } from '../reviewQuest/questOptions';
+import { WRAP, SECTION_TITLE, GHOST_BUTTON, SEGMENTS, segment } from '../../lib/ui';
+import RarityMark from '../RarityMark';
+import SwitchTrack from '../SwitchTrack';
 import ReviewEntry from './ReviewEntry';
 import StartQuestButton from '../reviewQuest/StartQuestButton';
 
@@ -53,12 +59,10 @@ const StrongLanguageSwitch = () => {
       role="switch"
       aria-checked={shown}
       onClick={() => setShown(!shown)}
-      className="flex items-center gap-2 text-sm font-semibold text-slate-300 hover:text-white"
+      className="flex items-center gap-2.5 min-h-11 text-sm font-medium text-white hover:text-slate-50"
     >
-      <span className={`relative w-9 h-5 rounded-full transition ${shown ? 'bg-rose-500' : 'bg-slate-700'}`}>
-        <span className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${shown ? 'translate-x-4' : ''}`} />
-      </span>
-      <MessageSquareWarning className="w-4 h-4" aria-hidden="true" />
+      <SwitchTrack on={shown} />
+      <MessageSquareWarning className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
       Show strong language
     </button>
   );
@@ -75,11 +79,11 @@ const RatingBreakdown = ({ tiers, selected, rating, onSelect, onClearRating }) =
           type="button"
           onClick={onClearRating}
           aria-pressed="true"
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border bg-white/10 transition"
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-sm text-sm font-semibold border bg-slate-800 transition-colors duration-120"
           style={{ borderColor: getRarity(rating).color, color: getRarity(rating).color }}
         >
           Rated {rating}/10
-          <X className="w-3.5 h-3.5 text-slate-300" aria-label="Show every review" />
+          <X className="w-3.5 h-3.5 text-slate-300" strokeWidth={1.8} aria-label="Show every review" />
         </button>
       )}
       {tiers.map((tier) => {
@@ -91,13 +95,16 @@ const RatingBreakdown = ({ tiers, selected, rating, onSelect, onClearRating }) =
             disabled={tier.count === 0}
             aria-pressed={active}
             onClick={() => onSelect(active ? null : tier.key)}
-            className={`px-3 py-1.5 rounded-full text-xs font-bold border transition disabled:opacity-30 disabled:cursor-not-allowed ${
-              active ? 'bg-white/10' : 'border-slate-700 hover:border-slate-500'
+            className={`inline-flex items-center gap-2 h-9 px-3 rounded-sm text-sm border transition-colors duration-120 disabled:opacity-30 disabled:cursor-not-allowed ${
+              active ? 'bg-slate-800' : 'border-slate-600 enabled:hover:border-slate-400'
             }`}
             style={active ? { borderColor: tier.color } : undefined}
           >
-            <span className="uppercase tracking-wider" style={{ color: tier.color }}>{tier.label}</span>
-            <span className="ml-1.5 text-slate-400 tabular-nums">{tier.count}</span>
+            <span className="inline-flex items-center gap-1.5 font-semibold" style={{ color: tier.color }}>
+              <RarityMark tier={tier.key} className="w-3 h-3" />
+              {tier.label}
+            </span>
+            <span className="text-slate-400 tabular-nums">{tier.count}</span>
           </button>
         );
       })}
@@ -157,12 +164,12 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
   const left = current ? current.total - current.reviews.length : 0;
 
   return (
-    <section id="reviews" className="max-w-7xl mx-auto px-6 py-10 pb-20 scroll-mt-20">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+    <section id="reviews" className={`${WRAP} py-10 pb-20 scroll-mt-20`}>
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
         <div className="flex flex-col items-start gap-2">
-          <h2 className="text-2xl font-bold text-white">
-            Community <span className="text-brand">Reviews</span>
-            <span className="text-slate-500 text-lg font-normal ml-2">({total})</span>
+          <h2 className={SECTION_TITLE}>
+            Community reviews
+            <span className="ml-3 font-sans text-lg font-normal tracking-normal tabular-nums text-slate-400">({total})</span>
           </h2>
           {/* Only offered when a review on screen actually has masked swearing */}
           {shown.some((r) => r.masked) && <StrongLanguageSwitch />}
@@ -176,13 +183,11 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
       </div>
 
       {total === 0 ? (
-        <div className="text-center py-14 px-6 bg-gradient-to-b from-brand/5 to-slate-900/30 rounded-2xl border border-slate-800">
-          <span className="mx-auto mb-4 w-14 h-14 rounded-2xl grid place-items-center bg-amber-300/10 border border-amber-300/30 text-amber-300">
-            <Medal className="w-7 h-7" aria-hidden="true" />
-          </span>
-          <p className="text-white text-xl font-bold mb-1">Be the first reviewer</p>
+        <div className="py-14 text-center border-t border-slate-700">
+          <Medal className="mx-auto mb-4 w-8 h-8 text-rarity-legendary" strokeWidth={1.8} aria-hidden="true" />
+          <p className="text-white text-xl font-semibold mb-1">Be the first reviewer</p>
           <p className="text-slate-400 text-sm mb-6">
-            Nobody has reviewed {game.title} yet — go first and earn the <span className="text-amber-300 font-semibold">First Reviewer</span> badge.
+            Nobody has reviewed {game.title} yet. Go first and earn the <span className="text-white font-medium">First Reviewer</span> badge.
           </p>
           <StartQuestButton gameId={gameId} />
         </div>
@@ -192,16 +197,14 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
             <div className="flex-1 max-w-2xl">
               <RatingBreakdown tiers={tiers} selected={tier} rating={rating} onSelect={(next) => onFilterChange({ tier: next, rating: null })} onClearRating={() => onFilterChange({ tier: null, rating: null })} />
             </div>
-            <div className="flex rounded-xl border border-slate-700 p-1 self-start lg:self-auto" role="group" aria-label="Sort reviews">
+            <div className={`${SEGMENTS} self-start lg:self-auto`} role="group" aria-label="Sort reviews">
               {SORTS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   aria-pressed={sort === option.value}
                   onClick={() => setSort(option.value)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-bold transition ${
-                    sort === option.value ? 'bg-brand text-slate-950' : 'text-slate-300 hover:text-white'
-                  }`}
+                  className={segment(sort === option.value)}
                 >
                   {option.label}
                 </button>
@@ -212,18 +215,19 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
           {error && <p className="text-red-300 text-sm mb-6">Couldn't load the reviews. Please refresh the page.</p>}
 
           {!current && !error ? (
-            <div className="h-64 rounded-2xl bg-slate-900/50 animate-pulse" />
+            <div className="h-64 rounded-sm bg-slate-900 motion-safe:animate-pulse" />
           ) : shown.length === 0 ? (
             <p className="text-slate-400 py-10 text-center">
               {rating ? `No ${rating}/10 reviews yet.` : `No ${RARITIES.find((t) => t.key === tier)?.label} reviews yet.`}
             </p>
           ) : (
-            <div className="flex flex-col gap-10">
+            <div className="flex flex-col">
               {shown.map((review, i) => (
-                // id: links like /game/123#review-abc scroll straight here
-                <div key={review.id} id={`review-${review.id}`} className="scroll-mt-24">
+                // id: links like /game/123#review-abc scroll straight here. A hairline
+                // between reviews instead of boxes.
+                <div key={review.id} id={`review-${review.id}`} className="scroll-mt-24 py-10 first:pt-0 not-first:border-t not-first:border-slate-700">
                   {review === pinned && (
-                    <p className="mb-3 text-xs font-bold uppercase tracking-[0.2em] text-brand">Your review</p>
+                    <p className="mb-3 text-sm text-slate-400">Your review</p>
                   )}
                   {/* A different artwork/screenshot per review, so the cards don't all look the same */}
                   <ReviewEntry review={review} game={game} artUrl={cardArt(game, i)} />
@@ -238,10 +242,10 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
                 type="button"
                 onClick={showMore}
                 disabled={loadingMore}
-                className="px-6 py-3 rounded-full font-bold text-white border border-slate-700 hover:border-brand/60 hover:bg-white/5 transition disabled:opacity-50"
+                className={GHOST_BUTTON}
               >
                 {loadingMore ? 'Loading…' : `Show ${Math.min(NEXT_PAGE, left)} more`}
-                <span className="ml-2 text-slate-500 font-semibold">({left} left)</span>
+                <span className="text-slate-400 font-normal tabular-nums">({left} left)</span>
               </button>
             </div>
           )}
