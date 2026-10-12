@@ -7,13 +7,15 @@
  * Every few levels the player climbs a critic tier.
  */
 
-// `minLevel` = the first level of the tier. Worst → best.
+// `minLevel` = the first level of the tier. Worst → best. The colours are Noir's inks:
+// the metadata grey, then the Uncommon, Rare, Epic and Legendary inks of the rarity
+// tiers (index.css), so a player's tier reads like a card's rarity.
 export const TIERS = [
-  { key: 'casual',       label: 'Casual Player', minLevel: 1,  color: '#94a3b8' },
-  { key: 'reviewer',     label: 'Reviewer',      minLevel: 3,  color: '#2dd4bf' },
-  { key: 'critic',       label: 'Critic',        minLevel: 6,  color: '#38bdf8' },
-  { key: 'top_critic',   label: 'Top Critic',    minLevel: 10, color: '#e879f9' },
-  { key: 'hall_of_fame', label: 'Hall of Fame',  minLevel: 15, color: '#fbbf24' },
+  { key: 'casual',       label: 'Casual Player', minLevel: 1,  color: '#948b7d' },
+  { key: 'reviewer',     label: 'Reviewer',      minLevel: 3,  color: '#5dbe94' },
+  { key: 'critic',       label: 'Critic',        minLevel: 6,  color: '#6b9ae8' },
+  { key: 'top_critic',   label: 'Top Critic',    minLevel: 10, color: '#b276d6' },
+  { key: 'hall_of_fame', label: 'Hall of Fame',  minLevel: 15, color: '#e2b65e' },
 ];
 
 // Total XP needed to reach a level: 0, 200, 600, 1200, 2000, …
