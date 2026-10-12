@@ -72,7 +72,9 @@ PLAYS_ON = {
 formatter = get_model(lambda m: m.with_structured_output(Recommendations))
 
 # The screen node: one small call that says if a message is for Play Next at all
-screener = get_model(lambda m: m.with_structured_output(Screening))
+# include_raw: when the reply isn't the expected form (a small model may write just
+# "no"), we still get its raw text instead of an error
+screener = get_model(lambda m: m.with_structured_output(Screening, include_raw=True))
 OFF_TOPIC = "off_topic"  # names the screen's reply, so the server can tell it apart
 DEFAULT_DECLINE = (
     "I can only help with games. Tell me what you're in the mood to play, and I'll find "
@@ -94,10 +96,16 @@ def screen_question(state: RecommenderState) -> dict:
         earlier=questions[-2] if len(questions) > 1 else "None: this is their first message.",
     )
     try:
-        verdict = screener.invoke([HumanMessage(content=prompt)])
+        result = screener.invoke([HumanMessage(content=prompt)])
     except Exception:
         log.warning("The screen failed; letting the message through", exc_info=True)
         return {}
+    verdict = result["parsed"]
+    if verdict is None:  # not the form: read a plain "yes" / "no" answer instead
+        raw = getattr(result["raw"], "text", "").strip().lower()
+        if not raw.startswith("no"):
+            return {}  # "yes", or anything unclear: let it through
+        verdict = Screening(about_games=False)
     if verdict.about_games:
         return {}
     text = verdict.reply.strip()
