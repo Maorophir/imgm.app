@@ -3,6 +3,7 @@ The graph's nodes: the agent (model + tools), the formatter (answer → cards) a
 the checker (plain code that enforces the rules a prompt can only ask for).
 """
 
+import logging
 import re
 import time
 import unicodedata
@@ -11,8 +12,8 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END
 
-from imgm_ai.agent.prompts import FORMAT_PROMPT, build_system_prompt
-from imgm_ai.agent.schemas import Recommendations
+from imgm_ai.agent.prompts import CHAT_PROMPT, FORMAT_PROMPT, SCREEN_PROMPT, build_system_prompt
+from imgm_ai.agent.schemas import Recommendations, Screening
 from imgm_ai.agent.state import (
     CHECK_FEEDBACK,
     GAME_LENGTH_TEXT,
@@ -33,6 +34,10 @@ model = get_model(lambda m: m.bind_tools(TOOLS))
 # the conversation already contains tool calls.
 writer = get_model(lambda m: m.bind_tools(TOOLS, tool_choice="none"))
 
+log = logging.getLogger("imgm_ai.agent")
+
+SCREEN = "screen"
+CHAT = "chat"
 AGENT = "agent"
 # Must be exactly "tools": that's the name tools_condition routes to
 TOOLS_NODE = "tools"
@@ -66,6 +71,88 @@ PLAYS_ON = {
 
 # The format node needs no tools: it only reshapes the answer into Recommendations
 formatter = get_model(lambda m: m.with_structured_output(Recommendations))
+
+# The screen node: one small call that decides what a message needs.
+# include_raw: when the reply isn't the expected form (a small model may write just
+# "no"), we still get its raw text instead of an error
+screener = get_model(lambda m: m.with_structured_output(Screening, include_raw=True))
+FIND, CHAT_ROUTE, OFF_TOPIC = "find", "chat", "off_topic"
+DEFAULT_DECLINE = (
+    "I can only help with games. Tell me what you're in the mood to play, and I'll find "
+    "you something great."
+)
+
+
+def searched_before(messages: list) -> bool:
+    """Has this chat already looked games up (so there are picks to talk about)?
+
+    Worked out from the history itself: every answer with picks ran search_games.
+    """
+    earlier = messages[: len(messages) - len(current_turn(messages))]
+    return any(isinstance(m, ToolMessage) and m.name == "search_games" for m in earlier)
+
+
+def screen_question(state: RecommenderState) -> dict:
+    """The screen node, before the agent: what does the latest message need?
+
+      find       search and recommend: the first request, the card buttons, or a
+                 follow-up that asks for different/more games ("find others")
+      chat       a short answer about the picks so far ("why that one?", "thanks!"):
+                 no search, the picks stay as they are
+      off_topic  "I only help with games", and the run ends there
+
+    Code makes the calls that must never go wrong: a card button always finds, and a
+    chat with no picks yet always finds (there's nothing to chat about). If the screen
+    itself fails, the message is searched for: a real player is never blocked.
+    """
+    if state.get("force_find"):
+        return {"route": FIND}
+    questions = [m.text for m in state["messages"] if is_player_question(m)]
+    prompt = SCREEN_PROMPT.format(
+        latest=questions[-1] if questions else "",
+        earlier=questions[-2] if len(questions) > 1 else "None: this is their first message.",
+    )
+    try:
+        result = screener.invoke([HumanMessage(content=prompt)])
+    except Exception:
+        log.warning("The screen failed; searching as usual", exc_info=True)
+        return {"route": FIND}
+    verdict = result["parsed"]
+    if verdict is None:  # not the form: read a plain "no" / "chat" answer instead
+        raw = getattr(result["raw"], "text", "").strip().lower()
+        route = OFF_TOPIC if raw.startswith(("no", "off")) else CHAT_ROUTE if raw.startswith("chat") else FIND
+        verdict = Screening(route=route)
+
+    route = verdict.route
+    if route == CHAT_ROUTE and not searched_before(state["messages"]):
+        route = FIND  # nothing has been recommended yet: this IS the request
+    if route != OFF_TOPIC:
+        return {"route": route}
+
+    text = verdict.reply.strip()
+    if len(text) < 20:  # a weak model sometimes writes just "no": use the standard line
+        text = DEFAULT_DECLINE
+    return {"route": OFF_TOPIC, "messages": [AIMessage(content=text, name=OFF_TOPIC)]}
+
+
+def route_after_screen(state: RecommenderState) -> str:
+    """After the screen: search (agent), answer (chat), or stop (off topic)."""
+    return {OFF_TOPIC: END, CHAT_ROUTE: CHAT}.get(state.get("route"), AGENT)
+
+
+# The chat node: the model with NO tools, so it can only answer, never search
+chatter = get_model()
+CHAT_REPLY = "chat_reply"  # names the chat node's answers
+
+
+def chat_reply(state: RecommenderState) -> dict:
+    """The chat node: a short answer to a follow-up about the picks, without searching.
+
+    It sees the conversation like the agent does (past turns condensed), so it knows
+    the games it recommended and why. The picks themselves stay as they were.
+    """
+    response = chatter.invoke([SystemMessage(content=CHAT_PROMPT)] + model_context(state["messages"]))
+    return {"messages": [AIMessage(content=response.text, name=CHAT_REPLY, id=response.id)]}
 
 
 def call_model(state: RecommenderState) -> dict:

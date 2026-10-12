@@ -23,7 +23,9 @@ import { PowerIcon } from "../Logo";
 // While the guide writes, its draft isn't shown (the cards replace it moments later):
 // the timeline gets a "Writing up your picks" step instead, just before the formatting
 const withWritingStep = (turn) => {
-  if (!turn.answer || turn.status === "error") return turn.steps;
+  // No steps = it never searched (e.g. an off-topic message got a one-line reply)
+  if (!turn.answer || turn.status === "error" || turn.steps.length === 0)
+    return turn.steps;
   const formatAt = turn.steps.findIndex((s) => s.id.startsWith("format-"));
   const writing = {
     id: "writing",
@@ -202,7 +204,8 @@ const GuideTurn = ({
 
           <GuideTimeline
             steps={withWritingStep(turn)}
-            running={working}
+            // A reply that streams without searching replaces "Warming up…" as it arrives
+            running={working && !(turn.answer && turn.steps.length === 0)}
             collapsible={Boolean(turn.cards)}
           />
 
@@ -234,9 +237,10 @@ const GuideTurn = ({
               )}
             </div>
           ) : (
-            // No cards: the guide's own words, once it's finished (e.g. it asked you something)
+            // No cards: the guide's own words. A reply that didn't search (a follow-up
+            // about the picks) shows live as it's written; a search's draft waits for the cards
             turn.answer &&
-            !working && (
+            (!working || turn.steps.length === 0) && (
               <div className="rounded-sm bg-slate-900 border border-slate-700 px-5 py-4 text-white leading-relaxed whitespace-pre-line">
                 <RichText text={turn.answer} />
               </div>

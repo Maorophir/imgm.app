@@ -100,6 +100,8 @@ class RecommenderState(MessagesState):
     check_problems: list[str]  # what the last check found wrong (empty = passed)
     fix_attempts: int  # how many times the agent was sent back to fix its answer
     started_at: float  # when this answer started (time.time()), for its time budget
+    route: str  # what the screen decided for this message: "find", "chat" or "off_topic"
+    force_find: bool  # a card button ("Not for me", "Played it"): always search again
     # "Not for me" games: never suggested again in this conversation. Unlike the
     # per-answer fields above, this one is conversation state, so it keeps growing.
     rejected: Annotated[list[RejectedGame], add_rejected]
@@ -123,6 +125,7 @@ def new_turn(
         "check_problems": [],  # nothing has failed a check yet
         "fix_attempts": 0,  # each answer gets its own fix rounds
         "started_at": time.time(),  # each answer gets its own time budget
+        "force_find": False,  # typed messages: the screen decides if a search is needed
     }
     if preferences is not None:  # leave out → keep the preferences already saved
         turn["preferences"] = preferences
@@ -139,4 +142,6 @@ def not_for_me_turn(game_id: int, title: str, reason: str = "not_for_me") -> dic
         if reason == "played"
         else f"Not for me: {title}. Replace it with something else, and keep the other picks if they still fit."
     )
-    return new_turn(asked, rejected=[{"game_id": game_id, "title": title}])
+    turn = new_turn(asked, rejected=[{"game_id": game_id, "title": title}])
+    turn["force_find"] = True  # a card button always means "find me a replacement"
+    return turn

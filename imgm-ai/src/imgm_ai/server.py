@@ -260,6 +260,7 @@ def guide_events(request: GuideRequest, user_id: str | None):
     tools_by_call = {}  # tool_call_id → tool name, to label the "done" step
     games = {}  # game id → tile info (cover, platforms, rating), for the final cards
     recommendations, problems, rounds = None, [], 0
+    reply_only = False  # answered in words only (off topic, or a chat follow-up): no new cards
 
     yield sse("start", {})
     try:
@@ -306,7 +307,7 @@ def guide_events(request: GuideRequest, user_id: str | None):
             elif mode == "messages":
                 message, meta = chunk
                 if (
-                    meta.get("langgraph_node") == "agent"
+                    meta.get("langgraph_node") in ("agent", "chat")  # chat: a follow-up's answer
                     and isinstance(message, AIMessageChunk)
                     and not message.tool_call_chunks
                     and message.text
@@ -316,6 +317,16 @@ def guide_events(request: GuideRequest, user_id: str | None):
             # Each node finishing: the timeline
             elif mode == "updates":
                 for node, update in chunk.items():
+                    # The screen said "not about games": its short reply is the whole answer
+                    if node == "screen" and update and update.get("messages"):
+                        reply = update["messages"][-1]
+                        reply_only = True
+                        yield sse("token", {"message_id": reply.id, "text": reply.text})
+                        continue
+                    # The chat node answered a follow-up (its words came as tokens): no new picks
+                    if node == "chat":
+                        reply_only = True
+                        continue
                     if node == "agent":
                         reply = update["messages"][-1]
                         for call in reply.tool_calls:
@@ -406,7 +417,7 @@ def guide_events(request: GuideRequest, user_id: str | None):
                     "follow_up": recommendations.follow_up,
                 },
             )
-        yield sse("done", {"problems": problems})
+        yield sse("done", {"problems": problems, "reply_only": reply_only})
     except Exception:
         log.exception("Play Next run failed")
         yield sse(
