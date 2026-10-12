@@ -2,10 +2,14 @@
  * MediaSection — a game's screenshots and videos, in two tabs.
  * Screenshots come first (not everyone wants to watch videos); tap one to open
  * it big. Videos are filtered to the few that matter (see pickVideos.js).
+ *
+ * Noir: square-cornered media with no shadows, the tabs and the video list as
+ * segmented controls (the picked one ivory), and a plain dark viewer.
  */
-import { Clapperboard, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Clapperboard, Image as ImageIcon, X } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { pickVideos, allVideos } from './pickVideos';
+import { WRAP, SECTION_TITLE, TEXT_BUTTON_SM, SEGMENTS, segment } from '../../lib/ui';
 
 const GRID_LIMIT = 8; // screenshots shown before "Show all"
 
@@ -32,7 +36,10 @@ const Lightbox = ({ images, index, onChange, onClose }) => {
     };
   }, [images.length, onChange, onClose]);
 
-  const arrow = 'absolute top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-slate-900/70 border border-slate-700 text-white text-xl hover:bg-slate-800 transition';
+  // Square ghost buttons on card stock
+  const iconButton =
+    'absolute w-11 h-11 grid place-items-center rounded-sm bg-slate-900 border border-slate-500 text-white hover:border-white transition-colors duration-120';
+  const arrow = `${iconButton} top-1/2 -translate-y-1/2`;
 
   return (
     <div
@@ -40,20 +47,26 @@ const Lightbox = ({ images, index, onChange, onClose }) => {
       aria-modal="true"
       aria-label={`Screenshot ${index + 1} of ${images.length}`}
       onClick={onClose}
-      className="fixed inset-0 z-[60] bg-slate-950/95 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+      className="fixed inset-0 z-[60] bg-slate-950/95 flex items-center justify-center p-4 animate-fade-in"
     >
       <img
         src={images[index]}
         alt={`Screenshot ${index + 1}`}
         onClick={(e) => e.stopPropagation()}
-        className="max-w-full max-h-[85vh] rounded-xl shadow-2xl object-contain"
+        className="max-w-full max-h-[85vh] rounded-sm object-contain"
       />
-      <button type="button" onClick={onClose} aria-label="Close" className="absolute top-4 right-4 w-11 h-11 rounded-full bg-slate-900/70 border border-slate-700 text-white text-lg hover:bg-slate-800">✕</button>
+      <button type="button" onClick={onClose} aria-label="Close" className={`${iconButton} top-4 right-4`}>
+        <X className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
+      </button>
       {images.length > 1 && (
         <>
-          <button type="button" aria-label="Previous screenshot" className={`${arrow} left-3 sm:left-6`} onClick={(e) => { e.stopPropagation(); go(-1); }}>←</button>
-          <button type="button" aria-label="Next screenshot" className={`${arrow} right-3 sm:right-6`} onClick={(e) => { e.stopPropagation(); go(1); }}>→</button>
-          <span className="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm font-semibold text-slate-300 tabular-nums">
+          <button type="button" aria-label="Previous screenshot" className={`${arrow} left-3 sm:left-6`} onClick={(e) => { e.stopPropagation(); go(-1); }}>
+            <ArrowLeft className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
+          </button>
+          <button type="button" aria-label="Next screenshot" className={`${arrow} right-3 sm:right-6`} onClick={(e) => { e.stopPropagation(); go(1); }}>
+            <ArrowRight className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
+          </button>
+          <span className="absolute bottom-5 left-1/2 -translate-x-1/2 text-sm text-slate-300 tabular-nums">
             {index + 1} / {images.length}
           </span>
         </>
@@ -76,20 +89,20 @@ const Screenshots = ({ images, title }) => {
             type="button"
             onClick={() => setOpen(i)}
             aria-label={`Open screenshot ${i + 1}`}
-            className="group relative aspect-video rounded-xl overflow-hidden border border-slate-800 bg-slate-900 focus-visible:outline-2 focus-visible:outline-brand"
+            className="group relative aspect-video rounded-sm overflow-hidden bg-slate-900"
           >
             <img
               src={thumb(url)}
               alt={`${title} screenshot ${i + 1}`}
               loading="lazy"
-              className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+              className="w-full h-full object-cover transition-opacity duration-120 group-hover:opacity-85"
             />
           </button>
         ))}
       </div>
       {images.length > GRID_LIMIT && (
-        <button type="button" onClick={() => setShowAll((s) => !s)} className="mt-4 text-sm font-bold text-white hover:text-brand">
-          {showAll ? 'Show fewer ▴' : `Show all ${images.length} screenshots ▾`}
+        <button type="button" onClick={() => setShowAll((s) => !s)} aria-expanded={showAll} className={`mt-2 ${TEXT_BUTTON_SM}`}>
+          {showAll ? 'Show fewer' : `Show all ${images.length} screenshots`}
         </button>
       )}
       {open != null && <Lightbox images={images} index={open} onChange={setOpen} onClose={() => setOpen(null)} />}
@@ -106,7 +119,7 @@ const Videos = ({ videos }) => {
 
   return (
     <>
-      <div className="aspect-video rounded-2xl overflow-hidden bg-slate-900 border border-slate-800/50 shadow-2xl shadow-black/30 mb-4">
+      <div className="aspect-video rounded-sm overflow-hidden bg-slate-900 mb-4">
         <iframe
           key={active.youtubeId}
           src={`https://www.youtube.com/embed/${active.youtubeId}`}
@@ -116,24 +129,25 @@ const Videos = ({ videos }) => {
           className="w-full h-full"
         />
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        {list.length > 1 && list.map((video) => (
-          <button
-            key={video.youtubeId}
-            type="button"
-            onClick={() => setActiveId(video.youtubeId)}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${
-              video.youtubeId === active.youtubeId
-                ? 'bg-brand text-slate-950'
-                : 'bg-slate-900/60 text-slate-400 border border-slate-800/50 hover:text-white hover:border-slate-700'
-            }`}
-          >
-            {video.name}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        {list.length > 1 && (
+          <div className={SEGMENTS} role="group" aria-label="Videos">
+            {list.map((video) => (
+              <button
+                key={video.youtubeId}
+                type="button"
+                aria-pressed={video.youtubeId === active.youtubeId}
+                onClick={() => setActiveId(video.youtubeId)}
+                className={segment(video.youtubeId === active.youtubeId)}
+              >
+                {video.name}
+              </button>
+            ))}
+          </div>
+        )}
         {everything.length > list.length || showAll ? (
-          <button type="button" onClick={() => setShowAll((s) => !s)} className="ml-1 text-sm font-bold text-white hover:text-brand">
-            {showAll ? 'Show fewer ▴' : `Show all ${everything.length} videos ▾`}
+          <button type="button" onClick={() => setShowAll((s) => !s)} aria-expanded={showAll} className={TEXT_BUTTON_SM}>
+            {showAll ? 'Show fewer' : `Show all ${everything.length} videos`}
           </button>
         ) : null}
       </div>
@@ -153,13 +167,11 @@ const MediaSection = ({ game }) => {
   if (tabs.length === 0) return null;
 
   return (
-    <section className="max-w-7xl mx-auto px-6 py-10">
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        <h2 className="text-2xl font-bold text-white">
-          Screenshots & <span className="text-brand">Videos</span>
-        </h2>
+    <section className={`${WRAP} py-10`}>
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+        <h2 className={SECTION_TITLE}>Screenshots &amp; videos</h2>
         {tabs.length > 1 && (
-          <div role="tablist" aria-label="Media" className="inline-flex p-1 rounded-xl bg-slate-900/80 border border-slate-800">
+          <div role="tablist" aria-label="Media" className={SEGMENTS}>
             {tabs.map((t) => (
               <button
                 key={t.key}
@@ -167,11 +179,9 @@ const MediaSection = ({ game }) => {
                 role="tab"
                 aria-selected={tab === t.key}
                 onClick={() => setTab(t.key)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-bold transition ${
-                  tab === t.key ? 'bg-brand text-slate-950 shadow' : 'text-slate-400 hover:text-white'
-                }`}
+                className={segment(tab === t.key)}
               >
-                <t.icon className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />{t.label} <span className="font-medium opacity-70 tabular-nums">{t.count}</span>
+                <t.icon className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />{t.label} <span className="font-medium opacity-70 tabular-nums">{t.count}</span>
               </button>
             ))}
           </div>

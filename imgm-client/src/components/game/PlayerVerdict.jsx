@@ -9,17 +9,22 @@
  *   aspects     chips: praised (+), mixed (•) or criticized (−), each backed by 2+ reviews
  *
  * Hidden while a game has no reviews (the reviews section invites the first one).
+ *
+ * Noir: no box. The score is printed like a card's (the numeral in the tier's ink),
+ * the bars are square, and a hairline divides the score from the summary.
  */
-import { CircleDot, CircleMinus, CirclePlus, Sparkles, Star } from 'lucide-react';
+import { CircleDot, CircleMinus, CirclePlus, Sparkles } from 'lucide-react';
+import RarityMark from '../RarityMark';
 import { getRarity } from '../reviewQuest/questOptions';
 import { timeAgo } from '../../lib/timeAgo';
+import { WRAP, SECTION_TITLE } from '../../lib/ui';
 
 const MIN_REVIEWS = 3; // the server's rule for writing a summary (lib/aiSummary.js)
 
 const ASPECT_STYLE = {
-  positive: { Icon: CirclePlus, color: 'text-emerald-400', verb: 'Praised' },
+  positive: { Icon: CirclePlus, color: 'text-rarity-uncommon', verb: 'Praised' },
   mixed: { Icon: CircleDot, color: 'text-slate-400', verb: 'Mixed feelings' },
-  negative: { Icon: CircleMinus, color: 'text-orange-400', verb: 'Criticized' },
+  negative: { Icon: CircleMinus, color: 'text-red-400', verb: 'Criticized' },
 };
 
 // One bar per score, 1 (left) to 10. Click a bar to see only the reviews with that score
@@ -44,15 +49,15 @@ export const Histogram = ({ byRating, selected, onSelect }) => {
           >
             <span className="w-full h-20 flex items-end">
               <span
-                className="w-full rounded-t-md transition-all group-enabled:group-hover:brightness-75"
+                className="w-full transition-[filter,opacity] duration-120 group-enabled:group-hover:brightness-75"
                 style={{
                   height: count ? `${Math.max((count / most) * 100, 6)}%` : '3px',
-                  background: count ? getRarity(rating).color : 'rgb(51 65 85)',
+                  background: count ? getRarity(rating).color : '#2e2a25', // slate-700, an empty bar
                   opacity: selected && !active ? 0.3 : 1,
                 }}
               />
             </span>
-            <span className={`text-xs tabular-nums ${active ? 'text-white font-bold' : 'text-slate-400'}`}>{rating}</span>
+            <span className={`text-xs tabular-nums ${active ? 'text-white font-semibold' : 'text-slate-400'}`}>{rating}</span>
           </button>
         );
       })}
@@ -61,27 +66,27 @@ export const Histogram = ({ byRating, selected, onSelect }) => {
 };
 
 // embedded: placed inside another page's layout (no outer width/padding of its own)
-const PlayerVerdict = ({ game, selectedRating, onRatingClick, embedded = false, title }) => {
+// title: the heading's words (default "What players think")
+const PlayerVerdict = ({ game, selectedRating, onRatingClick, embedded = false, title = 'What players think' }) => {
   const count = game.reviewStats?.count ?? 0;
   if (count === 0) return null;
   const average = game.ratings?.imgm;
   const rarity = getRarity(Math.round(average));
 
   return (
-    <section className={embedded ? '' : 'max-w-7xl mx-auto px-6 py-10'}>
-      <h2 className="text-2xl font-bold text-white mb-6">
-        {title ?? <>What <span className="text-brand">players</span> think</>}
-      </h2>
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6 md:p-8 flex flex-col gap-7">
+    <section className={embedded ? '' : `${WRAP} py-10`}>
+      <h2 className={`${SECTION_TITLE} mb-8`}>{title}</h2>
+      <div className="flex flex-col gap-8">
         {/* Score + histogram */}
         <div className="flex flex-col sm:flex-row sm:items-end gap-6 sm:gap-10">
-          <div className="flex flex-col items-start shrink-0">
-            <div className="flex items-center gap-3">
-              <Star className="w-11 h-11" style={{ color: rarity.color, fill: rarity.color }} aria-hidden="true" />
-              <span className="text-6xl font-black text-white tabular-nums leading-none">{average.toFixed(1)}</span>
-            </div>
-            <p className="mt-2 text-sm text-slate-400">
-              <span className="font-bold uppercase tracking-wider" style={{ color: rarity.color }}>{rarity.label}</span> · {count}{' '}
+          <div className="flex flex-col items-start shrink-0" style={{ '--ink': rarity.color }}>
+            <p className="flex items-baseline gap-1.5">
+              <span className="font-display text-[88px] leading-[.78] tabular-nums text-(--ink)">{average.toFixed(1)}</span>
+              <span className="text-sm tabular-nums text-slate-400">/10</span>
+            </p>
+            <p className="mt-3 flex items-center gap-2 text-sm text-slate-400">
+              <RarityMark tier={rarity.key} className="text-(--ink)" />
+              <span className="font-semibold text-(--ink)">{rarity.label}</span> · {count}{' '}
               {count === 1 ? 'review' : 'reviews'}
             </p>
           </div>
@@ -90,11 +95,11 @@ const PlayerVerdict = ({ game, selectedRating, onRatingClick, embedded = false, 
 
         {/* The AI summary */}
         {game.aiSummary ? (
-          <div className="flex flex-col gap-4 border-t border-slate-800 pt-6">
-            <h3 className="text-lg font-bold text-white">Summary</h3>
-            <p className="text-slate-200 leading-relaxed max-w-[80ch]">{game.aiSummary}</p>
-            <p className="inline-flex items-center gap-1.5 text-xs text-slate-500">
-              <Sparkles className="w-3.5 h-3.5" aria-hidden="true" />
+          <div className="flex flex-col gap-4 border-t border-slate-700 pt-6">
+            <h3 className="text-lg font-semibold text-white">Summary</h3>
+            <p className="text-white leading-[1.6] max-w-[80ch]">{game.aiSummary}</p>
+            <p className="inline-flex items-center gap-1.5 text-sm text-slate-400">
+              <Sparkles className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" />
               AI-generated from IMGM reviews
               {game.aiSummaryReviews && ` · based on ${game.aiSummaryReviews} reviews`}
               {game.aiSummaryAt && ` · updated ${timeAgo(game.aiSummaryAt) === 'just now' ? 'just now' : `${timeAgo(game.aiSummaryAt)} ago`}`}
@@ -107,9 +112,9 @@ const PlayerVerdict = ({ game, selectedRating, onRatingClick, embedded = false, 
                     <li
                       key={aspect.label}
                       title={`${style.verb} in ${aspect.support} reviews`}
-                      className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full border border-slate-700 bg-slate-900/80 text-sm font-semibold text-slate-200"
+                      className="inline-flex items-center gap-2 h-9 px-3 rounded-sm border border-slate-600 text-sm font-medium text-white"
                     >
-                      <style.Icon className={`w-4 h-4 ${style.color}`} aria-hidden="true" />
+                      <style.Icon className={`w-4 h-4 ${style.color}`} strokeWidth={1.8} aria-hidden="true" />
                       <span className="sr-only">{style.verb}: </span>
                       {aspect.label}
                     </li>
@@ -119,8 +124,8 @@ const PlayerVerdict = ({ game, selectedRating, onRatingClick, embedded = false, 
             )}
           </div>
         ) : (
-          <p className="inline-flex items-center gap-2 border-t border-slate-800 pt-6 text-sm text-slate-400">
-            <Sparkles className="w-4 h-4 text-slate-500" aria-hidden="true" />
+          <p className="flex items-center gap-2 border-t border-slate-700 pt-6 text-sm text-slate-400">
+            <Sparkles className="w-4 h-4 shrink-0" strokeWidth={1.8} aria-hidden="true" />
             {count < MIN_REVIEWS
               ? `An AI summary of what players think appears once ${MIN_REVIEWS} players have reviewed ${game.title}.`
               : 'The AI summary of these reviews is on its way. Check back soon.'}

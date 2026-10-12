@@ -16,6 +16,7 @@ import ReviewsSection from '../components/reviewCard/ReviewsSection';
 import GameHeader from '../components/game/GameHeader';
 import MediaSection from '../components/game/MediaSection';
 import { usePageTitle } from '../hooks/usePageTitle';
+import { WRAP, PRIMARY_BUTTON } from '../lib/ui';
 
 // Keyed by id so all page state (fetched data, media tabs…) resets on navigation
 // The game's line in Google: its IMGM numbers when it has reviews, an invitation when not
@@ -65,13 +66,13 @@ const GameDetailsContent = ({ id }) => {
   // Loading state
   if (!data) {
     return (
-      <div className="min-h-screen animate-pulse">
-        <div className="max-w-7xl mx-auto px-6 pt-16 pb-10 flex flex-col md:flex-row gap-8">
-          <div className="w-48 md:w-56 aspect-[3/4] bg-slate-800/60 rounded-xl" />
+      <div className="min-h-screen motion-safe:animate-pulse">
+        <div className={`${WRAP} pt-16 pb-10 flex flex-col md:flex-row gap-8`}>
+          <div className="w-48 md:w-56 aspect-[3/4] bg-slate-900 rounded-sm" />
           <div className="flex-1 flex flex-col gap-3">
-            <div className="h-4 bg-slate-800/70 rounded w-full" />
-            <div className="h-4 bg-slate-800/70 rounded w-5/6" />
-            <div className="h-4 bg-slate-800/70 rounded w-2/3" />
+            <div className="h-4 bg-slate-800 rounded-sm w-full" />
+            <div className="h-4 bg-slate-800 rounded-sm w-5/6" />
+            <div className="h-4 bg-slate-800 rounded-sm w-2/3" />
           </div>
         </div>
       </div>
@@ -81,7 +82,7 @@ const GameDetailsContent = ({ id }) => {
   // Server unreachable / failed
   if (data.error) {
     return (
-      <div className="max-w-3xl mx-auto px-6 py-24">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-24">
         <LoadError
           title="Couldn't load this game"
           onRetry={() => {
@@ -99,12 +100,9 @@ const GameDetailsContent = ({ id }) => {
   if (!game) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4">
-        <h1 className="text-6xl font-black text-slate-700 mb-4">404</h1>
-        <p className="text-xl text-slate-400 mb-8">Game not found</p>
-        <Link
-          to="/"
-          className="px-6 py-3 bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] rounded-full font-semibold transition"
-        >
+        <h1 className="font-display text-[88px] leading-[.9] tracking-[.005em] text-slate-400 mb-3">404</h1>
+        <p className="text-xl text-white mb-8">Game not found</p>
+        <Link to="/" className={PRIMARY_BUTTON}>
           Back to Home
         </Link>
       </div>

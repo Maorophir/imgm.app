@@ -6,37 +6,63 @@
  *
  * Quest mode (/search?quest=1, from the home page's "Start your first quest"): the page
  * asks which game you played last, and picking one opens its review quest.
+ *
+ * Noir: the big condensed headline, the search field from the header, and the results
+ * on the same shelf as the home page's featured games.
  */
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowRight, Gamepad2, Search as SearchIcon } from 'lucide-react';
+import { Search as SearchIcon } from 'lucide-react';
 import { searchGames } from '../lib/api';
+import { coverSrcSet, COVER_SIZES } from '../lib/igdbImage';
+import { WRAP, GHOST_BUTTON } from '../lib/ui';
 import GameCard from '../components/GameCard';
 import GameCardSkeleton from '../components/GameCardSkeleton';
 import { MAX_XP } from '../components/reviewQuest/questOptions';
 
 const MIN_QUERY_LENGTH = 2;
 
-// Quest mode: each result is one link, straight into that game's review quest
+// The home page's shelf: tiles at least 128px on phones (two columns even at 320px),
+// 160px from tablets up
+const SHELF =
+  'grid grid-cols-[repeat(auto-fill,minmax(min(128px,100%),1fr))] gap-x-4 gap-y-9 sm:grid-cols-[repeat(auto-fill,minmax(min(160px,100%),1fr))] sm:gap-x-6 sm:gap-y-13';
+
+// A message where results would be (nothing found, search down): no box, two lines
+const Notice = ({ title, children }) => (
+  <div className="py-16 text-center">
+    <p className="text-lg font-medium text-white">{title}</p>
+    <p className="mt-1 text-sm text-slate-400">{children}</p>
+  </div>
+);
+
+// Quest mode: each result is one link, straight into that game's review quest. A Noir
+// tile like the game cards: the cover with 2px corners, no box, the title underlined on
+// hover, the year in quiet grey, and "I played this" as a text link along the bottom.
 const QuestPick = ({ game }) => {
   const year = game.releaseDate ? new Date(game.releaseDate).getFullYear() : null;
   return (
-    <Link
-      to={`/game/${game.id}/review`}
-      className="group flex flex-col rounded-2xl overflow-hidden bg-slate-900/60 border border-slate-800 transition duration-300 hover:-translate-y-1 hover:border-white/40 active:scale-[.98]"
-    >
-      <div className="aspect-[3/4] bg-slate-800">
-        {game.coverUrl && <img src={game.coverUrl} alt="" loading="lazy" className="w-full h-full object-cover" />}
+    <Link to={`/game/${game.id}/review`} className="group flex flex-col min-w-0 text-white">
+      <div className="aspect-[3/4] overflow-hidden rounded-sm bg-slate-900">
+        {game.coverUrl && (
+          <img
+            src={game.coverUrl}
+            srcSet={coverSrcSet(game.coverUrl)}
+            sizes={COVER_SIZES}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className="w-full h-full object-cover"
+          />
+        )}
       </div>
-      <div className="flex flex-col gap-1 p-3.5 flex-1">
-        <p className="text-[15px] font-bold text-white leading-tight line-clamp-2">{game.title}</p>
-        {year && <p className="text-xs text-slate-400">{year}</p>}
-        <p className="mt-auto pt-2 inline-flex items-center gap-1.5 text-xs font-bold text-white">
-          <Gamepad2 className="w-3.5 h-3.5" aria-hidden="true" />
-          I played this
-          <ArrowRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
-        </p>
-      </div>
+      <p className="mt-3.5 text-base font-medium leading-[1.3] line-clamp-2 underline decoration-1 underline-offset-4 decoration-transparent group-hover:decoration-white transition-[text-decoration-color] duration-120">
+        {game.title}
+      </p>
+      {year && <p className="mt-1 text-sm tabular-nums text-slate-400">{year}</p>}
+      {/* mt-auto: lines up along the bottom of a grid row, whatever the title's length */}
+      <p className="mt-auto pt-2 text-sm font-medium underline decoration-1 underline-offset-5 decoration-slate-500/80 group-hover:decoration-current group-hover:text-slate-50 transition-colors duration-120">
+        I played this
+      </p>
     </Link>
   );
 };
@@ -74,26 +100,22 @@ const Search = () => {
   };
 
   return (
-    <section className="px-6 py-12 max-w-7xl mx-auto min-h-[80vh]">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">
-          {questMode ? (
-            'What did you play last?'
-          ) : isSearchable ? (
-            <>Results for <span className="text-brand">"{query}"</span></>
-          ) : (
-            <>Search <span className="text-brand">Games</span></>
-          )}
+    <section className={`${WRAP} pt-10 sm:pt-14 pb-12 md:pb-16 min-h-[80vh]`}>
+      <div className="mb-8 sm:mb-10">
+        <h1 className="font-display text-[34px] sm:text-[54px] leading-[.95] tracking-[.005em] text-white break-words">
+          {questMode ? 'What did you play last?' : isSearchable ? `Results for “${query}”` : 'Search games'}
         </h1>
         {questMode && (
           <>
-            <p className="text-slate-300 mt-2">
-              Pick it to start its quest: about 2 minutes, <span className="font-semibold text-amber-300">up to {MAX_XP} XP</span>.
+            <p className="mt-3 text-base leading-[1.6] text-white">
+              Pick it to start its quest: about two minutes, up to {MAX_XP} XP, and a card at the end.
             </p>
-            <form role="search" onSubmit={searchForQuest} className="mt-5 flex gap-2 max-w-xl">
-              <label className="relative flex-1">
+            <form role="search" onSubmit={searchForQuest} className="mt-6 flex gap-2 max-w-xl">
+              {/* The header's search field: card stock, a control-grey edge that turns
+                  ivory while it has focus */}
+              <label className="flex flex-1 min-w-0 items-center gap-2.5 h-11 px-3.5 rounded-sm bg-slate-900 border border-slate-500 focus-within:border-white transition-colors duration-120">
                 <span className="sr-only">A game you played</span>
-                <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" aria-hidden="true" />
+                <SearchIcon className="w-4 h-4 shrink-0 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
                 {/* text-base (16px): smaller text makes iPhones zoom in on focus.
                     Focused only on arrival, not when coming back to results. */}
                 <input
@@ -103,51 +125,46 @@ const Search = () => {
                   required
                   minLength={MIN_QUERY_LENGTH}
                   autoFocus={!query}
-                  placeholder="Type a game..."
-                  className="w-full bg-slate-800/60 border border-slate-700/50 rounded-full pl-11 pr-4 py-3 text-base text-white placeholder-slate-500 focus:border-slate-500 transition"
+                  autoComplete="off"
+                  placeholder="Search games"
+                  className="flex-1 min-w-0 h-10 bg-transparent text-base text-white placeholder:text-slate-400 appearance-none focus:outline-hidden [&::-webkit-search-cancel-button]:appearance-none"
                 />
               </label>
-              <button type="submit" className="px-5 rounded-full bg-white text-slate-950 font-bold hover:bg-slate-200 transition">
+              <button type="submit" className={GHOST_BUTTON}>
                 Search
               </button>
             </form>
           </>
         )}
         {isSearchable && !isLoading && !results.error && (
-          <p className={`text-slate-400 text-sm ${questMode ? 'mt-3' : 'mt-1'}`}>
+          <p className={`text-sm tabular-nums text-slate-400 ${questMode ? 'mt-4' : 'mt-3'}`}>
             {results.games.length} game{results.games.length !== 1 ? 's' : ''} found
           </p>
         )}
       </div>
 
       {!isSearchable && !questMode && (
-        <p className="text-slate-500">Type at least {MIN_QUERY_LENGTH} characters in the search bar above.</p>
+        <p className="text-base text-slate-400">Type at least {MIN_QUERY_LENGTH} characters in the search bar above.</p>
       )}
 
       {isLoading && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+        <div className={SHELF}>
           {Array.from({ length: 10 }, (_, i) => <GameCardSkeleton key={i} />)}
         </div>
       )}
 
       {!isLoading && results.error && (
-        <div className="text-center py-16 bg-slate-900/30 rounded-2xl border border-red-500/20">
-          <p className="text-red-400 text-lg mb-2">
-            {results.error === 'rate-limited' ? 'Too many searches' : 'Search is unavailable right now'}
-          </p>
-          <p className="text-slate-500 text-sm">Please try again in a moment.</p>
-        </div>
+        <Notice title={results.error === 'rate-limited' ? 'Too many searches' : 'Search is unavailable right now'}>
+          Please try again in a moment.
+        </Notice>
       )}
 
       {isSearchable && !isLoading && !results.error && results.games.length === 0 && (
-        <div className="text-center py-16 bg-slate-900/30 rounded-2xl border border-slate-800/30">
-          <p className="text-slate-500 text-lg mb-2">No games found</p>
-          <p className="text-slate-700 text-sm">Try a different title or spelling.</p>
-        </div>
+        <Notice title="No games found">Try a different title or spelling.</Notice>
       )}
 
       {!isLoading && results.games.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+        <div className={`${SHELF} animate-fade-in`}>
           {results.games.map((game) => questMode ? (
             <QuestPick key={game.id} game={game} />
           ) : (
