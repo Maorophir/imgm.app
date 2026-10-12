@@ -147,8 +147,14 @@ function PlayNextChat({ userId }) {
   }, []);
   // Worked out again only when the picks, candidates or featured games change (not
   // for every piece of streamed text), so the wall itself doesn't re-render either
-  const cardGames = current?.cards?.games;
-  const candidates = current?.games;
+  // A message turned away (off topic) has no picks: the panel and the wall keep
+  // showing the last picks (or the empty "Your picks will appear here")
+  const shownTurn =
+    current?.status === "done" && !current.cards
+      ? (turns.findLast((turn) => turn.cards) ?? null)
+      : current;
+  const cardGames = shownTurn?.cards?.games;
+  const candidates = shownTurn?.games;
   const wallCovers = useMemo(() => {
     const picks = [...(cardGames ?? [])].sort((a, b) => b.best_pick - a.best_pick);
     return [
@@ -283,7 +289,7 @@ function PlayNextChat({ userId }) {
       {/* Side panel (large screens) */}
       <aside className="hidden lg:block min-h-0 overflow-y-auto pr-1">
         <GuidePanel
-          turn={current}
+          turn={shownTurn}
           onNotForMe={onNotForMe}
           disabled={running}
         />
