@@ -153,8 +153,8 @@ function reducer(turns, action) {
       return updateLast(turns, (turn) => ({ ...turn, cards: action.data }));
     case "done":
       return updateLast(turns, (turn) =>
-        // Picks, or an off-topic message answered in a line ("I only help with games")
-        turn.cards || action.data?.declined
+        // Picks, or an answer in words only (a follow-up about the picks, or off topic)
+        turn.cards || action.data?.reply_only
           ? { ...turn, status: "done" }
           : {
               ...turn,
