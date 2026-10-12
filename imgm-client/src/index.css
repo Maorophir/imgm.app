@@ -192,10 +192,29 @@ body {
   60%, 100% { background-position: -100% 0; }
 }
 
+/*
+ * Game cards (components/GameCard.jsx): a settled Legendary gets the same gold foil,
+ * as a 2px edge. Two backgrounds: the card's own colour inside the border (padding-box),
+ * the moving foil under the border (border-box). Unlayered, so it beats the card's
+ * Tailwind bg and border colours, on hover too.
+ */
+.loot-foil {
+  border-width: 2px;
+  border-color: transparent;
+  background:
+    linear-gradient(color-mix(in srgb, var(--color-slate-900) 60%, var(--color-slate-950)) 0 0) padding-box,
+    linear-gradient(115deg, #b45309, #fbbf24 18%, #fff7cc 32%, #fbbf24 46%, #b45309 64%, #fbbf24 80%, #fff7cc 92%, #fbbf24) border-box;
+  background-size: 100% 100%, 300% 300%;
+  animation: loot-foil 5s linear infinite;
+  box-shadow: 0 0 24px rgb(251 191 36 / 0.25);
+}
+@keyframes loot-foil { to { background-position: 0 0, 300% 0; } }
+
 @media (prefers-reduced-motion: reduce) {
   .card-flip-inner { transition: none; }
   .rarity-frame.is-legendary,
-  .rarity-frame.is-legendary .card-art::after { animation: none; }
+  .rarity-frame.is-legendary .card-art::after,
+  .loot-foil { animation: none; }
 }
 
 /* "+5 XP" after a Game of the Week vote: pops in, floats up, fades out */
