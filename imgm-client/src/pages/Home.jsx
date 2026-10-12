@@ -116,10 +116,11 @@ const Home = () => {
 
       {/* Home page content (sits above the background via z-10) */}
       <div className="relative z-10 flex flex-col items-center">
-        {/* The logo's headline: heavy white letters, one lime full stop */}
-        <h2 className="font-display text-7xl md:text-8xl mb-4 uppercase tracking-tight drop-shadow-2xl text-white">
+        {/* The logo's headline: heavy white letters, one lime full stop. The page's h1 (its
+            main headline for search engines; the look comes from the classes, not the tag) */}
+        <h1 className="font-display text-7xl md:text-8xl mb-4 uppercase tracking-tight drop-shadow-2xl text-white">
           I Am Gaming<span className="text-brand drop-shadow-[0_0_18px_var(--color-brand)]">.</span>
-        </h2>
+        </h1>
         
         <p className="text-2xl text-slate-200 mb-8 max-w-2xl font-light drop-shadow-md">
           Rate what you play. Discover what's next. 
