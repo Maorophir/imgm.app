@@ -1,6 +1,7 @@
 /**
  * The player's profile: their picture (checked before it's saved), their stats and
- * their reviews.
+ * their reviews. The same profile, minus what's private, is public at /u/<gamer tag>
+ * (getPublicProfile / getPublicReviews): see loadProfile for what each one shows.
  *
  * Profile pictures arrive already shrunk to 256px by the browser. They're saved only
  * after the AI service's SafeSearch check says they're fine (imgm-ai moderation.py);
@@ -17,6 +18,7 @@ import { getPlayerXp } from '../lib/playerXp.js';
 import { withMaskedText } from '../lib/reviewText.js';
 import { voterStats, weekOf } from '../lib/gotw.js';
 import { AVATAR_PRESETS, presetByKey } from '../lib/avatarPresets.js';
+import { normalizeUsername, USERNAME_MAX } from '../lib/usernameRules.js';
 
 const MAX_PICTURE = 300_000; // bytes
 const PICTURE = /^data:(image\/(?:webp|jpeg|png));base64,([A-Za-z0-9+/=]+)$/;
@@ -136,68 +138,145 @@ const asListItem = (review) => {
   return { ...rest, snippet: text && (text.length > 180 ? `${text.slice(0, 180).trimEnd()}…` : text) };
 };
 
-// GET /api/users/me/profile — stats + the newest reviews
+// One page of a player's reviews, newest first (ties by id, so pages never overlap)
+const reviewsPage = (userId, offset, limit) =>
+  prisma.review.findMany({
+    where: { userId },
+    orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    skip: offset,
+    take: limit,
+    select: REVIEW_SELECT,
+  });
+
+/**
+ * A player's profile: { player, stats, reviews }. Your own profile and anyone's public
+ * one both come from here, so they always show the same numbers.
+ *
+ * `own` adds what only the player sees about themselves: when they joined and their
+ * Game of the Week record. Votes are private (the Privacy page lists what's public:
+ * gamer tag, picture, level, reviews and badges), so the public profile leaves them
+ * out, and its XP (so its level) counts reviews only: with the XP each vote earns in
+ * it, the number would give away how often the player votes. That's the same XP a
+ * game page shows next to their reviews (withAuthorXp). Neither profile ever carries
+ * an email address or real name.
+ */
+const loadProfile = async (user, { own }) => {
+  const [all, progress, gotw, latest] = await Promise.all([
+    prisma.review.findMany({
+      where: { userId: user.id },
+      select: {
+        rating: true, hoursPlayed: true, badges: true, helpfulCount: true, xp: true, helpfulXp: true,
+        game: { select: { genres: true } },
+      },
+    }),
+    own ? getPlayerXp(user.id) : null,
+    own ? voterStats(user.id, weekOf().id) : null,
+    reviewsPage(user.id, 0, 12),
+  ]);
+  const byRating = {};
+  const badges = {};
+  const genres = {};
+  for (const review of all) {
+    byRating[review.rating] = (byRating[review.rating] ?? 0) + 1;
+    for (const badge of review.badges) badges[badge] = (badges[badge] ?? 0) + 1;
+    for (const genre of review.game?.genres ?? []) genres[genre] = (genres[genre] ?? 0) + 1;
+  }
+  const sum = (key) => all.reduce((total, r) => total + (r[key] ?? 0), 0);
+  return {
+    player: {
+      id: user.id,
+      name: user.displayUsername ?? user.username,
+      avatarUpdatedAt: user.avatarUpdatedAt ?? null,
+      ...(own && { joinedAt: user.createdAt }),
+    },
+    stats: {
+      xp: own ? progress.xp : sum('xp') + sum('helpfulXp'), // public: without the votes' XP
+      reviews: all.length,
+      averageGiven: all.length ? sum('rating') / all.length : null,
+      byRating,
+      hoursLogged: sum('hoursPlayed'),
+      helpfulVotes: sum('helpfulCount'),
+      badges,
+      topGenres: Object.entries(genres).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([genre]) => genre),
+      ...(own && { gotw }),
+    },
+    reviews: latest.map(asListItem),
+  };
+};
+
+// The player behind a public gamer tag (any capitalisation), or null. Only what a public
+// profile needs is read: never the email address or the real name.
+const findPlayer = (tag) => {
+  const name = String(tag ?? '').trim();
+  if (!name || name.length > USERNAME_MAX) return null;
+  return prisma.user.findUnique({
+    where: { username: normalizeUsername(name) },
+    select: { id: true, username: true, displayUsername: true, avatarUpdatedAt: true },
+  });
+};
+
+// GET /api/users/me/profile — your stats + your newest reviews
 export const getMyProfile = async (req, res) => {
   try {
     const user = await requireLogin(req, res);
     if (!user) return;
-    const [all, progress, gotw, latest] = await Promise.all([
-      prisma.review.findMany({
-        where: { userId: user.id },
-        select: { rating: true, hoursPlayed: true, badges: true, helpfulCount: true, game: { select: { genres: true } } },
-      }),
-      getPlayerXp(user.id),
-      voterStats(user.id, weekOf().id),
-      prisma.review.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, take: 12, select: REVIEW_SELECT }),
-    ]);
-    const byRating = {};
-    const badges = {};
-    const genres = {};
-    for (const review of all) {
-      byRating[review.rating] = (byRating[review.rating] ?? 0) + 1;
-      for (const badge of review.badges) badges[badge] = (badges[badge] ?? 0) + 1;
-      for (const genre of review.game?.genres ?? []) genres[genre] = (genres[genre] ?? 0) + 1;
-    }
-    const sum = (key) => all.reduce((total, r) => total + (r[key] ?? 0), 0);
-    res.json({
-      player: { id: user.id, name: user.displayUsername ?? user.username, avatarUpdatedAt: user.avatarUpdatedAt ?? null, joinedAt: user.createdAt },
-      stats: {
-        xp: progress.xp,
-        reviews: all.length,
-        averageGiven: all.length ? sum('rating') / all.length : null,
-        byRating,
-        hoursLogged: sum('hoursPlayed'),
-        helpfulVotes: sum('helpfulCount'),
-        badges,
-        topGenres: Object.entries(genres).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([genre]) => genre),
-        gotw,
-      },
-      reviews: latest.map(asListItem),
-    });
+    res.json(await loadProfile(user, { own: true }));
   } catch (error) {
     console.error('Error loading the profile:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
 
-// GET /api/users/me/reviews?offset=&limit= — more of your reviews ("Show more")
+// GET /api/users/:username/profile — anyone's public profile, by gamer tag (404 if no
+// player has it)
+export const getPublicProfile = async (req, res) => {
+  try {
+    const player = await findPlayer(req.params.username);
+    if (!player) return res.status(404).json({ error: 'No player has that gamer tag.' });
+    res.json(await loadProfile(player, { own: false }));
+  } catch (error) {
+    console.error('Error loading a public profile:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// More reviews, page by page ("Show more"): ?offset=&limit=
 const pageQuery = z.object({
   offset: z.coerce.number().int().min(0).max(10000).default(0),
   limit: z.coerce.number().int().min(1).max(24).default(12),
 });
+const sendReviewsPage = async (res, userId, { offset, limit }) => {
+  const [reviews, total] = await Promise.all([
+    reviewsPage(userId, offset, limit),
+    prisma.review.count({ where: { userId } }),
+  ]);
+  res.json({ reviews: reviews.map(asListItem), total, hasMore: offset + reviews.length < total });
+};
+
+// GET /api/users/me/reviews?offset=&limit= — more of your reviews
 export const getMyReviews = async (req, res) => {
   const query = pageQuery.safeParse(req.query);
   if (!query.success) return res.status(400).json({ error: 'Invalid request' });
   try {
     const user = await requireLogin(req, res);
     if (!user) return;
-    const [reviews, total] = await Promise.all([
-      prisma.review.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, skip: query.data.offset, take: query.data.limit, select: REVIEW_SELECT }),
-      prisma.review.count({ where: { userId: user.id } }),
-    ]);
-    res.json({ reviews: reviews.map(asListItem), total, hasMore: query.data.offset + reviews.length < total });
+    await sendReviewsPage(res, user.id, query.data);
   } catch (error) {
     console.error('Error loading your reviews:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// GET /api/users/:username/reviews?offset=&limit= — more of a player's reviews
+export const getPublicReviews = async (req, res) => {
+  const query = pageQuery.safeParse(req.query);
+  if (!query.success) return res.status(400).json({ error: 'Invalid request' });
+  try {
+    const player = await findPlayer(req.params.username);
+    if (!player) return res.status(404).json({ error: 'No player has that gamer tag.' });
+    await sendReviewsPage(res, player.id, query.data);
+  } catch (error) {
+    console.error("Error loading a player's reviews:", error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

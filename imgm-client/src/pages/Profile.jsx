@@ -1,69 +1,20 @@
 /**
  * Profile page — Route: /profile
  *
- * Your picture, level (tier, XP bar, the tier ladder), stats and reviews. The cog
- * opens Settings (gamer tag, password, delete account).
+ * Your picture, level (tier, XP bar, the tier ladder), stats and reviews (as their
+ * cards). The cog opens Settings (gamer tag, password, delete account). Under your
+ * name, "View your public profile" opens the page everyone else sees (/u/<gamer tag>,
+ * pages/PlayerProfile.jsx) and Share sends its link.
  */
 import { Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
-import { getMyProfile } from '../lib/api';
-import { MyReviews, ProfilePicture, StatsGrid } from '../components/profile/ProfileParts';
+import { getMyProfile, getMyReviews } from '../lib/api';
+import { LevelCard, PlayerReviews, ProfilePicture, StatsGrid } from '../components/profile/ProfileParts';
+import ShareCardButton from '../components/ShareCardButton';
 import { useMyProgress } from '../hooks/useMyProgress';
-import { TIERS, tierLevels } from '../lib/levels';
-import { XpBar } from '../components/LevelBadge';
-import { SECTION_TITLE } from '../lib/ui';
-
-
-// Your tier and level, the bar to the next level, and every tier you can reach
-const LevelCard = ({ progress }) => (
-  // Card stock on a hairline in the tier's ink
-  <section
-    className="rounded-sm border bg-slate-900 p-6 flex flex-col gap-4"
-    style={{ borderColor: `${progress.tier.color}55` }}
-  >
-    <div className="flex items-end justify-between gap-4">
-      <div>
-        <p className="text-sm text-slate-400">Your rank</p>
-        <p className="font-display text-[34px] leading-none tracking-[.005em] mt-1" style={{ color: progress.tier.color }}>{progress.tier.label}</p>
-      </div>
-      <p className="text-right">
-        <span className="block font-display text-[54px] text-white tabular-nums leading-[.8]">{progress.level}</span>
-        <span className="text-sm text-slate-400">Level</span>
-      </p>
-    </div>
-
-    <div>
-      <XpBar progress={progress} />
-      <p className="mt-2 flex justify-between gap-3 text-sm text-slate-400 tabular-nums">
-        <span>{progress.xp.toLocaleString()} XP · {progress.reviews} review{progress.reviews === 1 ? '' : 's'}</span>
-        <span>{progress.toNext.toLocaleString()} XP to Level {progress.level + 1}</span>
-      </p>
-    </div>
-
-    {/* The ladder, worst → best, your tier highlighted */}
-    <ol className="grid grid-cols-5 gap-1.5 text-center">
-      {TIERS.map((t) => {
-        const reached = progress.level >= t.minLevel;
-        const isCurrent = t === progress.tier;
-        return (
-          <li
-            key={t.key}
-            className={`rounded-sm border px-1 py-2 ${isCurrent ? 'bg-slate-950' : 'border-slate-700'} ${reached ? '' : 'opacity-40'}`}
-            style={isCurrent ? { borderColor: t.color } : undefined}
-          >
-            <span className="block text-xs font-semibold leading-tight" style={{ color: t.color }}>{t.label}</span>
-            <span className="block text-xs tabular-nums text-slate-400 mt-0.5">{tierLevels(t)}</span>
-          </li>
-        );
-      })}
-    </ol>
-    <p className="text-sm text-slate-400">
-      Earn XP by reviewing: 10 XP per quest screen you answer, 50 XP for your final words (up to 130 per review).
-    </p>
-  </section>
-);
+import { SECTION_TITLE, TEXT_LINK } from '../lib/ui';
 
 function Profile() {
   const { data: session, isPending, refetch } = useSession();
@@ -105,6 +56,20 @@ function Profile() {
               Joined {new Date(profile.player.joinedAt).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
             </p>
           )}
+          {/* Your page as everyone else sees it, and its link to send */}
+          {current && (
+            <div className="flex flex-wrap items-center gap-x-6 mt-1">
+              <Link to={`/u/${current}`} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
+                View your public profile
+              </Link>
+              <ShareCardButton
+                url={`/u/${current}`}
+                title={`${current} on IMGM`}
+                text="My game reviews and cards on IMGM"
+                label="Share profile"
+              />
+            </div>
+          )}
         </div>
         <Link
           to="/settings"
@@ -116,17 +81,23 @@ function Profile() {
         </Link>
       </header>
 
-      {progress && <LevelCard progress={progress} />}
+      {progress && <LevelCard progress={progress} own />}
 
-      {profile && <StatsGrid stats={profile.stats} />}
+      {profile && <StatsGrid stats={profile.stats} own />}
 
       {profile && (
-        <section className="flex flex-col gap-4">
+        <section className="flex flex-col gap-8">
           <h2 className={SECTION_TITLE}>
             Your reviews
             <span className="ml-3 font-sans text-lg font-normal tracking-normal tabular-nums text-slate-400">({profile.stats.reviews})</span>
           </h2>
-          <MyReviews key={reload} first={profile.reviews} total={profile.stats.reviews} />
+          <PlayerReviews
+            key={reload}
+            first={profile.reviews}
+            total={profile.stats.reviews}
+            loadMore={getMyReviews}
+            empty={<>No reviews yet. Find a game you've played and start your first <span className="text-white font-medium">Review Quest</span>.</>}
+          />
         </section>
       )}
 

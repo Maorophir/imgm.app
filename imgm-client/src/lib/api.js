@@ -133,10 +133,17 @@ export const addToBacklog = (gameId, source) => fetchJson(`/api/backlog/${gameId
 export const removeFromBacklog = (gameId) => fetchJson(`/api/backlog/${gameId}`, { method: 'DELETE' });
 export const reorderBacklog = (gameIds) => fetchJson('/api/backlog/order', { method: 'PUT', body: { gameIds } });
 export const setBacklogFinished = (gameId, finished) => fetchJson(`/api/backlog/${gameId}/finished`, { method: 'PUT', body: { finished } });
+// "Playing now": marks a Backlog game as the one you're playing (true) or not (false)
+export const setBacklogPlaying = (gameId, playing) => fetchJson(`/api/backlog/${gameId}/playing`, { method: 'PUT', body: { playing } });
 
 // Your profile: { player, stats, reviews } and more reviews page by page
 export const getMyProfile = (signal) => fetchJson('/api/users/me/profile', { signal });
 export const getMyReviews = (offset, signal) => fetchJson(`/api/users/me/reviews?offset=${offset}&limit=12`, { signal });
+// Any player's public profile, by gamer tag: { player, stats, reviews } with only what the
+// privacy policy calls public (no email, real name or Game of the Week votes)
+export const getPublicProfile = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/profile`, { signal });
+export const getPublicReviews = (username, offset, signal) =>
+  fetchJson(`/api/users/${encodeURIComponent(username)}/reviews?offset=${offset}&limit=12`, { signal });
 // Profile picture: a data URL from resizeToAvatar (checked by the server before it's saved)
 export const uploadAvatar = (image) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { image } });
 export const deleteAvatar = () => fetchJson('/api/users/me/avatar', { method: 'DELETE' });

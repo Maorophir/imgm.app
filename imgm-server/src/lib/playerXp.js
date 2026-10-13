@@ -3,6 +3,11 @@
  * quest earned + what helpful votes earned), so editing or deleting a review
  * corrects it automatically, plus GOTW_VOTE_XP for each Game of the Week vote. Levels and tiers are
  * worked out from this number on the client (imgm-client/src/lib/levels.js).
+ *
+ * Votes are private (the Privacy page), so the vote XP counts only where the player
+ * sees their own XP (getPlayerXp). The XP everyone else sees (next to a player's
+ * reviews, and on their public profile) counts reviews only, so it can't give away
+ * how often they vote.
  */
 import { prisma } from './db.js';
 
@@ -19,18 +24,15 @@ export const getPlayerXp = async (userId) => {
 
 /**
  * Adds `user.xp` to each review's author, so reviews can show the writer's
- * level. One grouped query for all the authors on the page.
+ * level. One grouped query for all the authors on the page. Everyone sees this
+ * number, so it's the public XP: reviews only, without the votes' XP.
  */
 export const withAuthorXp = async (reviews) => {
   const userIds = [...new Set(reviews.map((r) => r.userId))];
   if (userIds.length === 0) return reviews;
 
-  const [totals, votes] = await Promise.all([
-    prisma.review.groupBy({ by: ['userId'], where: { userId: { in: userIds } }, _sum: { xp: true, helpfulXp: true } }),
-    prisma.gotwVote.groupBy({ by: ['userId'], where: { userId: { in: userIds } }, _count: { _all: true } }),
-  ]);
-  const voteXp = new Map(votes.map((v) => [v.userId, v._count._all * GOTW_VOTE_XP]));
-  const xpByUser = new Map(totals.map((t) => [t.userId, (t._sum.xp ?? 0) + (t._sum.helpfulXp ?? 0) + (voteXp.get(t.userId) ?? 0)]));
+  const totals = await prisma.review.groupBy({ by: ['userId'], where: { userId: { in: userIds } }, _sum: { xp: true, helpfulXp: true } });
+  const xpByUser = new Map(totals.map((t) => [t.userId, (t._sum.xp ?? 0) + (t._sum.helpfulXp ?? 0)]));
 
   return reviews.map((r) => ({ ...r, user: r.user && { ...r.user, xp: xpByUser.get(r.userId) ?? 0 } }));
 };

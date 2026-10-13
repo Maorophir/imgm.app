@@ -3,7 +3,8 @@
  *
  *   FreshReviews   the four newest reviews on any game, each as a small card with the
  *                  reviewer's words under it, who wrote it and how long ago. The whole
- *                  card opens the game page at that review.
+ *                  card opens the game page at that review; the reviewer's name opens
+ *                  their public profile (/u/<gamer tag>).
  *   NeedsReview    popular games (from the featured list) nobody has reviewed yet: one's
  *                  key art with a card still lying face down on it, then a row per game,
  *                  each a shortcut into its review quest and the First Reviewer badge
@@ -43,16 +44,29 @@ const FreshCard = ({ review }) => {
         </blockquote>
       )}
       <figcaption className="flex flex-wrap items-center gap-x-3 mt-2 text-sm text-slate-400">
+        {/* The reviewer's name opens their profile. It sits above the card's link (z-1),
+            so a tap on the name goes to the player and anywhere else to the review. */}
+        {review.author ? (
+          <Link
+            to={`/u/${encodeURIComponent(review.author)}`}
+            className={`relative z-1 inline-flex items-center min-h-11 font-medium text-white ${TEXT_LINK}`}
+          >
+            {author}
+          </Link>
+        ) : (
+          <span className="inline-flex items-center min-h-11 font-medium text-white">{author}</span>
+        )}
         {/* Opens the game page right at this review. Its ::after stretches over the whole
-            figure, so the card is one link (one tab stop) named after the reviewer. */}
+            figure, so the card is one link (one tab stop), named for screen readers as
+            the reviewer's review of the game and shown as how long ago it was. It's a
+            text link like any other, so hovering anywhere on the card firms its line. */}
         <Link
           to={`/game/${review.game.id}?review=${review.id}#review-${review.id}`}
-          className={`fresh-link inline-flex items-center min-h-11 font-medium text-white after:absolute after:inset-0 focus-visible:outline-none ${TEXT_LINK}`}
+          className={`fresh-link inline-flex items-center min-h-11 text-xs tabular-nums after:absolute after:inset-0 focus-visible:outline-none ${TEXT_LINK}`}
         >
-          {author}
-          <span className="sr-only">’s review of {review.game.title}</span>
+          <span className="sr-only">{author}’s review of {review.game.title}, </span>
+          <time dateTime={review.createdAt}>{timeAgo(review.createdAt)}</time>
         </Link>
-        <time dateTime={review.createdAt} className="text-xs tabular-nums">{timeAgo(review.createdAt)}</time>
       </figcaption>
     </figure>
   );

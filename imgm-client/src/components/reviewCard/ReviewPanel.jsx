@@ -2,6 +2,7 @@
  * ReviewPanel — the written side of a review, shown next to its RarityCard:
  * reviewer, rarity verdict, badges, the full Final words ("Read more" when
  * long), best/worst moments (behind a spoiler veil if marked) and pros & cons.
+ * The reviewer's gamer tag opens their public profile (/u/<tag>).
  * Empty or partial reviews get one calm line instead of an empty box.
  * Swearing shows masked ("f***") unless the viewer turned on strong language.
  *
@@ -13,12 +14,13 @@ import ArtIcon from '../ArtIcon';
 import HelpfulVote from './HelpfulVote';
 import RarityMark from '../RarityMark';
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
 import { getRarity, RATING_LABELS, BADGES } from '../reviewQuest/questOptions';
 import { formatDate, tickedChecklist, reviewerName } from './reviewDisplay';
 import { Avatar } from './RarityCard';
 import { getProgress } from '../../lib/levels';
-import { TEXT_BUTTON_SM } from '../../lib/ui';
+import { TEXT_BUTTON_SM, TEXT_LINK } from '../../lib/ui';
 
 const LONG_REVIEW = 420; // characters: longer reviews start collapsed
 
@@ -63,7 +65,16 @@ const ReviewPanel = ({ review: original }) => {
         <div className="flex items-center gap-2.5 min-w-0">
           <Avatar name={name} user={review.user} size="w-9 h-9 text-sm" />
           <span className="min-w-0">
-            <span className="block font-semibold text-white truncate">{name}</span>
+            {review.user?.displayUsername ? (
+              <Link
+                to={`/u/${encodeURIComponent(review.user.displayUsername)}`}
+                className={`block w-fit max-w-full font-semibold text-white truncate ${TEXT_LINK}`}
+              >
+                {name}
+              </Link>
+            ) : (
+              <span className="block font-semibold text-white truncate">{name}</span>
+            )}
             <span className="block text-sm text-slate-400">
               {author && (
                 <span className="font-medium" style={{ color: author.tier.color }}>

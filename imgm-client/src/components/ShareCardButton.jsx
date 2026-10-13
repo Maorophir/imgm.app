@@ -1,5 +1,6 @@
 /**
- * ShareCardButton — a quiet text button, "Share card", that shares a card's link.
+ * ShareCardButton — a quiet text button, "Share card", that shares a card's link (or,
+ * with `label`, any page's: "Share profile" on a player's profile).
  *
  * On phones (and browsers that have one) it opens the device's own share sheet.
  * Elsewhere it copies the full link to the clipboard and says "Link copied" for two
@@ -10,6 +11,7 @@
  *              turned into a full address on this site. Defaults to the current page.
  *   title      the share sheet's title, e.g. "IamHonie's card for Hollow Knight: Silksong"
  *   text       a line to go with the link, e.g. "10/10, Legendary on IMGM"
+ *   label      the button's words (default "Share card"), e.g. "Share profile"
  *   className  placement
  */
 import { useEffect, useState } from 'react';
@@ -17,11 +19,11 @@ import { TEXT_BUTTON } from '../lib/ui';
 
 const COPIED_FOR = 2000; // ms "Link copied" stays up
 
-const ShareCardButton = ({ url, title, text, className = '' }) => {
+const ShareCardButton = ({ url, title, text, label = 'Share card', className = '' }) => {
   // 'idle', 'copied', or 'failed' (the clipboard said no)
   const [status, setStatus] = useState('idle');
 
-  // "Link copied" (or the failure) goes back to "Share card" after two seconds
+  // "Link copied" (or the failure) goes back to the label after two seconds
   useEffect(() => {
     if (status === 'idle') return;
     const timer = setTimeout(() => setStatus('idle'), COPIED_FOR);
@@ -58,7 +60,7 @@ const ShareCardButton = ({ url, title, text, className = '' }) => {
         onClick={share}
         className={`${TEXT_BUTTON} ${className}`}
       >
-        {message || 'Share card'}
+        {message || label}
       </button>
       {/* Says the result out loud for screen readers (the button's new label alone isn't announced) */}
       <span role="status" className="sr-only">{message}</span>

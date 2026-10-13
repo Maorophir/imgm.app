@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 // Page components (one per route)
 import Home from './pages/Home';
 import Profile from './pages/Profile';
+import PlayerProfile from './pages/PlayerProfile';
 import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
@@ -56,7 +57,8 @@ function PlayNextRoute() {
 }
 
 // Each page's title and description (the tab, and Google's headline + grey line).
-// Game pages set their own, with the game's name and its IMGM numbers.
+// Game pages set their own, with the game's name and its IMGM numbers, and so do
+// players' profiles (/u/<gamer tag>), which also decide whether Google may index them.
 const PAGES = {
   '/hall-of-fame': [
     'Hall of Fame: the best games, rated by players',
@@ -76,7 +78,7 @@ const PAGES = {
   '/search': ['Search games', 'Find any game and see what IMGM players think of it.'],
   '/terms': ['Terms of Use', 'The rules for using IMGM (I Am Gaming).'],
   '/privacy': ['Privacy Policy', 'What IMGM collects, why, and how to delete your account and data.'],
-  '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, earn XP and badges, and get picks from Play Next.'],
+  '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, collect a card for every rating, and get picks from Play Next.'],
   '/welcome': ['Welcome'],
 };
 function RouteTitle() {
@@ -115,6 +117,8 @@ function App() {
           <Route path="/play-next" element={<PlayNextRoute />} />
           <Route path="/guide" element={<Navigate to="/play-next" replace />} />
           <Route path="/profile" element={<Profile />} />
+          {/* Anyone's public profile, by gamer tag */}
+          <Route path="/u/:username" element={<PlayerProfile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/backlog" element={<Backlog />} />
           <Route path="/privacy" element={<Privacy />} />

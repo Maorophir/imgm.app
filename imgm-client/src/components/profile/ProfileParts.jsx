@@ -1,8 +1,13 @@
 /**
- * The pieces of the profile page: the picture (with change / remove), the stats, and
- * the player's reviews.
+ * The pieces of a profile page, shared by your own profile (/profile) and anyone's
+ * public one (/u/<gamer tag>): the picture (with change / remove, your own only), the
+ * level card, the stats, and the player's reviews as their cards.
+ *   `own` marks your own profile: it speaks to you ("Your rank"), explains how you
+ *   earn XP (a public profile says in one line what XP is), and shows your Game of the
+ *   Week record (stats.gotw, which only your own profile gets: votes are private).
  * Noir: stats as big numerals on hairlines (no boxes), square chips and buttons, and
- * each review tile marked with its tier's mark and ink.
+ * each review shown as its mini card on its painted edge, like the home page's
+ * "Fresh from the community".
  */
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -10,8 +15,12 @@ import { Camera, Clock, Crown, Flame, Star, ThumbsUp, Trash2, Trophy, Users, X }
 import { Avatar } from '../reviewCard/RarityCard';
 import { BADGES, getRarity } from '../reviewQuest/questOptions';
 import ArtIcon from '../ArtIcon';
+import CardStage from '../CardStage';
+import CollectibleCard from '../CollectibleCard';
 import RarityMark from '../RarityMark';
-import { GHOST_BUTTON } from '../../lib/ui';
+import { XpBar } from '../LevelBadge';
+import { TIERS, tierLevels } from '../../lib/levels';
+import { GHOST_BUTTON, TEXT_LINK } from '../../lib/ui';
 
 // The picture's small ghost buttons
 const SMALL_BUTTON =
@@ -20,7 +29,7 @@ const SMALL_BUTTON =
 const GROUP = 'border-t border-slate-700 pt-4 flex flex-col gap-3';
 const GROUP_LABEL = 'text-sm text-slate-400';
 import { Histogram } from '../game/PlayerVerdict';
-import { chooseAvatarPreset, deleteAvatar, getMyReviews, uploadAvatar } from '../../lib/api';
+import { chooseAvatarPreset, deleteAvatar, uploadAvatar } from '../../lib/api';
 import AvatarPicker from './AvatarPicker';
 import { resizeToAvatar } from '../../lib/resizeImage';
 import { timeAgo } from '../../lib/timeAgo';
@@ -135,6 +144,59 @@ export const ProfilePicture = ({ player, onChanged }) => {
   );
 };
 
+// The player's tier and level, the bar to the next level, and every tier there is.
+// progress: getProgress(xp) plus the review count ({ reviews })
+export const LevelCard = ({ progress, own = false }) => (
+  // Card stock on a hairline in the tier's ink
+  <section
+    className="rounded-sm border bg-slate-900 p-6 flex flex-col gap-4"
+    style={{ borderColor: `${progress.tier.color}55` }}
+  >
+    <div className="flex items-end justify-between gap-4">
+      <div>
+        <p className="text-sm text-slate-400">{own ? 'Your rank' : 'Rank'}</p>
+        <p className="font-display text-[34px] leading-none tracking-[.005em] mt-1" style={{ color: progress.tier.color }}>{progress.tier.label}</p>
+      </div>
+      <p className="text-right">
+        <span className="block font-display text-[54px] text-white tabular-nums leading-[.8]">{progress.level}</span>
+        <span className="text-sm text-slate-400">Level</span>
+      </p>
+    </div>
+
+    <div>
+      <XpBar progress={progress} />
+      <p className="mt-2 flex justify-between gap-3 text-sm text-slate-400 tabular-nums">
+        <span>{progress.xp.toLocaleString()} XP · {progress.reviews} review{progress.reviews === 1 ? '' : 's'}</span>
+        <span>{progress.toNext.toLocaleString()} XP to Level {progress.level + 1}</span>
+      </p>
+    </div>
+
+    {/* The ladder, worst → best, the player's tier highlighted */}
+    <ol className="grid grid-cols-5 gap-1.5 text-center">
+      {TIERS.map((t) => {
+        const reached = progress.level >= t.minLevel;
+        const isCurrent = t === progress.tier;
+        return (
+          <li
+            key={t.key}
+            className={`rounded-sm border px-1 py-2 ${isCurrent ? 'bg-slate-950' : 'border-slate-700'} ${reached ? '' : 'opacity-40'}`}
+            style={isCurrent ? { borderColor: t.color } : undefined}
+          >
+            <span className="block text-xs font-semibold leading-tight" style={{ color: t.color }}>{t.label}</span>
+            <span className="block text-xs tabular-nums text-slate-400 mt-0.5">{tierLevels(t)}</span>
+          </li>
+        );
+      })}
+    </ol>
+    {/* What XP is: a visitor on someone's profile may not know yet */}
+    <p className="text-sm text-slate-400">
+      {own
+        ? 'Earn XP by reviewing: 10 XP per quest screen you answer, 50 XP for your final words (up to 130 per review).'
+        : 'Players level up by reviewing games: each review earns up to 130 XP.'}
+    </p>
+  </section>
+);
+
 // One stat: a quiet label on a hairline, the number big in the display face
 const Stat = ({ icon: Icon, label, value, children }) => (
   <div className="border-t border-slate-700 pt-3 flex flex-col gap-1">
@@ -146,7 +208,8 @@ const Stat = ({ icon: Icon, label, value, children }) => (
   </div>
 );
 
-export const StatsGrid = ({ stats }) => {
+// stats.gotw is only there on your own profile; without it the badges take the row
+export const StatsGrid = ({ stats, own = false }) => {
   const average = stats.averageGiven;
   const rarity = average != null ? getRarity(Math.round(average)) : null;
   const badges = Object.entries(stats.badges ?? {}).filter(([key]) => BADGES[key]);
@@ -165,15 +228,17 @@ export const StatsGrid = ({ stats }) => {
         <Stat icon={Clock} label="Hours logged" value={stats.hoursLogged.toLocaleString()} />
         <Stat icon={ThumbsUp} label="Found helpful" value={stats.helpfulVotes} />
       </div>
-      <div className="grid md:grid-cols-2 gap-x-8 gap-y-4">
-        <div className={GROUP}>
-          <span className={GROUP_LABEL}>Game of the Week</span>
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium text-white">
-            <span className="inline-flex items-center gap-1.5"><Flame className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" /> {stats.gotw.streak}-week streak</span>
-            <span className="inline-flex items-center gap-1.5"><Trophy className="w-4 h-4 text-rarity-legendary" strokeWidth={1.8} aria-hidden="true" /> {stats.gotw.winnersPicked} winners picked</span>
-            {stats.gotw.kingmaker && <span className="inline-flex items-center gap-1.5 text-rarity-legendary"><Crown className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Kingmaker</span>}
+      <div className={`grid gap-x-8 gap-y-4 ${stats.gotw ? 'md:grid-cols-2' : ''}`}>
+        {stats.gotw && (
+          <div className={GROUP}>
+            <span className={GROUP_LABEL}>Game of the Week</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium text-white">
+              <span className="inline-flex items-center gap-1.5"><Flame className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" /> {stats.gotw.streak}-week streak</span>
+              <span className="inline-flex items-center gap-1.5"><Trophy className="w-4 h-4 text-rarity-legendary" strokeWidth={1.8} aria-hidden="true" /> {stats.gotw.winnersPicked} winners picked</span>
+              {stats.gotw.kingmaker && <span className="inline-flex items-center gap-1.5 text-rarity-legendary"><Crown className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Kingmaker</span>}
+            </div>
           </div>
-        </div>
+        )}
         <div className={GROUP}>
           <span className={GROUP_LABEL}>Badges &amp; favourite genres</span>
           <div className="flex flex-wrap gap-2">
@@ -185,13 +250,15 @@ export const StatsGrid = ({ stats }) => {
             {stats.topGenres.map((genre) => (
               <span key={genre} className="inline-flex items-center h-8 px-2.5 rounded-xs border border-slate-600 text-sm text-slate-300">{genre}</span>
             ))}
-            {badges.length === 0 && stats.topGenres.length === 0 && <span className="text-sm text-slate-400">Review games to earn badges.</span>}
+            {badges.length === 0 && stats.topGenres.length === 0 && (
+              <span className="text-sm text-slate-400">{own ? 'Review games to earn badges.' : 'No badges yet.'}</span>
+            )}
           </div>
         </div>
       </div>
       {stats.reviews > 0 && (
         <div className={GROUP}>
-          <p className={`${GROUP_LABEL} mb-1`}>The scores you give</p>
+          <p className={`${GROUP_LABEL} mb-1`}>{own ? 'The scores you give' : 'The scores they give'}</p>
           <Histogram byRating={stats.byRating} />
         </div>
       )}
@@ -199,64 +266,82 @@ export const StatsGrid = ({ stats }) => {
   );
 };
 
-const ReviewTile = ({ review }) => {
+// One review as its card, like the home page's Fresh cards: the mini card on its painted
+// edge (standing still, the game's name on it), the player's words under it, how long
+// ago and how many found it helpful. The whole card opens the game page right at this
+// review.
+const ReviewCard = ({ review }) => {
   const rarity = getRarity(review.rating);
   return (
-    <Link
-      to={`/game/${review.game.id}`}
-      className="group flex gap-3 py-3 px-1 border-t border-slate-700 hover:bg-slate-800 transition-colors duration-120 animate-fade-in"
-    >
-      {review.game.coverUrl ? (
-        <img src={review.game.coverUrl} alt="" loading="lazy" className="w-14 h-20 rounded-sm object-cover bg-slate-800 shrink-0" />
-      ) : (
-        <div className="w-14 h-20 rounded-sm bg-slate-800 shrink-0" />
+    // The keyboard outline goes around the whole card, like the home page's cards
+    <figure className="relative min-w-0 animate-fade-in has-[.review-link:focus-visible]:outline-2 has-[.review-link:focus-visible]:outline-offset-4 has-[.review-link:focus-visible]:outline-white">
+      <CardStage
+        tier={rarity.key}
+        tilt={false}
+        rest={0}
+        className="w-full sm:w-[min(208px,100%)]"
+        front={<CollectibleCard variant="mini" title={review.game.title} score={review.rating} coverUrl={review.game.coverUrl} />}
+      />
+      {review.snippet && (
+        // The opening quote mark hangs into the margin, so the words line up (the box
+        // reaches out to the left to keep the hanging mark inside the clamp)
+        <blockquote className="-ml-[.42em] pl-[.42em] -indent-[.42em] mt-5 sm:mt-7 font-serif italic text-base sm:text-[21px] leading-[1.35] text-white break-words line-clamp-4">
+          “{review.snippet}”
+        </blockquote>
       )}
-      <div className="min-w-0 flex flex-col gap-1">
-        <p className="font-medium text-white leading-tight truncate underline decoration-1 underline-offset-4 decoration-transparent group-hover:decoration-white transition-[text-decoration-color] duration-120">{review.game.title}</p>
-        <p className="flex items-center gap-1.5 text-sm" style={{ color: rarity.color }}>
-          <RarityMark tier={rarity.key} />
-          <span className="font-semibold">{rarity.label}</span>
-          <span className="tabular-nums text-slate-400">{review.rating}/10</span>
-        </p>
-        {review.snippet && <p className="font-serif italic text-base text-slate-200 leading-snug line-clamp-2">“{review.snippet}”</p>}
-        <p className="mt-auto text-sm text-slate-400">
-          {timeAgo(review.createdAt)}
-          {review.helpfulCount > 0 && ` · ${review.helpfulCount} found it helpful`}
-        </p>
-      </div>
-    </Link>
+      <figcaption className="flex flex-wrap items-center gap-x-3 mt-2 text-xs text-slate-400">
+        {/* Its ::after stretches over the whole figure, so the card is one link (one tab
+            stop), named for screen readers after the game (the card already shows it)
+            and shown as how long ago it was */}
+        <Link
+          to={`/game/${review.game.id}?review=${review.id}#review-${review.id}`}
+          className={`review-link inline-flex items-center min-h-11 tabular-nums after:absolute after:inset-0 focus-visible:outline-none ${TEXT_LINK}`}
+        >
+          <span className="sr-only">Review of {review.game.title}, </span>
+          <time dateTime={review.createdAt}>{timeAgo(review.createdAt)}</time>
+        </Link>
+        {review.helpfulCount > 0 && <span>{review.helpfulCount} found it helpful</span>}
+      </figcaption>
+    </figure>
   );
 };
 
-// Your reviews, newest first, 12 at a time
-export const MyReviews = ({ first, total }) => {
+// A player's reviews as cards, newest first, 12 at a time.
+//   first     the first page (from the profile)
+//   total     how many reviews the player has
+//   loadMore  (offset) => the next page: { reviews }
+//   empty     what to say when there are none
+export const PlayerReviews = ({ first, total, loadMore, empty }) => {
   const [reviews, setReviews] = useState(first);
   const [loading, setLoading] = useState(false);
-  if (reviews.length === 0) {
-    return (
-      <p className="text-slate-400">
-        No reviews yet. Find a game you've played and start your first <span className="text-white font-medium">Review Quest</span>.
-      </p>
-    );
-  }
+  const [failed, setFailed] = useState(false);
+  if (reviews.length === 0) return <p className="text-slate-400">{empty}</p>;
   const more = async () => {
     setLoading(true);
+    setFailed(false);
     try {
-      const page = await getMyReviews(reviews.length);
+      const page = await loadMore(reviews.length);
       setReviews((current) => [...current, ...page.reviews]);
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
   };
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid sm:grid-cols-2 gap-x-8">
-        {reviews.map((review) => <ReviewTile key={review.id} review={review} />)}
+    <div className="flex flex-col gap-10 sm:gap-14">
+      {/* The home page's grid: two columns on phones, then as many 240px columns as fit.
+          auto-fill keeps the empty columns, so one or two cards stay card-sized. */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-x-8 sm:gap-y-14">
+        {reviews.map((review) => <ReviewCard key={review.id} review={review} />)}
       </div>
       {reviews.length < total && (
-        <button type="button" onClick={more} disabled={loading} className={`${GHOST_BUTTON} self-center`}>
-          {loading ? 'Loading…' : `Show more (${total - reviews.length} left)`}
-        </button>
+        <div className="flex flex-col items-center gap-2">
+          <button type="button" onClick={more} disabled={loading} className={GHOST_BUTTON}>
+            {loading ? 'Loading…' : `Show more (${total - reviews.length} left)`}
+          </button>
+          {failed && <p role="status" className="text-sm text-red-300">Couldn't load more reviews. Please try again.</p>}
+        </div>
       )}
     </div>
   );
