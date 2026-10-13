@@ -452,7 +452,7 @@ const GameOfTheWeek = () => {
             <div className="flex-1">
               <p className="font-semibold text-white text-lg">Log in to vote</p>
               <p className="text-sm text-slate-400 mt-0.5">
-                Pick next week's Game of the Week, see the live results, nominate a game, and earn XP for every vote.
+                Pick next week's Game of the Week, see the live results, nominate a game, and earn XP toward your level for every vote.
               </p>
             </div>
             {/* Logged out, this is the page's main action: the one lime button */}

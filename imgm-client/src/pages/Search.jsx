@@ -27,7 +27,6 @@ import { isUnreleased, releaseLabel } from '../lib/release';
 import { WRAP, GHOST_BUTTON, SECTION_TITLE } from '../lib/ui';
 import GameCard from '../components/GameCard';
 import GameCardSkeleton from '../components/GameCardSkeleton';
-import { MAX_XP } from '../components/reviewQuest/questOptions';
 
 const MIN_QUERY_LENGTH = 2;
 // Popular games on the page with no query: two of the home page's pages of them
@@ -158,9 +157,11 @@ const Search = () => {
         <h1 className="font-display text-[34px] sm:text-[54px] leading-[.95] tracking-[.005em] text-white break-words">
           {questMode ? 'What did you play last?' : isSearchable ? `Results for “${query}”` : 'Search games'}
         </h1>
+        {/* Many people here are new: what they get is the card (XP comes up inside the
+            quest, where it's explained) */}
         {questMode && (
           <p className="mt-3 text-base leading-[1.6] text-white">
-            Pick it to start its quest: about two minutes, up to {MAX_XP} XP, and a card at the end.
+            Pick it to start its quest: about two minutes, and you get a card at the end.
           </p>
         )}
         {showSearchBox && (

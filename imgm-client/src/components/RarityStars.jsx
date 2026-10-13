@@ -2,7 +2,8 @@
  * RarityStars — 10 stars (one per point) whose fill takes the colour of the
  * score's loot rarity. Legendary scores make the stars float, one after another.
  *
- * Interactive by default: tap a star, drag across them, or use the arrow keys.
+ * Interactive by default: tap a star, drag across them, or use the arrow keys (to a
+ * screen reader it's a slider, "Your rating", read as "9 out of 10, Epic").
  * Pass `readOnly` to display a score — including averages: 8.4 shows 8 full
  * stars and a 40%-filled 9th star.
  */
@@ -21,6 +22,9 @@ const SIZES = {
 };
 
 const clamp = (v) => Math.min(STAR_COUNT, Math.max(1, v));
+
+// A score in words, for screen readers: "9 out of 10, Epic"
+const spoken = (score) => `${score} out of 10, ${getRarity(score).label}`;
 
 const RarityStars = ({ value, onChange, size = 'lg', readOnly = false }) => {
   // What the mouse is hovering over (a preview), shown instead of `value` while hovering
@@ -78,10 +82,13 @@ const RarityStars = ({ value, onChange, size = 'lg', readOnly = false }) => {
       {...handlers}
       role={readOnly ? 'img' : 'slider'}
       tabIndex={readOnly ? undefined : 0}
-      aria-label={value ? `${value} out of 10, ${getRarity(value).label}` : 'Rating, not picked yet'}
+      // A picture says its score in its name. The slider keeps one name ("Your rating")
+      // and says its value in words, so a screen reader reads "9 out of 10, Epic", not "9".
+      aria-label={readOnly ? (value ? spoken(value) : 'Not rated') : 'Your rating'}
       aria-valuemin={readOnly ? undefined : 1}
       aria-valuemax={readOnly ? undefined : STAR_COUNT}
       aria-valuenow={readOnly ? undefined : value ?? undefined}
+      aria-valuetext={readOnly ? undefined : value ? spoken(value) : 'Not picked yet'}
       className={`flex ${gap} ${readOnly ? '' : 'cursor-pointer touch-none select-none p-1.5 rounded-sm'}`}
     >
       {Array.from({ length: STAR_COUNT }, (_, i) => {

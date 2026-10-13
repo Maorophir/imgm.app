@@ -12,9 +12,14 @@
  *   - If the user already reviewed this game, the quest opens pre-filled and
  *     posting updates that review (one review per person per game).
  *   - Once posted, the done screen deals the review's card: the same trading card the
- *     home page shows, which can be turned over and shared.
+ *     home page shows, which can be turned over and shared. Under it, "Rate another
+ *     game" offers three more to rate (RateAnother), so a player can keep going.
  *   - Logged out, the page asks you to sign up first ("Rate <game>", Sign up, or "I
- *     already have an account"); either way you come straight back to the quest.
+ *     already have an account") over the game's art, with a face-down card for the one
+ *     they're about to earn; either way you come straight back to the quest.
+ *   - Each game's quest starts fresh: going from one game's done screen to another
+ *     game's quest (same route, new :id) remounts the page (the key on Quest).
+ *   - XP is explained the first time it's offered ("up to 130 XP toward your level").
  *   - A game that isn't out yet can't be rated: the page shows its release date, Add
  *     to Backlog and the way back to the game page instead. A player who already has a
  *     review of it (its date was pushed back) can still edit or delete that review.
@@ -40,6 +45,8 @@ import CardStage from '../components/CardStage';
 import CollectibleCard, { CardBack, ChecklistBack } from '../components/CollectibleCard';
 import { tickedChecklist } from '../components/reviewCard/reviewDisplay';
 import ShareCardButton from '../components/ShareCardButton';
+import FaceDownCard from '../components/home/FaceDownCard';
+import RateAnother from '../components/reviewQuest/RateAnother';
 import {
   EMPTY_ANSWERS, BADGES, CHECKLIST, XP_EASY, XP_WRITTEN, MAX_XP, getRarity,
 } from '../components/reviewQuest/questOptions';
@@ -218,8 +225,52 @@ const NotOutYet = ({ game }) => (
   </div>
 );
 
-const ReviewQuest = () => {
-  const { id } = useParams();
+// The game's art behind the quest: a different picture per screen where there are
+// several (its artworks), else the cover
+const questArt = (game) => (game.artworks?.length ? game.artworks : [game.coverUrl]);
+
+// The quest's stage: the game's art across the page, darkened (no blur: Noir has no
+// frosted glass), with the panel centred on it. key={art} replays the fade on every change.
+const QuestStage = ({ art, children }) => (
+  <div className="relative min-h-[calc(100vh-80px)] flex items-center justify-center px-4 py-10 overflow-hidden">
+    {art && (
+      <div
+        key={art}
+        className="absolute inset-0 bg-cover bg-center animate-fade-in"
+        style={{ backgroundImage: `url(${art})` }}
+      />
+    )}
+    <div className="absolute inset-0 bg-slate-950/75" />
+    {children}
+  </div>
+);
+
+// Logged out: most people here are new, so signing up is the main action. Either way
+// they come straight back to this quest (new players choose a gamer tag on the way).
+// The game's art (the quest's first screen's) and a face-down card show what this is
+// and what they get: their own card for this game.
+const SignUpGate = ({ game, id }) => {
+  const back = encodeURIComponent(`/game/${id}/review`);
+  return (
+    <QuestStage art={questArt(game)[0]}>
+      <div className="relative z-10 w-full max-w-xl bg-slate-900 border border-slate-700 rounded-sm px-6 py-10 md:px-8 text-center">
+        <FaceDownCard small className="w-28 mx-auto mb-8" />
+        <h1 className={`${SECTION_TITLE} text-balance mb-3`}>Rate {game.title}</h1>
+        <p className="text-slate-400 mb-8">Make a free account to keep your card.</p>
+        <div className="flex flex-col items-center gap-3">
+          <Link to={`/login?mode=signup&redirect=${back}`} className={PRIMARY_BUTTON}>
+            Sign up
+          </Link>
+          <Link to={`/login?redirect=${back}`} className={`inline-flex items-center h-11 font-medium text-white ${TEXT_LINK}`}>
+            I already have an account
+          </Link>
+        </div>
+      </div>
+    </QuestStage>
+  );
+};
+
+const Quest = ({ id }) => {
   const navigate = useNavigate();
   const { data: session, isPending: sessionLoading } = useSession();
   const userId = session?.user?.id;
@@ -343,25 +394,7 @@ const ReviewQuest = () => {
   }
   // Not out yet: nothing to rate, logged in or not (but their own review stays editable)
   if (isUnreleased(game.releaseDate) && !existing.review) return <NotOutYet game={game} />;
-  if (!session) {
-    // Most people here are new, so signing up is the main action. Either way they come
-    // straight back to this quest (new players choose a gamer tag on the way).
-    const back = encodeURIComponent(`/game/${id}/review`);
-    return (
-      <div className="max-w-xl mx-auto px-4 sm:px-6 py-24 text-center">
-        <h1 className={`${SECTION_TITLE} text-balance mb-3`}>Rate {game.title}</h1>
-        <p className="text-slate-400 mb-8">Make a free account to keep your card.</p>
-        <div className="flex flex-col items-center gap-3">
-          <Link to={`/login?mode=signup&redirect=${back}`} className={PRIMARY_BUTTON}>
-            Sign up
-          </Link>
-          <Link to={`/login?redirect=${back}`} className={`inline-flex items-center h-11 font-medium text-white ${TEXT_LINK}`}>
-            I already have an account
-          </Link>
-        </div>
-      </div>
-    );
-  }
+  if (!session) return <SignUpGate game={game} id={id} />;
 
   const isQuestScreen = typeof step === 'number';
   const current = isQuestScreen ? STEPS[step] : null;
@@ -369,7 +402,7 @@ const ReviewQuest = () => {
   const rarity = answers.rating ? getRarity(answers.rating) : null;
 
   // A different screenshot behind every screen
-  const backgrounds = game.artworks?.length ? game.artworks : [game.coverUrl];
+  const backgrounds = questArt(game);
   const background = backgrounds[(isQuestScreen ? step : 0) % backgrounds.length];
 
   // The posted review, and the link that opens it on the game page
@@ -377,16 +410,7 @@ const ReviewQuest = () => {
   const reviewLink = savedId ? `/game/${game.id}?review=${savedId}#review-${savedId}` : `/game/${game.id}`;
 
   return (
-    <div className="relative min-h-[calc(100vh-80px)] flex items-center justify-center px-4 py-10 overflow-hidden">
-      {/* The game's art behind the panel, darkened (no blur: Noir has no frosted glass).
-          key={background} replays the fade on every change. */}
-      <div
-        key={background}
-        className="absolute inset-0 bg-cover bg-center animate-fade-in"
-        style={{ backgroundImage: `url(${background})` }}
-      />
-      <div className="absolute inset-0 bg-slate-950/75" />
-
+    <QuestStage art={background}>
       {/* The quest panel: flat card stock on a hairline */}
       <div className="relative z-10 w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-sm p-6 md:p-8">
         {/* Header: Back · game title · Finish */}
@@ -560,7 +584,8 @@ const ReviewQuest = () => {
                 >
                   <Gamepad2 className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />{isEditing ? 'Edit the quest' : 'Start the quest'}
                 </button>
-                <span className="text-sm text-slate-400 text-center tabular-nums">{STEPS.length - 1} quick screens · up to {MAX_XP} XP</span>
+                {/* The first time XP comes up in the quest, so it says what XP is for */}
+                <span className="text-sm text-slate-400 text-center text-balance tabular-nums">{STEPS.length - 1} quick screens · up to {MAX_XP} XP toward your level</span>
               </div>
             </div>
           )}
@@ -630,9 +655,19 @@ const ReviewQuest = () => {
             </div>
           )}
         </div>
+
+        {/* The way on: three more games to rate, and the quest's game search */}
+        {step === DONE && <RateAnother gameId={game.id} />}
       </div>
-    </div>
+    </QuestStage>
   );
+};
+
+// One quest per game: a new :id (e.g. "Rate another game" from the done screen) starts
+// a fresh quest, rather than keeping the last game's answers and done screen
+const ReviewQuest = () => {
+  const { id } = useParams();
+  return <Quest key={id} id={id} />;
 };
 
 export default ReviewQuest;
