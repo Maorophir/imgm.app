@@ -60,7 +60,7 @@ const SearchBar = () => {
       <form
         onSubmit={handleSubmit}
         role="search"
-        className="flex items-center gap-2.5 h-11 px-3.5 rounded-sm bg-slate-900 border border-slate-500 focus-within:border-white transition-colors duration-120"
+        className="ui-search flex items-center gap-2.5 h-11 px-3.5 rounded-sm bg-slate-900 border border-slate-500 focus-within:border-white transition-colors duration-120"
       >
         <Search className="w-4 h-4 shrink-0 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
         <input

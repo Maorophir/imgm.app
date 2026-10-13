@@ -278,3 +278,1013 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-xp-pop { animation: none; }
 }
+
+/*
+ * Style previews (local development only). Each block restyles the buttons, links and
+ * type when <html> has that data-style, set by the switcher in the corner
+ * (components/StylePreview.jsx, lib/styles.js). The elements carry ui-* / hero-* hook
+ * classes (lib/ui.js, HomeHero.jsx). These rules sit outside Tailwind's layers, so they
+ * win over the utilities. Once a style is chosen, it moves into the real recipes and
+ * these blocks go.
+ */
+/* Printed: buttons printed in the card's own capitals with its inner frame; text in Libre Franklin */
+/* ── Style preview: "Printed" ──
+   The controls come off the same press as the cards. Button labels are set in the card's
+   title face (Big Shoulders capitals), and each button has the card's frame-in-frame: a
+   thin rule just inside its edge. The ink is flat. Pressing a button deepens the
+   impression, and a disabled button is an unprinted blank with a dashed cut line. Body
+   text moves from Host Grotesk to Libre Franklin, a newspaper and sports-page gothic.
+   Colours are the Noir tokens only (hover and press shades are lime mixed with the page
+   black). */
+:root[data-style="printed"] {
+  --font-sans: "Libre Franklin", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --printed-ink: var(--color-slate-950);
+  /* Label size for the 52px buttons: 18px on a 320px phone, 21px from about 410px up */
+  --printed-cta: clamp(18px, 4.6vw + 2px, 21px);
+  font-family: var(--font-sans);
+}
+
+/* ── Words only: no icons in buttons, links, tabs, labels or the search field, and no
+   Sparkles anywhere (every one of these sits beside its own words) ── */
+:root[data-style="printed"] :is(.ui-primary, .ui-ghost, .ui-segment, .ui-link, .ui-search, .ui-label) svg,
+:root[data-style="printed"] svg[class*="lucide-sparkles"] {
+  display: none;
+}
+
+/* ── The one lime action: a printed label, not a slab ── */
+:root[data-style="printed"] .ui-primary {
+  position: relative;
+  height: auto;
+  min-height: 52px;
+  padding: 9px 24px 8px; /* 1px less below, so the capitals sit optically centred */
+  border: 0;
+  border-radius: var(--radius-sm);
+  background-color: var(--color-brand);
+  color: var(--printed-ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: var(--printed-cta);
+  line-height: 1;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: normal; /* a long label in a narrow column wraps instead of spilling out */
+  text-wrap: balance;
+  filter: none;
+  translate: none;
+  transition: background-color 140ms ease-out, translate 60ms ease-out;
+}
+/* The card's frame-in-frame: a 1px ink rule 4px inside the edge */
+:root[data-style="printed"] .ui-primary::before {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid color-mix(in srgb, var(--printed-ink) 45%, transparent);
+  border-radius: 1px;
+  pointer-events: none;
+  transition: border-color 140ms ease-out;
+}
+/* Hover: more ink, never brighter. The fill darkens a step and the rule prints solid. */
+@media (hover: hover) {
+  :root[data-style="printed"] .ui-primary:not(:disabled, [aria-disabled="true"]):hover {
+    background-color: color-mix(in srgb, var(--color-brand) 90%, var(--color-slate-950));
+  }
+  :root[data-style="printed"] .ui-primary:not(:disabled, [aria-disabled="true"]):hover::before {
+    border-width: 2px;
+    border-color: var(--printed-ink);
+  }
+}
+/* Pressed: the stamp goes down. The face sinks 1px, darkens again, and the rule moves in. */
+:root[data-style="printed"] .ui-primary:not(:disabled, [aria-disabled="true"]):active {
+  translate: 0 1px;
+  background-color: color-mix(in srgb, var(--color-brand) 82%, var(--color-slate-950));
+}
+:root[data-style="printed"] .ui-primary:not(:disabled, [aria-disabled="true"]):active::before {
+  inset: 5px;
+  border-width: 2px;
+  border-color: var(--printed-ink);
+}
+/* Keyboard focus: the site's ivory ring outside, and the rule printed solid inside */
+:root[data-style="printed"] .ui-primary:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 3px;
+}
+:root[data-style="printed"] .ui-primary:focus-visible::before {
+  border-width: 2px;
+  border-color: var(--printed-ink);
+}
+/* Disabled: not printed yet. Bare card stock with a dashed cut line and grey words. */
+:root[data-style="printed"] .ui-primary:is(:disabled, [aria-disabled="true"]) {
+  opacity: 1;
+  cursor: not-allowed;
+  background-color: var(--color-slate-900);
+  color: var(--color-slate-400);
+  translate: none;
+}
+:root[data-style="printed"] .ui-primary:is(:disabled, [aria-disabled="true"])::before {
+  inset: 4px;
+  border: 1px dashed var(--color-slate-500);
+}
+
+/* ── Every other button: a ticket on card stock ──
+   The card's dark stock, a cut edge in the control grey, and a faint ivory rule 3px
+   inside it, like the hairline just inside a card's edge. Same capitals as the lime one. */
+:root[data-style="printed"] .ui-ghost {
+  position: relative;
+  height: auto;
+  min-height: 44px;
+  padding-block: 7px 6px;
+  border: 1px solid var(--color-slate-500);
+  border-radius: var(--radius-sm);
+  background-color: var(--color-slate-900);
+  color: var(--color-white);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  text-align: center;
+  white-space: normal;
+  text-wrap: balance;
+  translate: none;
+  transition: border-color 140ms ease-out, background-color 140ms ease-out, translate 60ms ease-out;
+}
+:root[data-style="printed"] .ui-ghost::before {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, var(--color-white) 12%, transparent);
+  border-radius: 1px;
+  pointer-events: none;
+  transition: border-color 140ms ease-out;
+}
+:root[data-style="printed"] .ui-ghost.text-sm {
+  font-size: 15px;
+}
+/* The tall one that stands beside a lime button matches it */
+:root[data-style="printed"] .ui-ghost.h-13 {
+  min-height: 52px;
+  font-size: var(--printed-cta);
+  letter-spacing: .03em;
+}
+/* The header's "Sign up" stays on one line */
+:root[data-style="printed"] header .ui-ghost {
+  white-space: nowrap;
+}
+@media (hover: hover) {
+  :root[data-style="printed"] .ui-ghost:not(:disabled, [aria-disabled="true"]):hover {
+    border-color: var(--color-white);
+    background-color: var(--color-slate-800);
+    color: var(--color-slate-50);
+  }
+  :root[data-style="printed"] .ui-ghost:not(:disabled, [aria-disabled="true"]):hover::before {
+    border-color: color-mix(in srgb, var(--color-white) 32%, transparent);
+  }
+}
+:root[data-style="printed"] .ui-ghost:not(:disabled, [aria-disabled="true"]):active {
+  translate: 0 1px;
+  border-color: var(--color-white);
+  background-color: var(--color-slate-950);
+}
+:root[data-style="printed"] .ui-ghost:not(:disabled, [aria-disabled="true"]):active::before {
+  inset: 4px;
+  border-color: color-mix(in srgb, var(--color-white) 32%, transparent);
+}
+:root[data-style="printed"] .ui-ghost:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 3px;
+}
+:root[data-style="printed"] .ui-ghost:focus-visible::before {
+  border-color: color-mix(in srgb, var(--color-white) 32%, transparent);
+}
+/* Disabled: a blank with a dashed cut line, like the lime one */
+:root[data-style="printed"] .ui-ghost:is(:disabled, [aria-disabled="true"]) {
+  opacity: 1;
+  cursor: not-allowed;
+  border-style: dashed;
+  border-color: var(--color-slate-500);
+  background-color: transparent;
+  color: var(--color-slate-400);
+  translate: none;
+}
+:root[data-style="printed"] .ui-ghost:is(:disabled, [aria-disabled="true"])::before {
+  display: none;
+}
+
+/* ── Text links: the quiet underline stays, and hover prints it heavier. Keyboard focus
+   keeps the site's own ivory ring from the base layer (so a link that hands its ring to
+   a bigger box, like the home's Fresh cards, doesn't get a second one). ── */
+:root[data-style="printed"] .ui-link {
+  text-decoration-thickness: 1px;
+  transition: color 140ms ease-out, text-decoration-color 140ms ease-out;
+}
+@media (hover: hover) {
+  :root[data-style="printed"] .ui-link:not(:disabled):hover {
+    color: var(--color-slate-50);
+    text-decoration-color: currentColor;
+    text-decoration-thickness: 2px;
+  }
+}
+:root[data-style="printed"] .ui-link:not(:disabled):active {
+  color: var(--color-slate-300);
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+}
+:root[data-style="printed"] .ui-link:focus-visible {
+  text-decoration-color: currentColor;
+  text-decoration-thickness: 2px;
+}
+:root[data-style="printed"] .ui-link:disabled {
+  cursor: not-allowed;
+  color: var(--color-slate-400);
+  text-decoration-color: var(--color-slate-600);
+}
+
+/* ── Header links: the current page gets a heavier printed rule (3px, not 2px) ── */
+:root[data-style="printed"] .ui-nav-link[aria-current="page"] {
+  text-decoration-thickness: 3px;
+  text-decoration-color: currentColor;
+}
+/* Phones: Libre Franklin runs about 5px wider than Host Grotesk over the four links, so
+   they get a hair less tracking to keep fitting a 360px screen without scrolling */
+@media (max-width: 39.99rem) {
+  :root[data-style="printed"] .ui-nav-link {
+    letter-spacing: -.01em;
+  }
+}
+
+/* ── Search: a write-in line, not a boxed command field with a magnifier ── */
+:root[data-style="printed"] .ui-search {
+  padding-inline: 0;
+  border-style: solid;
+  border-width: 0 0 1px;
+  border-color: var(--color-slate-500);
+  border-radius: 0;
+  background-color: transparent;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+@media (hover: hover) {
+  :root[data-style="printed"] .ui-search:hover:not(:focus-within) {
+    border-color: var(--color-slate-400);
+  }
+}
+:root[data-style="printed"] .ui-search:focus-within {
+  border-color: var(--color-white);
+  box-shadow: 0 1px 0 0 var(--color-white); /* with the border: a 2px ivory rule */
+}
+
+/* ── Text fields: the same write-in line ── */
+:root[data-style="printed"] .ui-field {
+  padding-inline: 2px;
+  border-style: solid;
+  border-width: 0 0 1px;
+  border-color: var(--color-slate-500);
+  border-radius: 0;
+  background-color: transparent;
+  transition: border-color 140ms ease-out, box-shadow 140ms ease-out;
+}
+@media (hover: hover) {
+  :root[data-style="printed"] .ui-field:not(:disabled, :focus):hover {
+    border-color: var(--color-slate-400);
+  }
+}
+:root[data-style="printed"] .ui-field:focus {
+  outline: none;
+  border-color: var(--color-white);
+  box-shadow: 0 1px 0 0 var(--color-white);
+}
+:root[data-style="printed"] .ui-field:disabled {
+  cursor: not-allowed;
+  border-style: dashed;
+}
+
+/* ── Sort and filter rows: printed tab words, no box, no hairlines. The picked one is
+   ivory on the nav's heavier rule; the others are grey until hovered. ── */
+:root[data-style="printed"] .ui-segments {
+  column-gap: 6px;
+  border: 0;
+  border-radius: 0;
+}
+:root[data-style="printed"] .ui-segment {
+  padding-inline: 8px;
+  border: 0;
+  background-color: transparent;
+  color: var(--color-slate-400);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-decoration-color: transparent;
+  text-underline-offset: 7px;
+  transition: color 140ms ease-out, text-decoration-color 140ms ease-out;
+}
+/* Counts inside a tab (Backlog's "To play 4") follow the tab's own ink. Backlog paints
+   the picked one's count dark for the old ivory block, which would vanish here. */
+:root[data-style="printed"] .ui-segment > span {
+  color: inherit;
+}
+@media (hover: hover) {
+  :root[data-style="printed"] .ui-segment:not(:disabled, .bg-white, [aria-pressed="true"], [aria-selected="true"]):hover {
+    color: var(--color-white);
+    text-decoration-color: var(--color-slate-500);
+  }
+}
+:root[data-style="printed"] .ui-segment:is(.bg-white, [aria-pressed="true"], [aria-selected="true"]) {
+  color: var(--color-white);
+  text-decoration-color: var(--color-white);
+  text-decoration-thickness: 3px;
+}
+:root[data-style="printed"] .ui-segment:not(:disabled):active {
+  color: var(--color-slate-300);
+}
+/* Drawn just inside: the row can scroll sideways, which would clip a ring outside */
+:root[data-style="printed"] .ui-segment:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: -2px;
+}
+:root[data-style="printed"] .ui-segment:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  color: var(--color-slate-500);
+  text-decoration-color: transparent;
+}
+
+/* ── Section titles: capitals, like the card's title, a size down from 54px ── */
+:root[data-style="printed"] .ui-title {
+  font-size: 32px;
+  line-height: .92;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+}
+@media (min-width: 640px) {
+  :root[data-style="printed"] .ui-title {
+    font-size: 44px;
+  }
+}
+
+/* ── The home hero: one sentence in the text face at 400 (not a medium "subhead"), then
+   one button alone. The grey reassurance line and the "Browse games" beside the button
+   go (the header's Games link and, on phones, the link at the end of the hero remain). ── */
+:root[data-style="printed"] .hero-promise {
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.28;
+  letter-spacing: -.005em;
+}
+@media (min-width: 640px) {
+  :root[data-style="printed"] .hero-promise {
+    font-size: 23px;
+  }
+}
+@media (min-width: 1280px) {
+  :root[data-style="printed"] .hero-promise {
+    font-size: 25px;
+  }
+}
+:root[data-style="printed"] .hero-note,
+:root[data-style="printed"] .hero-actions .ui-link {
+  display: none;
+}
+/* Phones: the card hangs from the band, so it doesn't move up when the note goes. This
+   keeps the room the note used to leave between the button and the tilted card. */
+@media (max-width: 39.99rem) {
+  :root[data-style="printed"] .hero-actions {
+    margin-bottom: 24px;
+  }
+}
+
+/* ── Less motion asked for: nothing slides or sinks ── */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-style="printed"] :is(.ui-primary, .ui-ghost, .ui-link, .ui-segment, .ui-search, .ui-field),
+  :root[data-style="printed"] :is(.ui-primary, .ui-ghost)::before {
+    transition: none;
+  }
+  :root[data-style="printed"] :is(.ui-primary, .ui-ghost):not(:disabled, [aria-disabled="true"]):active {
+    translate: none;
+  }
+}
+
+/* Tactile: the lime button is a key standing on its own edge, like the card; text in Archivo */
+/* ── Tactile ─────────────────────────────────────────────────────────────────────
+   Things you press are KEYS: each stands on a painted edge a few pixels down and to
+   the right, the same edge CardStage puts under the card. The label is set in the
+   card's own face (Big Shoulders caps). Pressing slides the face onto its edge.
+   Things you follow are WORDS: sentence case and underlined, and the underline closes
+   up under the word when you press it. Fields are SLOTS cut into the surface, with
+   their inner wall lit from the same side as the key edges.
+   A thicker edge means a more important key: the lime main action is 5px, every
+   other key 3px. Colours are Noir tokens only; the edges are colour-mixes of them.
+   ─────────────────────────────────────────────────────────────────────────────── */
+
+:root[data-style="tactile"] {
+  /* Archivo: a late-19th-century American gothic (Omnibus-Type) with a width axis.
+     Body at 100% width; nav links and labels use a semi-condensed cut (see below). */
+  --font-sans: "Archivo", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* Words only: no icons inside keys, text links, or the search slot */
+:root[data-style="tactile"] :is(.ui-primary, .ui-ghost, .ui-segment, .ui-link, .ui-search) > svg {
+  display: none;
+}
+
+/* ── Keys: shared construction ── */
+:root[data-style="tactile"] :is(.ui-primary, .ui-ghost, .ui-segment) {
+  --k-travel: var(--k-x) var(--k-y);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-optical-sizing: auto;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  line-height: 1;
+  translate: none;
+  filter: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  /* Release: the key springs back up quickly (the press itself is faster, see :active) */
+  transition:
+    translate 120ms cubic-bezier(.3, .7, .4, 1),
+    box-shadow 120ms cubic-bezier(.3, .7, .4, 1),
+    background-color 120ms ease-out,
+    border-color 120ms ease-out,
+    color 120ms ease-out;
+}
+
+/* ── The lime key (one per page) ──
+   A lime face with a printed frame 3px inside (the card's frame-in-frame), standing
+   on an olive edge: the lime mixed into the page black, the way each rarity has a
+   darker -edge ink. No border, no black offset. */
+:root[data-style="tactile"] .ui-primary {
+  --k-x: 2px;
+  --k-y: 5px;
+  --k-face: var(--color-brand);
+  --k-line: color-mix(in oklab, var(--color-slate-950) 28%, var(--k-face));
+  --k-edge: color-mix(in oklab, var(--color-brand) 55%, var(--color-slate-950));
+  /* One line looks exactly as before (52px); a long label in a narrow column (the
+     quest's two-up row, a 320px phone) wraps inside the key instead of spilling out */
+  height: auto;
+  min-height: 52px;
+  padding-block: 8px;
+  white-space: normal;
+  text-wrap: balance;
+  text-align: center;
+  background-color: var(--k-face);
+  color: var(--color-slate-950);
+  font-size: 21px;
+  letter-spacing: .035em;
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 3px var(--k-face),
+    inset 0 0 0 4px var(--k-line),
+    var(--k-x) var(--k-y) 0 0 var(--k-edge);
+}
+@media (hover: hover) {
+  /* A finger over it: the face darkens a step and its frame inks in */
+  :root[data-style="tactile"] .ui-primary:hover:not(:disabled, [aria-disabled="true"]) {
+    --k-face: color-mix(in oklab, var(--color-brand) 92%, var(--color-slate-950));
+    --k-line: color-mix(in oklab, var(--color-slate-950) 55%, var(--k-face));
+  }
+}
+/* Pressed: the face slides down onto its edge, which stays put */
+:root[data-style="tactile"] .ui-primary:active:not(:disabled, [aria-disabled="true"]) {
+  --k-face: color-mix(in oklab, var(--color-brand) 92%, var(--color-slate-950));
+  --k-line: color-mix(in oklab, var(--color-slate-950) 55%, var(--k-face));
+  translate: var(--k-travel);
+  box-shadow:
+    inset 0 0 0 3px var(--k-face),
+    inset 0 0 0 4px var(--k-line),
+    0 0 0 0 var(--k-edge);
+  transition-duration: 40ms;
+}
+/* The outline clears the 5px edge */
+:root[data-style="tactile"] .ui-primary:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 6px;
+}
+/* Unavailable: an unlit key lying flat, with no edge, so nothing to press. It stands
+   up and lights when it becomes available (e.g. once the quest has a score). */
+:root[data-style="tactile"] :is(.ui-primary:disabled, .ui-primary[aria-disabled="true"]) {
+  --k-face: var(--color-slate-800);
+  --k-line: var(--color-slate-600);
+  color: var(--color-slate-400);
+  cursor: not-allowed;
+  box-shadow:
+    inset 0 0 0 3px var(--k-face),
+    inset 0 0 0 4px var(--k-line),
+    0 0 0 0 transparent;
+}
+
+/* ── Card-stock keys (every other button, incl. the header "Sign up") ──
+   The card's own stock: dark face, a faint ivory line just inside the rim, on a
+   thinner dark edge. Ivory caps. */
+:root[data-style="tactile"] .ui-ghost {
+  --k-x: 2px;
+  --k-y: 3px;
+  --k-face: var(--color-slate-900);
+  --k-rim: var(--color-slate-500);
+  --k-edge: var(--color-slate-600);
+  background-color: var(--k-face);
+  border-color: var(--k-rim);
+  color: var(--color-white);
+  font-size: 16px;
+  opacity: 1;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-white) 7%, transparent),
+    var(--k-x) var(--k-y) 0 0 var(--k-edge);
+}
+:root[data-style="tactile"] header .ui-ghost {
+  font-size: 15px;
+}
+@media (hover: hover) {
+  :root[data-style="tactile"] .ui-ghost:hover:not(:disabled, [aria-disabled="true"]) {
+    --k-face: var(--color-slate-800);
+    --k-rim: var(--color-slate-400);
+    color: var(--color-slate-50);
+  }
+}
+:root[data-style="tactile"] .ui-ghost:active:not(:disabled, [aria-disabled="true"]) {
+  --k-face: var(--color-slate-800);
+  --k-rim: var(--color-slate-400);
+  translate: var(--k-travel);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--color-white) 7%, transparent),
+    0 0 0 0 var(--k-edge);
+  transition-duration: 40ms;
+}
+:root[data-style="tactile"] .ui-ghost:focus-visible {
+  outline: 2px solid var(--color-white);
+  outline-offset: 5px;
+}
+:root[data-style="tactile"] :is(.ui-ghost:disabled, .ui-ghost[aria-disabled="true"]) {
+  --k-face: var(--color-slate-950);
+  --k-rim: var(--color-slate-700);
+  color: var(--color-slate-500);
+  cursor: not-allowed;
+  box-shadow:
+    inset 0 0 0 1px transparent,
+    0 0 0 0 transparent;
+}
+
+/* ── Segments: a row of latching keys (sort, filters, tabs) ──
+   Each choice is its own key on a 3px edge. The picked one stays pushed in, with an
+   ivory face. The row scrolls sideways, so it gets room for the edges. */
+:root[data-style="tactile"] .ui-segments {
+  gap: 6px;
+  border-width: 0;
+  border-radius: 0;
+  padding: 0 3px 4px 0;
+}
+:root[data-style="tactile"] .ui-segment {
+  --k-x: 2px;
+  --k-y: 3px;
+  --k-face: var(--color-slate-900);
+  --k-edge: var(--color-slate-600);
+  background-color: var(--k-face);
+  border: 1px solid var(--color-slate-500);
+  border-radius: 2px;
+  color: var(--color-white);
+  font-size: 15px;
+  letter-spacing: .045em;
+  box-shadow: var(--k-x) var(--k-y) 0 0 var(--k-edge);
+}
+@media (hover: hover) {
+  :root[data-style="tactile"] .ui-segment:hover:not(:disabled, [aria-pressed="true"], [aria-selected="true"]) {
+    --k-face: var(--color-slate-800);
+  }
+}
+:root[data-style="tactile"] .ui-segment:active:not(:disabled) {
+  translate: var(--k-travel);
+  box-shadow: 0 0 0 0 var(--k-edge);
+  transition-duration: 40ms;
+}
+:root[data-style="tactile"] .ui-segment:is([aria-pressed="true"], [aria-selected="true"]) {
+  --k-face: var(--color-white);
+  border-color: var(--color-white);
+  color: var(--color-slate-950);
+  translate: var(--k-travel);
+  box-shadow: 0 0 0 0 var(--k-edge);
+}
+:root[data-style="tactile"] .ui-segment:disabled {
+  box-shadow: 0 0 0 0 transparent;
+}
+
+/* ── Slots: text fields and the header search ──
+   Cut into the surface: the inner wall shows at the top and left, lit from the same
+   side as the key edges. Focus: the rim turns ivory and doubles. */
+:root[data-style="tactile"] :is(.ui-field, .ui-search) {
+  background-color: var(--color-slate-900);
+  border-color: var(--color-slate-500);
+  box-shadow: inset 2px 3px 0 0 var(--color-slate-950);
+}
+:root[data-style="tactile"] .ui-field:focus,
+:root[data-style="tactile"] .ui-search:focus-within {
+  border-color: var(--color-white);
+  box-shadow:
+    inset 2px 3px 0 0 var(--color-slate-950),
+    0 0 0 1px var(--color-white);
+}
+
+/* ── Words: text links and header links ──
+   A word sits on its rule. Pressing closes the gap: the underline comes up to the
+   word and thickens. */
+:root[data-style="tactile"] :is(.ui-link, .ui-nav-link) {
+  transition:
+    color 120ms ease-out,
+    text-decoration-color 120ms ease-out,
+    text-underline-offset 60ms ease-out,
+    text-decoration-thickness 60ms ease-out;
+}
+:root[data-style="tactile"] .ui-link:active {
+  text-underline-offset: 2px;
+  text-decoration-thickness: 2px;
+  text-decoration-color: currentColor;
+}
+/* Header links in the semi-condensed cut, like printed legends. The current page
+   keeps a thick 3px ivory bar under it. */
+:root[data-style="tactile"] .ui-nav-link,
+:root[data-style="tactile"] header a[href="/login"] {
+  font-stretch: 88%;
+}
+:root[data-style="tactile"] .ui-nav-link {
+  font-weight: 500;
+  text-underline-offset: 7px;
+}
+:root[data-style="tactile"] .ui-nav-link[aria-current="page"] {
+  text-decoration-thickness: 3px;
+  text-decoration-color: var(--color-white);
+}
+:root[data-style="tactile"] .ui-nav-link:active {
+  text-underline-offset: 3px;
+  text-decoration-color: currentColor;
+}
+
+/* ── Type ── */
+:root[data-style="tactile"] .ui-label {
+  font-stretch: 92%;
+}
+/* Section titles in capitals, like the card's title, and a step smaller */
+:root[data-style="tactile"] .ui-title {
+  text-transform: uppercase;
+  font-size: 32px;
+  line-height: .95;
+  letter-spacing: .01em;
+}
+@media (min-width: 40rem) {
+  :root[data-style="tactile"] .ui-title {
+    font-size: 44px;
+  }
+}
+
+/* ── Home hero: the headline, one sentence, one key ── */
+:root[data-style="tactile"] .hero-promise {
+  font-weight: 400;
+  letter-spacing: -.01em;
+  margin-top: -4px;
+}
+@media (min-width: 40rem) {
+  :root[data-style="tactile"] .hero-promise {
+    margin-top: -10px;
+  }
+}
+/* No reassurance line, and no second action beside the key (phones keep
+   "Browse games" at the end of the hero, outside this row) */
+:root[data-style="tactile"] .hero-note,
+:root[data-style="tactile"] .hero-actions .ui-link {
+  display: none;
+}
+
+/* ── Phones ── */
+@media (max-width: 39.99rem) {
+  :root[data-style="tactile"] .ui-primary {
+    font-size: 20px;
+  }
+  /* Room between the key's edge and the tilted card under it, which the note used to give */
+  :root[data-style="tactile"] .hero-actions {
+    margin-bottom: 24px;
+  }
+}
+
+/* ── Less motion: keys don't travel. A press only takes the edge away; a picked
+   segment shows by its ivory face and missing edge. ── */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-style="tactile"] :is(.ui-primary, .ui-ghost, .ui-segment) {
+    --k-travel: 0px 0px;
+    transition: none;
+  }
+  :root[data-style="tactile"] :is(.ui-link, .ui-nav-link) {
+    transition: none;
+  }
+}
+
+/* Printed Stock: like Printed, with boxed fields and a slab button; text in Libre Franklin */
+/* ── Style preview "open": Printed Stock ──
+   Every button is a small piece of the review card: lime (the one main action) or the
+   card's dark stock, with the card's frame-in-frame drawn as a 1px keyline 3px inside
+   the edge, and labelled in the card's own face (Big Shoulders 800 capitals). Everything
+   you read moves to Libre Franklin (Franklin Gothic: sports pages, box scores). Review
+   quotes stay in Noto Serif Display italic. Icons leave buttons and tabs. The hero
+   keeps one button and nothing after it. Noir tokens only: no glows, no gradients, no
+   blur. Three families in total. */
+
+:root[data-style="open"] {
+  --font-sans: "Libre Franklin", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+
+  /* Short names for the Noir tokens used below (hex fallbacks are the same tokens'
+     values, in case Tailwind didn't emit a variable that no class uses) */
+  --o-lime: var(--color-brand, #c6eb4e);
+  --o-on-lime: var(--color-slate-950, #100f0d);
+  --o-page: var(--color-slate-950, #100f0d);
+  --o-ivory: var(--color-white, #eee7d9);
+  --o-ivory-hi: var(--color-slate-50, #f8f3e9);
+  --o-stock: var(--color-slate-900, #1a1815);
+  --o-raised: var(--color-slate-800, #25221d);
+  --o-hair: var(--color-slate-700, #2e2a25);
+  --o-rule: var(--color-slate-600, #423c35);
+  --o-control: var(--color-slate-500, #6b645a);
+  --o-meta: var(--color-slate-400, #948b7d);
+  --o-soft: var(--color-slate-300, #c4bbac);
+}
+
+/* ── Buttons are words only: no icon inside a button or a tab ── */
+:root[data-style="open"] :is(.ui-primary, .ui-ghost, .ui-segment) > svg {
+  display: none;
+}
+
+/* ── The one lime action: a printed lime tab ──
+   The face colour is repeated as a 3px inset ring, so the dark keyline under it shows
+   only as a 1px line 3px in from the edge, like the card's face inside its frame. */
+:root[data-style="open"] .ui-primary {
+  --o-face: var(--o-lime);
+  --o-key: color-mix(in srgb, var(--o-page) 38%, transparent);
+  --o-key-at: 4px;
+  padding-inline: 24px;
+  border-radius: 2px;
+  background-color: var(--o-face);
+  box-shadow: inset 0 0 0 3px var(--o-face), inset 0 0 0 var(--o-key-at) var(--o-key);
+  color: var(--o-on-lime);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: .03em;
+  text-transform: uppercase;
+  filter: none;
+  translate: none;
+  transition: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Hover darkens (ink soaking in), never brightens; the keyline firms up */
+@media (hover: hover) {
+  :root[data-style="open"] .ui-primary:hover:not(:disabled, [aria-disabled="true"]) {
+    --o-face: color-mix(in oklab, var(--o-lime) 88%, var(--o-page));
+    --o-key: color-mix(in srgb, var(--o-page) 64%, transparent);
+  }
+}
+/* Pressed: darker still, and the keyline thickens to 2px, as if stamped */
+:root[data-style="open"] .ui-primary:active:not(:disabled, [aria-disabled="true"]) {
+  --o-face: color-mix(in oklab, var(--o-lime) 80%, var(--o-page));
+  --o-key: color-mix(in srgb, var(--o-page) 72%, transparent);
+  --o-key-at: 5px;
+}
+:root[data-style="open"] .ui-primary:focus-visible {
+  outline: 2px solid var(--o-ivory);
+  outline-offset: 3px;
+}
+/* Disabled: the lime isn't printed yet. Grey card stock with a grey keyline, not a faded lime */
+:root[data-style="open"] .ui-primary:is(:disabled, [aria-disabled="true"]) {
+  --o-face: var(--o-raised);
+  --o-key: var(--o-rule);
+  color: var(--o-meta);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* ── Every other button: blank card stock ──
+   The card's dark fill, the control-grey edge, and the same keyline 3px inside the
+   edge (faint ivory, like the card's own inset ring). Ivory condensed capitals. */
+:root[data-style="open"] .ui-ghost {
+  --o-face: var(--o-stock);
+  --o-key: color-mix(in srgb, var(--o-ivory) 10%, transparent);
+  border: 1px solid var(--o-control);
+  border-radius: 2px;
+  background-color: var(--o-face);
+  box-shadow: inset 0 0 0 2px var(--o-face), inset 0 0 0 3px var(--o-key);
+  color: var(--o-ivory);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 17px;
+  line-height: 1;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+  translate: none;
+  transition: none;
+  -webkit-tap-highlight-color: transparent;
+}
+:root[data-style="open"] .ui-ghost.text-sm {
+  font-size: 15px;
+  letter-spacing: .05em;
+}
+@media (hover: hover) {
+  :root[data-style="open"] .ui-ghost:hover:not(:disabled, [aria-disabled="true"]) {
+    --o-face: var(--o-raised);
+    --o-key: color-mix(in srgb, var(--o-ivory) 18%, transparent);
+    border-color: var(--o-soft);
+    color: var(--o-ivory-hi);
+  }
+}
+:root[data-style="open"] .ui-ghost:active:not(:disabled, [aria-disabled="true"]) {
+  --o-face: var(--o-page);
+  border-color: var(--o-ivory);
+}
+:root[data-style="open"] .ui-ghost:focus-visible {
+  outline: 2px solid var(--o-ivory);
+  outline-offset: 3px;
+}
+:root[data-style="open"] .ui-ghost:is(:disabled, [aria-disabled="true"]) {
+  --o-key: transparent;
+  border-color: var(--o-hair);
+  color: var(--o-control);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* ── Sort / filter / tab rows: words on one rule, no box ──
+   The picked word gets the 2px ivory bar (the nav's current-page underline idea). */
+:root[data-style="open"] .ui-segments {
+  gap: 6px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: inset 0 -1px 0 var(--o-hair);
+}
+:root[data-style="open"] .ui-segment {
+  padding-inline: 10px;
+  border: 0;
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: inset 0 -2px 0 transparent;
+  color: var(--o-meta);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  line-height: 1;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  transition: none;
+  -webkit-tap-highlight-color: transparent;
+}
+/* Counts inside a tab (Backlog's "To play 4") follow the tab's own ink. Backlog paints
+   the picked one's count dark for the old ivory block, which would vanish here. */
+:root[data-style="open"] .ui-segment > span {
+  color: inherit;
+}
+@media (hover: hover) {
+  :root[data-style="open"] .ui-segment:hover:not(:disabled, [aria-pressed="true"], [aria-selected="true"], .bg-white) {
+    color: var(--o-ivory);
+    box-shadow: inset 0 -1px 0 var(--o-control);
+  }
+}
+:root[data-style="open"] .ui-segment:is([aria-pressed="true"], [aria-selected="true"], .bg-white) {
+  background-color: transparent;
+  color: var(--o-ivory);
+  box-shadow: inset 0 -2px 0 var(--o-ivory);
+}
+:root[data-style="open"] .ui-segment:active:not(:disabled) {
+  color: var(--o-soft);
+  box-shadow: inset 0 -2px 0 var(--o-soft);
+}
+/* The row can scroll sideways, so the ring is drawn just inside the word, in ivory */
+:root[data-style="open"] .ui-segment:focus-visible {
+  outline: 2px solid var(--o-ivory);
+  outline-offset: -2px;
+}
+:root[data-style="open"] .ui-segment:disabled {
+  color: var(--o-control);
+  opacity: 1;
+  cursor: not-allowed;
+}
+
+/* ── Text fields: card stock with a firmer bottom rule to write on ── */
+:root[data-style="open"] .ui-field {
+  border: 1px solid var(--o-rule);
+  border-bottom-color: var(--o-meta);
+  border-radius: 2px 2px 0 0;
+  background-color: var(--o-stock);
+  box-shadow: inset 0 -1px 0 transparent;
+  transition: none;
+}
+@media (hover: hover) {
+  :root[data-style="open"] .ui-field:hover:not(:disabled, :focus) {
+    border-bottom-color: var(--o-soft);
+  }
+}
+:root[data-style="open"] .ui-field:focus {
+  outline: none;
+  border-color: var(--o-ivory);
+  box-shadow: inset 0 -1px 0 var(--o-ivory);
+}
+:root[data-style="open"] .ui-field:disabled {
+  border-bottom-color: var(--o-rule);
+  cursor: not-allowed;
+}
+
+/* ── Header search: no icon, no box; a writing line that fills in as stock on focus ── */
+:root[data-style="open"] .ui-search {
+  border: 0;
+  border-bottom: 1px solid var(--o-control);
+  border-radius: 0;
+  background-color: transparent;
+  box-shadow: inset 0 -1px 0 transparent;
+  transition: none;
+}
+:root[data-style="open"] .ui-search > svg {
+  display: none;
+}
+@media (hover: hover) {
+  :root[data-style="open"] .ui-search:hover {
+    border-bottom-color: var(--o-soft);
+  }
+}
+:root[data-style="open"] .ui-search:focus-within {
+  border-bottom-color: var(--o-ivory);
+  background-color: var(--o-stock);
+  box-shadow: inset 0 -1px 0 var(--o-ivory);
+}
+
+/* ── Header links on phones: Libre Franklin runs about 5px wider than Host Grotesk over
+   the four links, so a hair less tracking keeps them fitting a 360px screen ── */
+@media (max-width: 39.99rem) {
+  :root[data-style="open"] .ui-nav-link {
+    letter-spacing: -.01em;
+  }
+}
+
+/* ── Section titles: capitals, like the card title and the game titles ── */
+:root[data-style="open"] .ui-title {
+  font-size: 30px;
+  line-height: .92;
+  letter-spacing: .01em;
+  text-transform: uppercase;
+}
+
+/* ── The home hero: headline and promise together, then one button and nothing after ── */
+:root[data-style="open"] .hero-promise {
+  font-weight: 400;
+  letter-spacing: -.005em;
+}
+:root[data-style="open"] .hero-actions {
+  margin-top: 28px;
+}
+/* "Browse games" leaves the button row (the nav's Games covers it; phones keep their
+   own link at the end of the hero, which isn't in this row) */
+:root[data-style="open"] .hero-actions .ui-link {
+  display: none;
+}
+/* No reassurance line under the button: the card beside it shows the rarity */
+:root[data-style="open"] .hero-note {
+  display: none;
+}
+/* Phones: the card hangs from the band, so it doesn't move up when the note goes. This
+   keeps the room the note used to leave between the button and the tilted card. */
+@media (max-width: 39.99rem) {
+  :root[data-style="open"] .hero-actions {
+    margin-bottom: 24px;
+  }
+}
+
+@media (min-width: 40rem) {
+  :root[data-style="open"] .ui-title {
+    font-size: 42px;
+  }
+  :root[data-style="open"] .hero-promise {
+    margin-top: -6px;
+  }
+  :root[data-style="open"] .hero-actions .ui-primary {
+    padding-inline: 28px;
+    font-size: 22px;
+    letter-spacing: .035em;
+  }
+}
+@media (min-width: 64rem) {
+  :root[data-style="open"] .hero-actions {
+    margin-top: 36px;
+  }
+}
+
+/* ── Motion only for people who haven't asked for less: soft colour changes, and a
+   1px press. With reduced motion, states change at once and nothing moves. ── */
+@media (prefers-reduced-motion: no-preference) {
+  :root[data-style="open"] :is(.ui-primary, .ui-ghost) {
+    transition: background-color 140ms ease-out, border-color 140ms ease-out, box-shadow 140ms ease-out, color 140ms ease-out, translate 60ms ease-out;
+  }
+  :root[data-style="open"] :is(.ui-segment, .ui-field, .ui-search) {
+    transition: color 140ms ease-out, background-color 140ms ease-out, border-color 140ms ease-out, box-shadow 140ms ease-out;
+  }
+  :root[data-style="open"] :is(.ui-primary, .ui-ghost):active:not(:disabled, [aria-disabled="true"]) {
+    translate: 0 1px;
+  }
+}

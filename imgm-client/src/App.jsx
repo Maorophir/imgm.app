@@ -17,6 +17,7 @@ import BackToTop from './components/BackToTop';
 import ScrollToTop from './components/ScrollToTop';
 import Footer from './components/Footer';
 import Feedback from './components/Feedback';
+import StylePreview from './components/StylePreview';
 import Settings from './pages/Settings';
 import Backlog from './pages/Backlog';
 import { BacklogProvider } from './context/BacklogContext';
@@ -129,6 +130,8 @@ function App() {
         <Footer />
         <BackToTop />
         <Feedback />
+        {/* Trying button-and-type styles, in local development only (never in a production build) */}
+        {import.meta.env.DEV && <StylePreview />}
       </div>
       </BacklogProvider>
       {/* Vercel Web Analytics: visitors and page views, cookieless (only counts on Vercel) */}

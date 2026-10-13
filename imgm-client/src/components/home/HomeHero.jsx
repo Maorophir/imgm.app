@@ -100,12 +100,12 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       <div className="col-start-2 row-start-2 relative z-5 min-w-0 pt-4 sm:pt-6 lg:pr-12 xl:pr-16">
         {/* The promise, plainly. From tablets up each sentence gets its own line; phones
             let the two run together, balanced over three lines. */}
-        <p className="text-[22px] leading-[1.25] font-medium text-white text-balance sm:text-[24px] xl:text-[26px]">
+        <p className="hero-promise text-[22px] leading-[1.25] font-medium text-white text-balance sm:text-[24px] xl:text-[26px]">
           <span className="sm:block">Players rate the games they play.</span>{' '}
           <span className="sm:block">Every rating becomes a collectible card.</span>
         </p>
 
-        <div className="mt-6 flex flex-col items-stretch sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 sm:gap-y-3 lg:mt-8">
+        <div className="hero-actions mt-6 flex flex-col items-stretch sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 sm:gap-y-3 lg:mt-8">
           {/* The page's one primary action, so it's the one lime button. It asks which
               game you played last (Search's quest mode) and opens that game's quest. */}
           <Link to="/search?quest=1" className={PRIMARY_BUTTON}>
@@ -116,7 +116,7 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
             Browse games
           </a>
         </div>
-        <p className="mt-3 text-sm text-slate-400">About two minutes. Your score sets the card’s rarity.</p>
+        <p className="hero-note mt-3 text-sm text-slate-400">About two minutes. Your score sets the card’s rarity.</p>
       </div>
 
       {/* ── The card, standing over the band and hanging past its bottom edge ── */}

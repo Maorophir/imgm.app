@@ -34,7 +34,7 @@ import { usePlayNextAccess } from '../hooks/usePlayNextAccess';
 // phones the row can scroll sideways, which would clip a focus ring drawn outside the
 // link, so there it's drawn just inside.
 const navClass = ({ isActive }) =>
-  `inline-flex items-center h-11 whitespace-nowrap font-medium text-white hover:text-slate-50 underline underline-offset-[6px] transition-colors duration-120 max-sm:focus-visible:outline-offset-[-2px] ${
+  `ui-nav-link inline-flex items-center h-11 whitespace-nowrap font-medium text-white hover:text-slate-50 underline underline-offset-[6px] transition-colors duration-120 max-sm:focus-visible:outline-offset-[-2px] ${
     isActive ? 'decoration-2' : 'decoration-1 decoration-transparent hover:decoration-current'
   }`;
 
@@ -91,7 +91,7 @@ function Navbar() {
       </Link>
       <Link
         to="/login?mode=signup"
-        className="inline-flex items-center h-11 px-3.5 sm:px-4.5 rounded-sm border border-slate-500 text-base font-medium text-white hover:border-white hover:text-slate-50 whitespace-nowrap transition-colors duration-120"
+        className="ui-ghost inline-flex items-center h-11 px-3.5 sm:px-4.5 rounded-sm border border-slate-500 text-base font-medium text-white hover:border-white hover:text-slate-50 whitespace-nowrap transition-colors duration-120"
       >
         Sign up
       </Link>
