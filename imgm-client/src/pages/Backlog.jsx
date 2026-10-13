@@ -1,19 +1,22 @@
 /**
  * Backlog — Route: /backlog
  *
- * The games you saved to play later, in two lists: To play and Finished. "My order" is
- * yours to arrange (new games land on top; move any game up, down, to the top or the
- * bottom); the other views just sort for a moment. Each game: Review (or edit your
- * review), Finished it (it moves to Finished, with a Finished mark; it can go back) and
- * X to remove it. Reviewing never marks a game by itself: plenty of players review mid-game.
+ * The games you saved, in three lists a game moves along: Playing now, To play and
+ * Finished. The page opens on Playing now when you're playing something, else on To play.
+ * "My order" (To play) is yours to arrange (new games land on top; move any game up,
+ * down, to the top or the bottom); the other views just sort for a moment. Each game:
+ * Review (or edit your review), one step on (To play: I'm playing it; Playing now:
+ * Finished it, with a Finished mark after), a step back to To play from the other two,
+ * and X to remove it. Reviewing never marks a game by itself: plenty of players review
+ * mid-game (the review quest offers Finished it afterwards).
  *
- * Noir: a list on hairlines, the two lists as a segmented control, and every row's
- * actions as ghost buttons (a page of rows has no single main action, so no lime).
+ * Noir: a list on hairlines, the lists as a segmented control, and every row's actions
+ * as ghost buttons (a page of rows has no single main action, so no lime).
  */
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Bookmark, Check, CircleCheck, ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, PenLine, RotateCcw, Sparkles, X } from 'lucide-react';
-import { getBacklog, reorderBacklog, setBacklogFinished } from '../lib/api';
+import { Bookmark, Check, CircleCheck, ChevronDown, ChevronsDown, ChevronsUp, ChevronUp, Gamepad2, PenLine, RotateCcw, Sparkles, X } from 'lucide-react';
+import { getBacklog, reorderBacklog, setBacklogFinished, setBacklogPlaying } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import { useBacklog } from '../context/BacklogContext';
 import { usePlayNextAccess } from '../hooks/usePlayNextAccess';
@@ -28,10 +31,16 @@ const ROW_BUTTON =
 
 const FROM = { play_next: 'Play Next', game_page: 'a game page', hall_of_fame: 'the Hall of Fame', gotw: 'Game of the Week' };
 const LISTS = [
+  { value: 'playing', label: 'Playing now' },
   { value: 'toPlay', label: 'To play' },
   { value: 'finished', label: 'Finished' },
 ];
 const VIEWS = {
+  playing: [
+    { value: 'started', label: 'Recently started' },
+    { value: 'score', label: 'IMGM score' },
+    { value: 'title', label: 'A–Z' },
+  ],
   toPlay: [
     { value: 'mine', label: 'My order' },
     { value: 'added', label: 'Recently added' },
@@ -46,6 +55,7 @@ const VIEWS = {
 };
 const SORTS = {
   added: (a, b) => new Date(b.addedAt) - new Date(a.addedAt),
+  started: (a, b) => new Date(b.playingAt) - new Date(a.playingAt),
   finished: (a, b) => new Date(b.finishedAt) - new Date(a.finishedAt),
   score: (a, b) => (b.average ?? -1) - (a.average ?? -1),
   title: (a, b) => a.game.title.localeCompare(b.game.title),
@@ -73,14 +83,20 @@ const Backlog = () => {
   const playNext = usePlayNextAccess();
   const [items, setItems] = useState(null);
   const [list, setList] = useState('toPlay');
-  const [views, setViews] = useState({ toPlay: 'mine', finished: 'finished' }); // each list keeps its own
+  const [views, setViews] = useState({ playing: 'started', toPlay: 'mine', finished: 'finished' }); // each list keeps its own
   const view = views[list];
   const userId = session?.user?.id;
 
   useEffect(() => {
     if (!userId) return undefined;
     const controller = new AbortController();
-    getBacklog(controller.signal).then(setItems).catch(() => setItems([]));
+    getBacklog(controller.signal)
+      .then((loaded) => {
+        setItems(loaded);
+        // Open on what you're playing, if anything (an empty Playing now is no place to land)
+        setList(loaded.some((item) => item.playingAt && !item.finishedAt) ? 'playing' : 'toPlay');
+      })
+      .catch(() => setItems([]));
     return () => controller.abort();
   }, [userId]);
 
@@ -89,9 +105,12 @@ const Backlog = () => {
 
   // Removed here or anywhere else on the page: it leaves the list
   const kept = (items ?? []).filter((item) => backlog?.has(item.game.id));
-  const toPlay = kept.filter((item) => !item.finishedAt);
+  // One list per game (the server keeps them apart too): finished, else playing, else to play
   const finished = kept.filter((item) => item.finishedAt);
-  const inList = list === 'finished' ? finished : toPlay;
+  const playing = kept.filter((item) => !item.finishedAt && item.playingAt);
+  const toPlay = kept.filter((item) => !item.finishedAt && !item.playingAt);
+  const lists = { playing, toPlay, finished };
+  const inList = lists[list];
   const shown = view === 'mine' ? inList : [...inList].sort(SORTS[view]);
 
   // Move one game in "My order" (To play): update at once, then save the whole order
@@ -99,17 +118,25 @@ const Backlog = () => {
     const next = [...toPlay];
     const [item] = next.splice(index, 1);
     next.splice(Math.max(0, Math.min(to, next.length)), 0, item);
-    setItems([...next, ...finished]);
+    setItems([...playing, ...next, ...finished]);
     reorderBacklog(next.map((i) => i.game.id)).catch(() => {});
   };
 
-  // Finished it (or back to To play): moves list at once; back as it was if the server refuses
-  const markFinished = (gameId, done) => {
-    const set = (finishedAt) => setItems((current) => current.map((i) => (i.game.id === gameId ? { ...i, finishedAt } : i)));
-    const before = kept.find((i) => i.game.id === gameId)?.finishedAt ?? null;
-    set(done ? new Date().toISOString() : null);
-    setBacklogFinished(gameId, done).catch(() => set(before));
+  // A game changes list at once; back as it was if the server refuses. If it was the last
+  // game in the list on screen, the page follows it (an empty list is no place to stay).
+  const moveTo = (gameId, changes, save, target) => {
+    const set = (fields) => setItems((current) => current.map((i) => (i.game.id === gameId ? { ...i, ...fields } : i)));
+    const before = kept.find((i) => i.game.id === gameId);
+    set(changes);
+    if (inList.length === 1 && inList[0].game.id === gameId) setList(target);
+    save().catch(() => set({ finishedAt: before?.finishedAt ?? null, playingAt: before?.playingAt ?? null }));
   };
+  // Finished it (it leaves Playing now, as on the server), or back to To play
+  const markFinished = (gameId, done) =>
+    moveTo(gameId, done ? { finishedAt: new Date().toISOString(), playingAt: null } : { finishedAt: null }, () => setBacklogFinished(gameId, done), done ? 'finished' : 'toPlay');
+  // I'm playing it (Playing now), or not after all: back to To play
+  const markPlaying = (gameId, on) =>
+    moveTo(gameId, on ? { playingAt: new Date().toISOString(), finishedAt: null } : { playingAt: null }, () => setBacklogPlaying(gameId, on), on ? 'playing' : 'toPlay');
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 flex flex-col gap-8">
@@ -119,7 +146,7 @@ const Backlog = () => {
           <h1 className="font-display text-[54px] md:text-[88px] leading-[.9] uppercase tracking-[.005em] text-white">
             Backlog
           </h1>
-          <p className="text-slate-400 mt-3">Games you saved to play later. Finished one? Mark it, and it moves to Finished.</p>
+          <p className="text-slate-400 mt-3">Games you saved to play later. Started one? Press I'm playing it and it moves to Playing now, then Finished when you're done.</p>
         </div>
         {inList.length > 1 && (
           <label className="flex items-center gap-2 text-sm text-slate-400">
@@ -138,7 +165,7 @@ const Backlog = () => {
       {kept.length > 0 && (
         <div className={`${SEGMENTS} self-start`} role="tablist" aria-label="Backlog lists">
           {LISTS.map((l) => {
-            const count = l.value === 'finished' ? finished.length : toPlay.length;
+            const count = lists[l.value].length;
             const active = list === l.value;
             return (
               <button
@@ -149,8 +176,17 @@ const Backlog = () => {
                 onClick={() => setList(l.value)}
                 className={segment(active)}
               >
-                {l.value === 'finished' && <CircleCheck className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />}
-                {l.label}
+                {/* From sm up: on a phone (360px and up) the three lists only fit side by
+                    side without the icon, and with "Playing" for "Playing now" */}
+                {l.value === 'finished' && <CircleCheck className="hidden sm:block w-4 h-4" strokeWidth={1.8} aria-hidden="true" />}
+                {l.value === 'playing' ? (
+                  <>
+                    <span className="sm:hidden">Playing</span>
+                    <span className="hidden sm:inline">{l.label}</span>
+                  </>
+                ) : (
+                  l.label
+                )}
                 <span className={`tabular-nums font-normal ${active ? 'text-slate-950/70' : 'text-slate-400'}`}>{count}</span>
               </button>
             );
@@ -174,16 +210,34 @@ const Backlog = () => {
         </div>
       ) : inList.length === 0 ? (
         <div className="py-12 text-center border-t border-slate-700">
-          <CircleCheck className="w-8 h-8 mx-auto mb-3 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
           {list === 'finished' ? (
             <>
+              <CircleCheck className="w-8 h-8 mx-auto mb-3 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
               <p className="text-xl font-semibold text-white">No finished games yet</p>
-              <p className="text-slate-400 mt-1">Done with a game? Press Finished it, and it lands here.</p>
+              <p className="text-slate-400 mt-1">Done with a game you're playing? Press Finished it, and it lands here.</p>
+            </>
+          ) : list === 'playing' ? (
+            <>
+              <Gamepad2 className="w-8 h-8 mx-auto mb-3 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
+              <p className="text-xl font-semibold text-white">Not playing anything right now</p>
+              <p className="text-slate-400 mt-1">Started a game from To play? Press I'm playing it, and it shows here.</p>
             </>
           ) : (
             <>
-              <p className="text-xl font-semibold text-white">You finished them all</p>
-              <p className="text-slate-400 mt-1">Time for something new.</p>
+              {/* To play is empty: either everything's done, or what's left is being played */}
+              {playing.length > 0 ? (
+                <>
+                  <Bookmark className="w-8 h-8 mx-auto mb-3 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
+                  <p className="text-xl font-semibold text-white">Nothing lined up next</p>
+                  <p className="text-slate-400 mt-1">Save games from Play Next, the Hall of Fame or any game page for after this one.</p>
+                </>
+              ) : (
+                <>
+                  <CircleCheck className="w-8 h-8 mx-auto mb-3 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
+                  <p className="text-xl font-semibold text-white">You finished them all</p>
+                  <p className="text-slate-400 mt-1">Time for something new.</p>
+                </>
+              )}
               {playNext.enabled && (
                 <Link to="/play-next" className={`${PRIMARY_BUTTON} mt-6`}>
                   <Sparkles className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Find games with Play Next
@@ -243,6 +297,8 @@ const Backlog = () => {
                     <span className="text-slate-400">
                       {item.finishedAt ? (
                         `Finished ${ago(item.finishedAt)}`
+                      ) : item.playingAt ? (
+                        `Started ${ago(item.playingAt)}`
                       ) : (
                         <>
                           Added {ago(item.addedAt)}
@@ -271,15 +327,36 @@ const Backlog = () => {
                     >
                       <RotateCcw className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
                     </button>
+                  ) : item.playingAt ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => markFinished(game.id, true)}
+                        aria-label={`Finished it: ${game.title}`}
+                        title="Finished it: move it to Finished"
+                        className={ROW_BUTTON}
+                      >
+                        <CircleCheck className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> <span className="hidden sm:inline">Finished it</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => markPlaying(game.id, false)}
+                        aria-label={`Move ${game.title} back to To play`}
+                        title="Not playing it now: back to To play"
+                        className={ROW_BUTTON}
+                      >
+                        <RotateCcw className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                      </button>
+                    </>
                   ) : (
                     <button
                       type="button"
-                      onClick={() => markFinished(game.id, true)}
-                      aria-label={`Mark ${game.title} as finished`}
-                      title="Finished it: move it to Finished"
+                      onClick={() => markPlaying(game.id, true)}
+                      aria-label={`I'm playing it: ${game.title}`}
+                      title="I'm playing it: move it to Playing now"
                       className={ROW_BUTTON}
                     >
-                      <CircleCheck className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> <span className="hidden sm:inline">Finished it</span>
+                      <Gamepad2 className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> <span className="hidden sm:inline">I'm playing it</span>
                     </button>
                   )}
                   <button

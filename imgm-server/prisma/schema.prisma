@@ -338,6 +338,7 @@ model BacklogItem {
   position Float    @default(0) // the player's own order (lowest first; new games go on top)
   addedAt  DateTime @default(now())
   finishedAt DateTime? // the player finished it (kept, under Finished); null = still to play
+  playingAt  DateTime? // started playing it (under Playing now); finishing it clears this
 
   @@id([userId, gameId])
   @@index([userId, position])
