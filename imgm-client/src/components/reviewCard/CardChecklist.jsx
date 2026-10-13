@@ -17,7 +17,8 @@ import { Check, ListChecks, Minus } from 'lucide-react';
 import { checklistColor } from '../reviewQuest/questOptions';
 
 const CardChecklist = ({ ticks, name, footer = null }) => (
-  <div className="flex flex-col gap-[2.4cqi] h-full min-h-0 overflow-y-auto">
+  // Left-aligned whatever the page around it does (the quest's done screen centres its text)
+  <div className="flex flex-col gap-[2.4cqi] h-full min-h-0 overflow-y-auto text-left">
     <p className="flex items-center justify-between gap-[2cqi]">
       <span className="inline-flex items-center gap-[1.4cqi] whitespace-nowrap shrink-0 text-[length:max(12px,4.4cqi)] font-semibold">
         <ListChecks className="w-[max(14px,4.6cqi)] h-[max(14px,4.6cqi)] text-slate-400" strokeWidth={1.8} aria-hidden="true" /> The checklist
