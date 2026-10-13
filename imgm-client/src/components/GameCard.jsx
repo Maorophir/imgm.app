@@ -1,8 +1,10 @@
 /**
  * GameCard — a game in the Home and Search grids, as a Noir tile: the cover with a
  * thin strip in its rarity colour under it, the title, one quiet line (year · genre ·
- * platforms) and the IMGM verdict in the tier's ink (● 8.0 Epic · 3 reviews), or
- * "No reviews yet".
+ * platforms) and the IMGM verdict in the tier's ink (● 8.0 Epic · 3 reviews). A game
+ * nobody has reviewed leaves that line empty rather than saying so (most games in a
+ * grid have no reviews yet, and a column of "No reviews yet" only advertises it), but
+ * the line keeps its height, so every tile in a grid row is the same size.
  *
  * Data: coverUrl, title, genres, platforms and releaseDate come from IGDB;
  * ratings.imgm (the average score) and reviewCount from IMGM reviews.
@@ -112,7 +114,7 @@ const GameCard = ({
         ))}
       </p>
 
-      {/* The IMGM verdict in the tier's ink, or a plain note that nobody has reviewed it */}
+      {/* The IMGM verdict in the tier's ink, or an empty line of the same height */}
       {reviewed ? (
         // The review count drops out whole the same way when the tile is too narrow
         <p className="flex flex-wrap items-center gap-x-1 h-5 mt-2 overflow-hidden text-sm leading-5 text-(--ink)">
@@ -129,7 +131,7 @@ const GameCard = ({
           )}
         </p>
       ) : (
-        <p className="h-5 mt-2 text-sm leading-5 text-slate-400">No reviews yet</p>
+        <div className="h-5 mt-2" aria-hidden="true" />
       )}
     </article>
   );

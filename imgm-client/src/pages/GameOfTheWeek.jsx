@@ -20,7 +20,7 @@ import PlayerVerdict from '../components/game/PlayerVerdict';
 import GamePicker from '../components/reviewQuest/GamePicker';
 import RarityMark from '../components/RarityMark';
 import { getRarity } from '../components/reviewQuest/questOptions';
-import { ArrowRight, Check, Clock, Crown, LogIn, Send, Vote, Flame, Gem, Heart, Landmark, PartyPopper, Sparkles, ThumbsUp, Trophy, TrendingUp, Users } from 'lucide-react';
+import { ArrowRight, Check, Clock, Crown, LogIn, Send, Vote, Flame, Gem, Heart, Landmark, Sparkles, ThumbsUp, Trophy, TrendingUp, Users } from 'lucide-react';
 import { getGame, getGameReviews, getGotw, getGotwHistory, nominateGotw, voteGotw } from '../lib/api';
 import { useSession } from '../lib/authClient';
 import { WRAP, SECTION_TITLE, PRIMARY_BUTTON, GHOST_BUTTON, TEXT_LINK, TEXT_BUTTON_SM } from '../lib/ui';
@@ -28,6 +28,9 @@ import BacklogButton from '../components/BacklogButton';
 import LoadError from '../components/LoadError';
 
 // The Legendary gilt, as the 2px edge around the winner's art
+// The winner banner shows its share of the vote only from this many votes
+const SHARE_MIN_VOTES = 20;
+
 const GILT = { backgroundImage: 'var(--gradient-gilt)', backgroundSize: '260% 260%', backgroundPosition: '50% 50%' };
 
 // Why a game is on the ballot (the server's slot names)
@@ -70,7 +73,9 @@ const Crowned = ({ gotw, timeZone, pickedWinner }) => {
   const { game } = gotw;
   const art = game.artworks?.[0] ?? game.coverUrl;
   const reignEnds = new Date(new Date(gotw.reignsFrom).getTime() + 6 * 24 * 60 * 60 * 1000);
-  const share = gotw.totalVotes ? Math.round((gotw.votes / gotw.totalVotes) * 100) : null;
+  // The winner's share of the vote, once there are enough votes for it to mean something
+  // ("100% of 3 votes" says more about how few voted than about the game)
+  const share = gotw.totalVotes >= SHARE_MIN_VOTES ? Math.round((gotw.votes / gotw.totalVotes) * 100) : null;
   return (
     // The winner's art in a 2px Legendary gilt edge
     <div className="p-[2px] rounded-sm" style={GILT}>
@@ -90,9 +95,7 @@ const Crowned = ({ gotw, timeZone, pickedWinner }) => {
             {gotw.topRank && <> · <Link to="/hall-of-fame" className={`font-medium text-white ${TEXT_LINK}`}>#{gotw.topRank} in the Hall of Fame</Link></>}
           </p>
           {pickedWinner && (
-            <p className="mt-3 inline-flex items-center gap-2 text-sm font-medium text-white">
-              <PartyPopper className="w-4 h-4 text-rarity-legendary" strokeWidth={1.8} aria-hidden="true" /> You picked the winner!
-            </p>
+            <p className="mt-3 text-sm font-medium text-white">You picked the winner!</p>
           )}
         </div>
         <div className="self-start md:self-end flex flex-col items-start md:items-end gap-3">

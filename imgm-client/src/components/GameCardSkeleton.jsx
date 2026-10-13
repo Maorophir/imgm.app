@@ -1,6 +1,7 @@
 /**
  * GameCardSkeleton — Pulsing placeholder with the same footprint as GameCard.
- * Shown in grids while game data is loading.
+ * Shown in grids while game data is loading. It keeps the verdict row too: GameCard
+ * keeps that row's height even when it's empty (an unreviewed game).
  */
 const GameCardSkeleton = () => (
   <div aria-hidden="true" className="flex flex-col min-w-0 motion-safe:animate-pulse">

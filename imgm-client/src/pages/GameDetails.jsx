@@ -1,11 +1,12 @@
 /**
  * GameDetails — The core page of IMGM. Route: /game/:id
  *
- * Layout (top to bottom):
- *   1. Header — cover, title and details, with the game's artwork behind them
- *   2. Screenshots & Videos — tabs; screenshots first, videos filtered to the relevant few
- *   3. What players think — PlayerVerdict: score, rating histogram, AI summary + chips
- *   4. User Reviews — ReviewsSection: rating breakdown, sort, pages of rarity-card reviews
+ * Layout (top to bottom): what players think comes before the media, since the
+ * cards are what IMGM has that no store page does.
+ *   1. Header — cover, title, the verdict line and details, with the game's artwork behind them
+ *   2. What players think — PlayerVerdict: score, rating histogram, AI summary + chips
+ *   3. Community reviews — ReviewsSection: rating breakdown, sort, pages of rarity-card reviews
+ *   4. Screenshots & Videos — tabs; screenshots first, videos filtered to the relevant few
  */
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -21,7 +22,8 @@ import { WRAP, PRIMARY_BUTTON } from '../lib/ui';
 // Keyed by id so all page state (fetched data, media tabs…) resets on navigation
 // The game's line in Google: its IMGM numbers when it has reviews, an invitation when not
 const gameDescription = (game) => {
-  const year = game.releaseDate ? ` (${new Date(game.releaseDate).getFullYear()})` : '';
+  // IGDB dates are midnight UTC, so the year is read in UTC
+  const year = game.releaseDate ? ` (${new Date(game.releaseDate).getUTCFullYear()})` : '';
   const count = game.reviewStats?.count ?? 0;
   const average = game.ratings?.imgm;
   if (count > 0 && average != null) {
@@ -67,8 +69,9 @@ const GameDetailsContent = ({ id }) => {
   if (!data) {
     return (
       <div className="min-h-screen motion-safe:animate-pulse">
-        <div className={`${WRAP} pt-16 pb-10 flex flex-col md:flex-row gap-8`}>
-          <div className="w-48 md:w-56 aspect-[3/4] bg-slate-900 rounded-sm" />
+        {/* The header's shape: on phones a small cover beside the title, from 768px a big one */}
+        <div className={`${WRAP} pt-16 pb-10 flex gap-4 sm:gap-6 md:gap-8`}>
+          <div className="w-24 sm:w-32 md:w-56 shrink-0 aspect-[3/4] bg-slate-900 rounded-sm" />
           <div className="flex-1 flex flex-col gap-3">
             <div className="h-4 bg-slate-800 rounded-sm w-full" />
             <div className="h-4 bg-slate-800 rounded-sm w-5/6" />
@@ -110,9 +113,9 @@ const GameDetailsContent = ({ id }) => {
   }
 
   return (
-    <div className="min-h-screen">
+    // The bottom padding ends the page under whichever section comes last
+    <div className="min-h-screen pb-10">
       <GameHeader game={game} />
-      <MediaSection game={game} />
 
       {/* What players think: score, rating histogram, the AI summary and its chips */}
       <PlayerVerdict
@@ -126,6 +129,9 @@ const GameDetailsContent = ({ id }) => {
       />
 
       <ReviewsSection game={game} gameId={id} filter={reviewFilter} onFilterChange={setReviewFilter} />
+
+      {/* The screenshots and videos come after the reviews */}
+      <MediaSection game={game} />
     </div>
   );
 };

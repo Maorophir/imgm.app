@@ -10,6 +10,13 @@
  * Reviews come page by page from /api/reviews/game/:id (the game itself only
  * carries the counts, in game.reviewStats).
  *
+ * The section's id is "reviews": the header's "Read the reviews" and links like
+ * /game/123#reviews land here (and it takes keyboard focus from the header's link).
+ * A game that isn't out yet doesn't offer the Review Quest. With no reviews, one quiet
+ * line says it can be rated once it's out (the header already shows the date and Add
+ * to Backlog). With reviews (its date was pushed back), StartQuestButton shows the date
+ * and Add to Backlog in place of the quest. A player's own review can always be edited.
+ *
  * Noir: the section heading in Big Shoulders, the sort as a segmented control, the
  * tiers as square chips in their inks, and a hairline between reviews.
  */
@@ -17,6 +24,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Medal, MessageSquareWarning, X } from 'lucide-react';
 import { getGameReviews } from '../../lib/api';
+import { isUnreleased } from '../../lib/release';
 import { useStrongLanguage } from '../../hooks/useStrongLanguage';
 import { RARITIES, getRarity } from '../reviewQuest/questOptions';
 import { WRAP, SECTION_TITLE, GHOST_BUTTON, SEGMENTS, segment } from '../../lib/ui';
@@ -122,6 +130,7 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState(false);
   const key = `${sort}|${tier ?? ''}|${rating ?? ''}`;
+  const unreleased = isUnreleased(game.releaseDate);
   // A review opened from elsewhere (?review=… from the home page): shown first, so the
   // page can scroll to it even when it isn't among the first reviews loaded
   const [searchParams] = useSearchParams();
@@ -164,7 +173,7 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
   const left = current ? current.total - current.reviews.length : 0;
 
   return (
-    <section id="reviews" className={`${WRAP} py-10 pb-20 scroll-mt-20`}>
+    <section id="reviews" tabIndex={-1} className={`${WRAP} py-10 scroll-mt-20 focus:outline-none`}>
       <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
         <div className="flex flex-col items-start gap-2">
           <h2 className={SECTION_TITLE}>
@@ -176,20 +185,25 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
         </div>
         {total > 0 &&
           (mine ? (
-            <StartQuestButton gameId={gameId} label="Edit your review" reward="Change any answer · keeps your badges" />
+            <StartQuestButton gameId={game.id} label="Edit your review" reward="Change any answer · keeps your badges" />
           ) : (
-            <StartQuestButton gameId={gameId} />
+            <StartQuestButton gameId={game.id} releaseDate={game.releaseDate} />
           ))}
       </div>
 
-      {total === 0 ? (
+      {total === 0 && unreleased ? (
+        // Not out yet: just say so (the date and Add to Backlog are in the header above)
+        <p className="py-14 text-center border-t border-slate-700 text-slate-400">
+          No cards yet. You can rate it once it's out.
+        </p>
+      ) : total === 0 ? (
         <div className="py-14 text-center border-t border-slate-700">
           <Medal className="mx-auto mb-4 w-8 h-8 text-rarity-legendary" strokeWidth={1.8} aria-hidden="true" />
           <p className="text-white text-xl font-semibold mb-1">Be the first reviewer</p>
           <p className="text-slate-400 text-sm mb-6">
             Nobody has reviewed {game.title} yet. Go first and earn the <span className="text-white font-medium">First Reviewer</span> badge.
           </p>
-          <StartQuestButton gameId={gameId} />
+          <StartQuestButton gameId={game.id} />
         </div>
       ) : (
         <>

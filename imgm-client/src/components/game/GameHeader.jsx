@@ -3,9 +3,18 @@
  * details (darkened by two scrims), so the page opens straight on the cover,
  * title and info instead of a tall empty hero image.
  *
+ * The verdict comes first: right under the title, one line with the IMGM score, its
+ * tier and a link down to the reviews (ImgmRating), or, for a game nobody has
+ * reviewed, a quiet line with the way to write the first card. A game that isn't out
+ * yet shows its release date there instead.
+ *
+ * On phones the cover sits small beside the title (not stacked above it), and the
+ * description shows 2 lines until "Read more"; from 768px the cover is big on the
+ * left with everything else in a column beside it.
+ *
  * Noir: the title in big condensed capitals, everything else quiet. Facts are small
- * grey labels over ivory values, the genres and platforms one grey line, the outside
- * scores plain numerals split by hairlines, and the links are text links.
+ * grey labels over ivory values, the genres and platforms one grey line, and the links
+ * are text links.
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -16,15 +25,10 @@ import ImgmRating from './ImgmRating';
 import { shortGenre } from '../../lib/gameLabels';
 import { WRAP, TEXT_LINK, TEXT_BUTTON_SM, LABEL } from '../../lib/ui';
 
-// Outside score sources shown under the details: only the ones this game has.
-// (The IMGM score has its own block, ImgmRating.)
-const RATING_SOURCES = [
-  { key: 'metacritic', label: 'Metacritic', format: (v) => Math.round(v) },
-  { key: 'ign', label: 'IGN', format: (v) => v.toFixed(1) },
-  { key: 'steam', label: 'Steam', format: (v) => `${Math.round(v)}%` },
-];
-
-const LONG_DESCRIPTION = 360; // characters: longer descriptions start collapsed
+// Characters: longer descriptions start collapsed, at 4 lines from 640px. A phone's
+// line holds about 45 characters, so there anything past 2 lines' worth collapses.
+const LONG_DESCRIPTION = 360;
+const LONG_ON_PHONE = 80;
 
 // A small grey label over its value ("Developer" / "CD Projekt RED")
 const Fact = ({ label, children }) => (
@@ -38,9 +42,17 @@ const GameHeader = ({ game }) => {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
 
   const backdrop = game.artworks?.[0] || game.screenshots?.[0] || game.coverUrl;
-  const releaseYear = game.releaseDate ? new Date(game.releaseDate).getFullYear() : null;
-  const ratings = RATING_SOURCES.filter((src) => game.ratings?.[src.key] != null);
-  const longDescription = (game.description?.length ?? 0) > LONG_DESCRIPTION;
+  // IGDB dates are midnight UTC, so they're read in UTC: in the visitor's own time zone
+  // the Americas would see the day (or, on 1 January, the year) before
+  const releaseYear = game.releaseDate ? new Date(game.releaseDate).getUTCFullYear() : null;
+  const descriptionLength = game.description?.length ?? 0;
+  const longDescription = descriptionLength > LONG_DESCRIPTION;
+  const longOnPhone = descriptionLength > LONG_ON_PHONE;
+  // Collapsed: 2 lines on phones and 4 from 640px, each only when that size offers
+  // "Read more" (so no text is ever cut off without a way to read it)
+  const clamp = descriptionOpen
+    ? ''
+    : `${longOnPhone ? 'line-clamp-2' : ''} ${longDescription ? 'sm:line-clamp-4' : 'sm:line-clamp-none'}`;
   // One quiet line: "RPG, Adventure · PC, PlayStation 5, Xbox Series X|S" (the game
   // page keeps every platform's full name; only the cards shorten them)
   const kinds = [
@@ -66,51 +78,72 @@ const GameHeader = ({ game }) => {
           <span className="text-slate-300 truncate">{game.title}</span>
         </nav>
 
-        <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
+        {/* With a cover: a grid. On phones the cover and the title share the first row
+            and everything else runs full width under them; from 768px the cover spans
+            both rows on the left. Without one, a single column. */}
+        <div
+          className={
+            game.coverUrl
+              ? 'grid grid-cols-[6rem_minmax(0,1fr)] sm:grid-cols-[8rem_minmax(0,1fr)] md:grid-cols-[14rem_minmax(0,1fr)] items-start gap-x-4 sm:gap-x-6 md:gap-x-8 gap-y-6'
+              : 'flex flex-col gap-6'
+          }
+        >
           {game.coverUrl && (
+            // A fixed 3:4 shape, so the page doesn't shift when the cover arrives
             <img
               src={game.coverUrl}
               alt={`${game.title} cover`}
-              className="w-44 md:w-56 shrink-0 rounded-sm bg-slate-900"
+              className="md:row-span-2 w-full aspect-[3/4] object-cover rounded-sm bg-slate-900"
             />
           )}
 
-          <div className="flex-1 min-w-0 flex flex-col gap-6 w-full">
-            <div>
-              <h1 className="font-display text-[54px] md:text-[88px] leading-[.9] tracking-[.005em] uppercase text-white text-balance break-words">
-                {game.title}
-              </h1>
-              <div className="flex items-center flex-wrap gap-x-3 gap-y-2 text-sm mt-4">
-                {game.developer && (
-                  <span className="text-slate-400">
-                    by <span className="font-medium text-white">{game.developer}</span>
-                  </span>
-                )}
-                {releaseYear && <span className="text-slate-400 tabular-nums">· {releaseYear}</span>}
-                {game.aiSentiment && <SentimentBadge sentiment={game.aiSentiment} size="sm" />}
-                {/* Its reign as Game of the Week: a gilt-ink badge for the whole week */}
-                {game.gameOfTheWeek && (
-                  <Link
-                    to="/game-of-the-week"
-                    className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xs border border-rarity-legendary-edge text-rarity-legendary text-sm font-medium hover:border-rarity-legendary transition-colors duration-120"
-                  >
-                    <Crown className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Game of the Week
-                  </Link>
-                )}
-              </div>
+          <div className="min-w-0">
+            {/* Phones: the title shares the row with the cover (216px of a 360px screen),
+                so it scales with the screen, up to 40px: a 12-letter word like
+                PHASMOPHOBIA (about 5.8em) still fits on one line at 360px (36px type) */}
+            <h1 className="font-display text-[length:clamp(30px,10vw,40px)] sm:text-[54px] md:text-[88px] leading-[.9] tracking-[.005em] uppercase text-white text-balance break-words">
+              {game.title}
+            </h1>
+            <div className="flex items-center flex-wrap gap-x-3 gap-y-2 text-sm mt-3 md:mt-4">
+              {game.developer && (
+                <span className="text-slate-400">
+                  by <span className="font-medium text-white">{game.developer}</span>
+                </span>
+              )}
+              {releaseYear && <span className="text-slate-400 tabular-nums">· {releaseYear}</span>}
+              {game.aiSentiment && <SentimentBadge sentiment={game.aiSentiment} size="sm" />}
+              {/* Its reign as Game of the Week: a gilt-ink badge for the whole week */}
+              {game.gameOfTheWeek && (
+                <Link
+                  to="/game-of-the-week"
+                  className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-xs border border-rarity-legendary-edge text-rarity-legendary text-sm font-medium hover:border-rarity-legendary transition-colors duration-120"
+                >
+                  <Crown className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Game of the Week
+                </Link>
+              )}
             </div>
+          </div>
+
+          <div className={`min-w-0 flex flex-col gap-6 ${game.coverUrl ? 'col-span-2 md:col-span-1 md:col-start-2' : ''}`}>
+            {/* The verdict first: what players made of it, before what it is */}
+            <ImgmRating
+              average={game.ratings?.imgm}
+              count={game.reviewStats?.count ?? 0}
+              gameId={game.id}
+              releaseDate={game.releaseDate}
+            />
 
             {game.description && (
               <div className="max-w-[75ch]">
-                <p className={`text-white leading-[1.6] ${longDescription && !descriptionOpen ? 'line-clamp-4' : ''}`}>
+                <p className={`text-white leading-[1.6] ${clamp}`}>
                   {game.description}
                 </p>
-                {longDescription && (
+                {longOnPhone && (
                   <button
                     type="button"
                     onClick={() => setDescriptionOpen((o) => !o)}
                     aria-expanded={descriptionOpen}
-                    className={TEXT_BUTTON_SM}
+                    className={`${TEXT_BUTTON_SM} ${longDescription ? '' : 'sm:hidden'}`}
                   >
                     {descriptionOpen ? 'Show less' : 'Read more'}
                   </button>
@@ -123,33 +156,15 @@ const GameHeader = ({ game }) => {
               {game.publisher && <Fact label="Publisher">{game.publisher}</Fact>}
               {game.releaseDate && (
                 <Fact label="Release date">
-                  {new Date(game.releaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  {new Date(game.releaseDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC' })}
                 </Fact>
               )}
             </div>
 
             {kinds && <p className="text-sm leading-[1.6] text-slate-400">{kinds}</p>}
 
-            {/* IMGM's own score, and "play it later" */}
-            <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
-              <ImgmRating average={game.ratings?.imgm} count={game.reviewStats?.count ?? 0} />
-              <BacklogButton gameId={game.id} source="game_page" variant="pill" />
-            </div>
-
-            {/* What the critics gave it: plain numerals, split by hairlines */}
-            {ratings.length > 0 && (
-              <dl className="flex flex-wrap gap-y-3">
-                {ratings.map((src) => {
-                  const value = game.ratings[src.key];
-                  return (
-                    <div key={src.key} className="pr-5 not-first:pl-5 not-first:border-l not-first:border-slate-700">
-                      <dt className={LABEL}>{src.label}</dt>
-                      <dd className="font-display text-2xl leading-tight tabular-nums text-white">{src.format(value)}</dd>
-                    </div>
-                  );
-                })}
-              </dl>
-            )}
+            {/* "Play it later" */}
+            <BacklogButton gameId={game.id} source="game_page" variant="pill" className="self-start" />
 
             {/* Where to buy: the stores IGDB lists for it (opens the store in a new tab) */}
             {game.stores?.length > 0 && (
