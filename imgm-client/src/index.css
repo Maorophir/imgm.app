@@ -695,182 +695,174 @@ body {
 
 /* ── Keys: shared construction ── */
 :root[data-style="tactile"] :is(.ui-primary, .ui-ghost, .ui-segment) {
-  --k-travel: var(--k-x) var(--k-y);
   font-family: var(--font-display);
   font-weight: 800;
   font-optical-sizing: auto;
   text-transform: uppercase;
   letter-spacing: .04em;
   line-height: 1;
-  translate: none;
+  translate: 0 0;
   filter: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  /* Release: the key springs back up quickly (the press itself is faster, see :active) */
+  /* Release: the key comes back up smoothly, with no bounce (the press itself is
+     faster, see :active) */
   transition:
-    translate 120ms cubic-bezier(.3, .7, .4, 1),
-    box-shadow 120ms cubic-bezier(.3, .7, .4, 1),
+    translate 140ms cubic-bezier(.2, .8, .2, 1),
+    box-shadow 140ms cubic-bezier(.2, .8, .2, 1),
     background-color 120ms ease-out,
     border-color 120ms ease-out,
     color 120ms ease-out;
 }
 
 /* ── The lime key (one per page) ──
-   A lime face with a printed frame 3px inside (the card's frame-in-frame), standing
-   on an olive edge: the lime mixed into the page black, the way each rarity has a
-   darker -edge ink. No border, no black offset. */
+   A flat lime face standing on its own side wall, straight below it like a keyboard
+   key seen from the front: the lime mixed into a deep green-black, with a fine light
+   line along the top edge. A finger on it sinks it 1px; pressing slides it down onto
+   its wall. Capitals in the card's face, centred on their ink (the left padding makes
+   up for the space the tracking leaves after the last letter). */
 :root[data-style="tactile"] .ui-primary {
-  --k-x: 2px;
-  --k-y: 5px;
   --k-face: var(--color-brand);
-  --k-line: color-mix(in oklab, var(--color-slate-950) 28%, var(--k-face));
-  --k-edge: color-mix(in oklab, var(--color-brand) 55%, var(--color-slate-950));
+  --k-edge: color-mix(in oklab, var(--color-brand) 52%, #1a2300);
+  --k-top: color-mix(in srgb, #ffffff 42%, transparent);
   /* One line looks exactly as before (52px); a long label in a narrow column (the
      quest's two-up row, a 320px phone) wraps inside the key instead of spilling out */
   height: auto;
   min-height: 52px;
-  padding-block: 8px;
+  padding: 10px 28px 8px calc(28px + .08em);
   white-space: normal;
   text-wrap: balance;
   text-align: center;
+  border-radius: 3px;
   background-color: var(--k-face);
   color: var(--color-slate-950);
-  font-size: 21px;
-  letter-spacing: .035em;
+  font-size: 18px;
+  letter-spacing: .08em;
   opacity: 1;
   box-shadow:
-    inset 0 0 0 3px var(--k-face),
-    inset 0 0 0 4px var(--k-line),
-    var(--k-x) var(--k-y) 0 0 var(--k-edge);
+    inset 0 1px 0 0 var(--k-top),
+    0 4px 0 0 var(--k-edge);
 }
 @media (hover: hover) {
-  /* A finger over it: the face darkens a step and its frame inks in */
   :root[data-style="tactile"] .ui-primary:hover:not(:disabled, [aria-disabled="true"]) {
-    --k-face: color-mix(in oklab, var(--color-brand) 92%, var(--color-slate-950));
-    --k-line: color-mix(in oklab, var(--color-slate-950) 55%, var(--k-face));
+    translate: 0 1px;
+    box-shadow:
+      inset 0 1px 0 0 var(--k-top),
+      0 3px 0 0 var(--k-edge);
   }
 }
-/* Pressed: the face slides down onto its edge, which stays put */
 :root[data-style="tactile"] .ui-primary:active:not(:disabled, [aria-disabled="true"]) {
-  --k-face: color-mix(in oklab, var(--color-brand) 92%, var(--color-slate-950));
-  --k-line: color-mix(in oklab, var(--color-slate-950) 55%, var(--k-face));
-  translate: var(--k-travel);
+  translate: 0 3px;
   box-shadow:
-    inset 0 0 0 3px var(--k-face),
-    inset 0 0 0 4px var(--k-line),
-    0 0 0 0 var(--k-edge);
-  transition-duration: 40ms;
+    inset 0 1px 0 0 var(--k-top),
+    0 1px 0 0 var(--k-edge);
+  transition-duration: 50ms;
 }
-/* The outline clears the 5px edge */
+/* The outline clears the 4px wall */
 :root[data-style="tactile"] .ui-primary:focus-visible {
   outline: 2px solid var(--color-white);
-  outline-offset: 6px;
+  outline-offset: 7px;
 }
-/* Unavailable: an unlit key lying flat, with no edge, so nothing to press. It stands
+/* Unavailable: an unlit key lying flat, with no wall, so nothing to press. It stands
    up and lights when it becomes available (e.g. once the quest has a score). */
 :root[data-style="tactile"] :is(.ui-primary:disabled, .ui-primary[aria-disabled="true"]) {
-  --k-face: var(--color-slate-800);
-  --k-line: var(--color-slate-600);
+  translate: 0 0;
+  background-color: var(--color-slate-800);
   color: var(--color-slate-400);
   cursor: not-allowed;
-  box-shadow:
-    inset 0 0 0 3px var(--k-face),
-    inset 0 0 0 4px var(--k-line),
-    0 0 0 0 transparent;
+  box-shadow: inset 0 0 0 1px var(--color-slate-600);
 }
 
 /* ── Card-stock keys (every other button, incl. the header "Sign up") ──
-   The card's own stock: dark face, a faint ivory line just inside the rim, on a
-   thinner dark edge. Ivory caps. */
+   Built the same way as the lime key: the card's dark stock with its hairline rim, on
+   a 3px wall straight below it, ivory capitals. */
 :root[data-style="tactile"] .ui-ghost {
-  --k-x: 2px;
-  --k-y: 3px;
-  --k-face: var(--color-slate-900);
-  --k-rim: var(--color-slate-500);
   --k-edge: var(--color-slate-600);
-  background-color: var(--k-face);
-  border-color: var(--k-rim);
+  border-radius: 3px;
+  background-color: var(--color-slate-900);
+  border-color: var(--color-slate-500);
   color: var(--color-white);
   font-size: 16px;
+  letter-spacing: .07em;
+  padding-left: calc(18px + .07em);
+  padding-right: 18px;
   opacity: 1;
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-white) 7%, transparent),
-    var(--k-x) var(--k-y) 0 0 var(--k-edge);
+  box-shadow: 0 3px 0 0 var(--k-edge);
 }
 :root[data-style="tactile"] header .ui-ghost {
   font-size: 15px;
+  padding-left: calc(16px + .07em);
+  padding-right: 16px;
 }
 @media (hover: hover) {
   :root[data-style="tactile"] .ui-ghost:hover:not(:disabled, [aria-disabled="true"]) {
-    --k-face: var(--color-slate-800);
-    --k-rim: var(--color-slate-400);
+    border-color: var(--color-slate-400);
     color: var(--color-slate-50);
+    translate: 0 1px;
+    box-shadow: 0 2px 0 0 var(--k-edge);
   }
 }
 :root[data-style="tactile"] .ui-ghost:active:not(:disabled, [aria-disabled="true"]) {
-  --k-face: var(--color-slate-800);
-  --k-rim: var(--color-slate-400);
-  translate: var(--k-travel);
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--color-white) 7%, transparent),
-    0 0 0 0 var(--k-edge);
-  transition-duration: 40ms;
+  background-color: var(--color-slate-800);
+  border-color: var(--color-slate-400);
+  translate: 0 2px;
+  box-shadow: 0 1px 0 0 var(--k-edge);
+  transition-duration: 50ms;
 }
 :root[data-style="tactile"] .ui-ghost:focus-visible {
   outline: 2px solid var(--color-white);
-  outline-offset: 5px;
+  outline-offset: 6px;
 }
 :root[data-style="tactile"] :is(.ui-ghost:disabled, .ui-ghost[aria-disabled="true"]) {
-  --k-face: var(--color-slate-950);
-  --k-rim: var(--color-slate-700);
+  translate: 0 0;
+  background-color: var(--color-slate-950);
+  border-color: var(--color-slate-700);
   color: var(--color-slate-500);
   cursor: not-allowed;
-  box-shadow:
-    inset 0 0 0 1px transparent,
-    0 0 0 0 transparent;
+  box-shadow: none;
 }
 
 /* ── Segments: a row of latching keys (sort, filters, tabs) ──
-   Each choice is its own key on a 3px edge. The picked one stays pushed in, with an
-   ivory face. The row scrolls sideways, so it gets room for the edges. */
+   Each choice is its own card-stock key on a 3px wall straight below it. The picked one
+   stays pushed in, with an ivory face. The row scrolls sideways, so it gets room for
+   the walls. */
 :root[data-style="tactile"] .ui-segments {
   gap: 6px;
   border-width: 0;
   border-radius: 0;
-  padding: 0 3px 4px 0;
+  padding: 0 0 4px 0;
 }
 :root[data-style="tactile"] .ui-segment {
-  --k-x: 2px;
-  --k-y: 3px;
-  --k-face: var(--color-slate-900);
   --k-edge: var(--color-slate-600);
-  background-color: var(--k-face);
+  background-color: var(--color-slate-900);
   border: 1px solid var(--color-slate-500);
-  border-radius: 2px;
+  border-radius: 3px;
   color: var(--color-white);
   font-size: 15px;
-  letter-spacing: .045em;
-  box-shadow: var(--k-x) var(--k-y) 0 0 var(--k-edge);
+  letter-spacing: .06em;
+  box-shadow: 0 3px 0 0 var(--k-edge);
 }
 @media (hover: hover) {
   :root[data-style="tactile"] .ui-segment:hover:not(:disabled, [aria-pressed="true"], [aria-selected="true"]) {
-    --k-face: var(--color-slate-800);
+    background-color: var(--color-slate-800);
+    translate: 0 1px;
+    box-shadow: 0 2px 0 0 var(--k-edge);
   }
 }
 :root[data-style="tactile"] .ui-segment:active:not(:disabled) {
-  translate: var(--k-travel);
-  box-shadow: 0 0 0 0 var(--k-edge);
-  transition-duration: 40ms;
+  translate: 0 2px;
+  box-shadow: 0 1px 0 0 var(--k-edge);
+  transition-duration: 50ms;
 }
 :root[data-style="tactile"] .ui-segment:is([aria-pressed="true"], [aria-selected="true"]) {
-  --k-face: var(--color-white);
+  background-color: var(--color-white);
   border-color: var(--color-white);
   color: var(--color-slate-950);
-  translate: var(--k-travel);
-  box-shadow: 0 0 0 0 var(--k-edge);
+  translate: 0 2px;
+  box-shadow: 0 1px 0 0 var(--k-edge);
 }
 :root[data-style="tactile"] .ui-segment:disabled {
-  box-shadow: 0 0 0 0 transparent;
+  box-shadow: none;
 }
 
 /* ── Slots: text fields and the header search ──
@@ -960,20 +952,18 @@ body {
 
 /* ── Phones ── */
 @media (max-width: 39.99rem) {
-  :root[data-style="tactile"] .ui-primary {
-    font-size: 20px;
-  }
   /* Room between the key's edge and the tilted card under it, which the note used to give */
   :root[data-style="tactile"] .hero-actions {
     margin-bottom: 24px;
   }
 }
 
-/* ── Less motion: keys don't travel. A press only takes the edge away; a picked
-   segment shows by its ivory face and missing edge. ── */
+/* ── Less motion: keys don't travel. A press only thins the wall; a picked
+   segment shows by its ivory face. ── */
 @media (prefers-reduced-motion: reduce) {
-  :root[data-style="tactile"] :is(.ui-primary, .ui-ghost, .ui-segment) {
-    --k-travel: 0px 0px;
+  :root[data-style="tactile"] :is(.ui-primary, .ui-ghost, .ui-segment),
+  :root[data-style="tactile"] :is(.ui-primary, .ui-ghost, .ui-segment):is(:hover, :active, [aria-pressed="true"], [aria-selected="true"]) {
+    translate: 0 0;
     transition: none;
   }
   :root[data-style="tactile"] :is(.ui-link, .ui-nav-link) {
