@@ -9,6 +9,7 @@ import { getPlayerXp, withAuthorXp } from '../lib/playerXp.js';
 import { notifyReviewChanged } from '../lib/aiIndex.js';
 import { castVote } from '../lib/reviewVotes.js';
 import { refreshGameSummary } from '../lib/aiSummary.js';
+import { cacheAtEdge } from '../lib/cdnCache.js';
 
 // Until a player confirms their email they can post only this many reviews: enough to
 // try IMGM, too few for bots and throwaway accounts to flood a game with fake reviews.
@@ -176,6 +177,15 @@ export const saveReview = async (req, res) => {
       }
     }
 
+    // A game that isn't out yet can't get a new review (its pages offer Add to Backlog
+    // instead, imgm-client/src/lib/release.js). Editing one written before is still fine.
+    if (game.releaseDate && new Date(game.releaseDate) > new Date()) {
+      const reviewed = await prisma.review.count({ where: { userId: user.id, gameId } });
+      if (!reviewed) {
+        return res.status(400).json({ error: `You can rate ${game.title} once it's out.` });
+      }
+    }
+
     // 3. The platform must be one this game is actually on
     if (answers.platform && game.platforms.length > 0 && !game.platforms.includes(answers.platform)) {
       return res.status(400).json({ error: `${game.title} isn't available on ${answers.platform}` });
@@ -277,43 +287,87 @@ export const voteOnReview = async (req, res) => {
 // GET /api/reviews/recent?limit=8 — the newest reviews on any game, for the home page.
 // Light on purpose: who, which game, the score and a short snippet (swearing masked).
 // At most 2 per game, so one busy game can't fill the whole row.
+//
+// Each game comes with what the home page's two big cards and its key-art band show,
+// so the page needs no second round of requests: genres, release date and studio (the
+// cards' small print), the first artwork (the band; the others would only weigh the
+// answer down), and its IMGM average and review count (the band's caption).
+//
+// The site owner can pin one review as the home page's card (HOME_PINNED_REVIEW_ID, see
+// .env.example). It comes back with `pinned: true`: marked in place when it is one of the
+// newest, otherwise added at the end, so the rest of the list stays newest first.
 const PER_GAME = 2;
 const recentQuery = z.object({ limit: z.coerce.number().int().min(1).max(12).default(8) });
+const RECENT_SELECT = {
+  id: true,
+  rating: true,
+  reviewText: true,
+  createdAt: true,
+  user: { select: { displayUsername: true } },
+  game: {
+    select: { id: true, title: true, coverUrl: true, genres: true, releaseDate: true, developer: true, artworks: true },
+  },
+};
 export const getRecentReviews = async (req, res) => {
   const query = recentQuery.safeParse(req.query);
   if (!query.success) return res.status(400).json({ error: 'Invalid request' });
+  const pinnedId = process.env.HOME_PINNED_REVIEW_ID?.trim() || null;
   try {
-    const newest = await prisma.review.findMany({
-      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-      take: query.data.limit * 6, // enough to fill the row even with a busy game
-      select: {
-        id: true,
-        rating: true,
-        reviewText: true,
-        createdAt: true,
-        user: { select: { displayUsername: true } },
-        game: { select: { id: true, title: true, coverUrl: true } },
-      },
-    });
+    const [newest, pinned] = await Promise.all([
+      prisma.review.findMany({
+        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+        take: query.data.limit * 6, // enough to fill the row even with a busy game
+        select: RECENT_SELECT,
+      }),
+      // Reviews have no hidden or removed state (a deleted review, or a deleted
+      // player's, is gone from the DB), so a pinned review that still exists is public.
+      // An id that no longer exists simply pins nothing.
+      pinnedId ? prisma.review.findUnique({ where: { id: pinnedId }, select: RECENT_SELECT }) : null,
+    ]);
     const perGame = new Map();
-    const reviews = newest
+    const latest = newest
       .filter((review) => {
         const shown = perGame.get(review.game.id) ?? 0;
         perGame.set(review.game.id, shown + 1);
         return shown < PER_GAME;
       })
       .slice(0, query.data.limit);
+    const reviews = pinned && !latest.some((review) => review.id === pinned.id) ? [...latest, pinned] : latest;
+
+    // Each game's IMGM average and review count, in one grouped query for the list
+    const gameIds = [...new Set(reviews.map((review) => review.game.id))];
+    const stats = gameIds.length
+      ? await prisma.review.groupBy({
+        by: ['gameId'],
+        where: { gameId: { in: gameIds } },
+        _avg: { rating: true },
+        _count: { _all: true },
+      })
+      : [];
+    const statsByGame = new Map(stats.map((s) => [s.gameId, s]));
+
+    // The same list for every visitor, so Vercel's CDN may keep it for a minute: the home
+    // page's cards then come from the edge even while this server sleeps
+    cacheAtEdge(res, { maxAge: 60, staleWhileRevalidate: 86400 });
     res.json(
       reviews.map((review) => {
         const { masked, reviewText } = withMaskedText(review);
         const text = (masked?.reviewText ?? reviewText)?.trim() || null;
+        const { artworks, ...game } = review.game;
+        const stat = statsByGame.get(game.id);
         return {
           id: review.id,
           rating: review.rating,
           snippet: text && (text.length > 160 ? `${text.slice(0, 160).trimEnd()}…` : text),
           createdAt: review.createdAt,
           author: review.user?.displayUsername ?? null,
-          game: review.game,
+          game: {
+            ...game,
+            artworks: artworks.slice(0, 1),
+            ratings: stat ? { imgm: stat._avg.rating } : {},
+            reviewCount: stat?._count._all ?? 0,
+          },
+          ...(review.id === pinnedId && { pinned: true }),
         };
       })
     );

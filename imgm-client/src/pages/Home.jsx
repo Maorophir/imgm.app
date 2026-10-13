@@ -5,8 +5,9 @@
  * lays out the sections. The bigger sections live in components/home/.
  *
  * From the top:
- *   the hero          "I am gaming.", the way in (a review quest), and the best recent
- *                     review as a real card laid across a band of key art (HomeHero)
+ *   the hero          "I am gaming.", what IMGM is in one sentence, the way in (rate a
+ *                     game), and a recent review with its words as a real card laid
+ *                     across a band of key art (HomeHero)
  *   the rarity        what your score does: a second real card and the 1–10 ladder
  *   featured games    the popular recent releases from IGDB, ten at a time
  *   fresh reviews     the newest reviews as small cards with their words
@@ -16,14 +17,15 @@
  * to the game the caption names. When there's nothing to show, a section waits or
  * steps aside instead of making something up.
  *
- * The data: the featured games and the newest reviews load side by side. The newest
- * reviews only know each game's title and cover, so the two big cards' games are then
- * loaded in full: their genre, year and studio fill the cards' small print, and the
- * hero card's game lends its key art to the band behind it.
+ * The data: the featured games and the newest reviews load side by side, and that's
+ * all. Each review comes with what its game's big card and the band need (genre, year,
+ * studio, the key art, the game's IMGM score), so the hero's card, the band and its
+ * caption all paint together. The site owner can pin the hero's review on the server;
+ * it comes in the same list, marked `pinned`.
  */
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getFeaturedGames, getGame, getRecentReviews } from '../lib/api';
+import { getFeaturedGames, getRecentReviews } from '../lib/api';
 import { shortGenre } from '../lib/gameLabels';
 import { WRAP, TEXT_BUTTON, TEXT_BUTTON_SM, SECTION_TITLE } from '../lib/ui';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
@@ -37,12 +39,24 @@ import { FreshReviews, NeedsReview } from '../components/home/FreshReviews';
 
 const PAGE_SIZE = 10; // games per carousel page (2 rows on desktop)
 
-// The hero's card: the best recent review that has a cover (highest score; among equal
-// scores, the newest)
-const pickHeroReview = (reviews) =>
-  reviews
+// Words long enough to read as a player's opinion on the hero card (a full sentence,
+// not "Fun!")
+const QUOTE_MIN = 40;
+
+// The hero's card. First the review the site owner pinned, then the best recent review
+// that has a cover and words to quote, then the best one with a cover. Best = highest
+// score; among equal scores, the newest.
+const pickHeroReview = (reviews) => {
+  const withCover = reviews
     .filter((review) => review.game.coverUrl)
-    .sort((a, b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt))[0] ?? null;
+    .sort((a, b) => b.rating - a.rating || new Date(b.createdAt) - new Date(a.createdAt));
+  return (
+    reviews.find((review) => review.pinned) ??
+    withCover.find((review) => review.snippet?.length >= QUOTE_MIN) ??
+    withCover[0] ??
+    null
+  );
+};
 
 // The rarity section's card: a different game from the hero's. Best is another tier
 // (so the two cards show two rarities), with words, with a cover; the newest wins a tie.
@@ -55,23 +69,19 @@ const pickSecondReview = (reviews, hero) => {
     .reduce((best, review) => (!best || fit(review) > fit(best) ? review : best), null);
 };
 
-// A game page's game, with its review count where the game tiles keep it
-const withReviewCount = (game) => ({ ...game, reviewCount: game.reviewCount ?? game.reviewStats?.count });
-
-// A review as its card's props. The recent-reviews list only knows the game's title and
-// cover; once the game itself has loaded, its genre, year and studio fill in the small print.
-const reviewCard = (review, game) => ({
-  title: review.game.title,
+// A review as its card's props: the game's genre, year and studio in the small print,
+// and the player's words as the quote. The year is read in UTC, like IGDB's dates.
+const reviewCard = ({ game, ...review }) => ({
+  title: game.title,
   score: review.rating,
-  coverUrl: review.game.coverUrl,
-  meta: game
-    ? [game.genres?.[0] && shortGenre(game.genres[0]), game.releaseDate && new Date(game.releaseDate).getFullYear()]
-      .filter(Boolean)
-      .join(' · ') || undefined
-    : undefined,
-  credit: game?.developer ? `Cover · ${game.developer}` : undefined,
+  coverUrl: game.coverUrl,
+  meta: [game.genres?.[0] && shortGenre(game.genres[0]), game.releaseDate && new Date(game.releaseDate).getUTCFullYear()]
+    .filter(Boolean)
+    .join(' · ') || undefined,
+  credit: game.developer ? `Cover · ${game.developer}` : undefined,
   reviewer: review.author ?? 'A player',
   date: review.createdAt,
+  quote: review.snippet ?? undefined,
 });
 
 const Home = () => {
@@ -83,9 +93,6 @@ const Home = () => {
   // The newest reviews on any game (the cards). null = still loading, [] = none,
   // false = they couldn't be loaded (the cards then step aside without saying "none").
   const [reviews, setReviews] = useState(null);
-  // The two big cards' games in full, by id: a game once it has loaded, null if it
-  // couldn't be (a missing id = still loading)
-  const [cardGames, setCardGames] = useState({});
 
   // Which page of the Featured Games carousel is showing (0-based)
   const [page, setPage] = useState(0);
@@ -123,25 +130,6 @@ const Home = () => {
   const recent = reviews || [];
   const heroReview = pickHeroReview(recent);
   const secondReview = pickSecondReview(recent, heroReview);
-  const heroId = heroReview?.game.id;
-  const secondId = secondReview?.game.id;
-
-  // Load the two cards' games in full (see the header)
-  useEffect(() => {
-    const ids = [heroId, secondId].filter((id) => id != null);
-    if (ids.length === 0) return undefined;
-    const controller = new AbortController();
-    ids.forEach((id) => {
-      getGame(id, controller.signal)
-        .then((game) => setCardGames((known) => ({ ...known, [id]: withReviewCount(game) })))
-        .catch((err) => {
-          if (err.name === 'AbortError') return;
-          // The card still shows, just without its small print
-          setCardGames((known) => ({ ...known, [id]: null }));
-        });
-    });
-    return () => controller.abort();
-  }, [heroId, secondId]);
 
   const retry = () => {
     setError(false);
@@ -157,20 +145,23 @@ const Home = () => {
   const goToPage = (next) => setPage((next + pageCount) % pageCount);
 
   // The key art behind the hero's card: its own game's, so the caption under the band
-  // and the card name the same game. While that game loads the band stays dark (no
-  // other art flashes up first); only if it has no art (or didn't load) does the band
-  // borrow the first featured game's art, and the caption then names that game.
-  const heroGame = heroId != null ? cardGames[heroId] : null;
-  const heroGameLoading = heroId != null && !(heroId in cardGames);
-  const bandGame = heroGameLoading
+  // and the card name the same game. While the reviews load the band stays dark (no
+  // other art flashes up first); only if the card's game has no art (or there's no
+  // card) does the band borrow the first featured game's art, and the caption then
+  // names that game.
+  const heroGame = heroReview?.game;
+  const bandGame = reviews === null
     ? null
     : (heroGame?.artworks?.length ? heroGame : games?.find((game) => game.artworks?.length)) ?? null;
 
-  // Fresh from the community: the newest reviews minus the two big cards above it
-  // (still null while loading, and [] hides the section)
+  // Fresh from the community: the newest reviews minus the two big cards above it, and
+  // never the pinned review (it may be months old). Still null while loading, and []
+  // hides the section.
   const freshReviews = reviews === null
     ? null
-    : recent.filter((review) => review.id !== heroReview?.id && review.id !== secondReview?.id);
+    : recent.filter(
+      (review) => !review.pinned && review.id !== heroReview?.id && review.id !== secondReview?.id
+    );
 
   // "Browse games": glide down to the featured games (a jump for people who ask their
   // device for less motion), and carry keyboard focus there too. A Cmd/Ctrl/Shift/Alt
@@ -212,17 +203,14 @@ const Home = () => {
 
       <HomeHero
         review={heroReview}
-        card={heroReview && reviewCard(heroReview, heroGame)}
+        card={heroReview && reviewCard(heroReview)}
         loading={reviews === null}
         failed={reviews === false}
         bandGame={bandGame}
         onBrowse={browse}
       />
 
-      <RaritySection
-        card={secondReview && { ...reviewCard(secondReview, cardGames[secondId]), quote: secondReview.snippet }}
-        loading={reviews === null}
-      />
+      <RaritySection card={secondReview && reviewCard(secondReview)} loading={reviews === null} />
 
       {/* ── Featured Games: the heading on the left, the shelf of game tiles on the right ──
           The section is where "Browse games" lands (tabIndex -1 lets it take focus);
