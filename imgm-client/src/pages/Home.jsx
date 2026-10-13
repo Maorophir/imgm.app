@@ -11,17 +11,20 @@
  *   the rarity        what your score does: a second real card and the 1–10 ladder
  *   featured games    the popular recent releases from IGDB, ten at a time
  *   fresh reviews     the newest reviews as small cards with their words
+ *   game of the week  this week's winner and next week's ballot, with the time left
+ *                     to vote and the way to the Game of the Week page (GotwStrip)
  *   be the first      popular games nobody has reviewed yet
  *
  * Everything shown is real: the cards are reviews players wrote, and the art belongs
  * to the game the caption names. When there's nothing to show, a section waits or
  * steps aside instead of making something up.
  *
- * The data: the featured games and the newest reviews load side by side, and that's
- * all. Each review comes with what its game's big card and the band need (genre, year,
- * studio, the key art, the game's IMGM score), so the hero's card, the band and its
- * caption all paint together. The site owner can pin the hero's review on the server;
- * it comes in the same list, marked `pinned`.
+ * The data: the featured games and the newest reviews load side by side. Each review
+ * comes with what its game's big card and the band need (genre, year, studio, the key
+ * art, the game's IMGM score), so the hero's card, the band and its caption all paint
+ * together. The site owner can pin the hero's review on the server; it comes in the
+ * same list, marked `pinned`. The Game of the Week section needs nothing from either,
+ * so it loads its own (the same answer the Game of the Week page gets).
  */
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
@@ -36,6 +39,7 @@ import LoadError from '../components/LoadError';
 import HomeHero from '../components/home/HomeHero';
 import RaritySection from '../components/home/RaritySection';
 import { FreshReviews, NeedsReview } from '../components/home/FreshReviews';
+import GotwStrip from '../components/home/GotwStrip';
 
 const PAGE_SIZE = 10; // games per carousel page (2 rows on desktop)
 
@@ -278,8 +282,10 @@ const Home = () => {
         </div>
       </section>
 
-      {/* ── What the community is saying, and games waiting for their first review ── */}
+      {/* ── What the community is saying, the game it picked this week (and the vote
+          for next week's), and games waiting for their first review ── */}
       <FreshReviews reviews={freshReviews} />
+      <GotwStrip />
       <NeedsReview games={games} avoidArt={bandGame?.id} />
     </main>
   );
