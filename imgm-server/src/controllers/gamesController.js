@@ -1,5 +1,6 @@
 import { reigningWeek } from '../lib/gotw.js';
 import { prisma } from '../lib/db.js';
+import { cacheAtEdge } from '../lib/cdnCache.js';
 import * as igdb from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
 
@@ -113,11 +114,38 @@ export const getFeaturedGames = async (req, res) => {
       );
     }
 
-    res.json(await withImgmRatings(games));
+    // Games with IMGM reviews first, so the shelf opens on games that already have cards.
+    // sort is stable, so each group keeps IGDB's popularity order; the client pages
+    // through this one list, so every page agrees with it.
+    const featured = await withImgmRatings(games);
+    featured.sort((a, b) => (b.reviewCount > 0) - (a.reviewCount > 0));
+
+    // The same list for every visitor: the CDN can answer while this server sleeps
+    cacheAtEdge(res);
+    res.json(featured);
   } catch (error) {
     console.error('Error fetching featured games:', error);
     res.status(502).json({ error: 'Failed to fetch featured games' });
   }
+};
+
+// IGDB refreshes running right now, by game id: a busy game page starts one refresh,
+// not one per visitor
+const refreshing = new Map();
+
+// Fetches a game from IGDB and saves it. Resolves to false when IGDB doesn't know it.
+const refreshGame = (id) => {
+  if (!refreshing.has(id)) {
+    const refresh = igdb
+      .getGameDetails(id)
+      .then(async (mapped) => {
+        if (mapped) await upsertGame(mapped);
+        return Boolean(mapped);
+      })
+      .finally(() => refreshing.delete(id));
+    refreshing.set(id, refresh);
+  }
+  return refreshing.get(id);
 };
 
 export const getGameById = async (req, res) => {
@@ -127,31 +155,22 @@ export const getGameById = async (req, res) => {
   }
 
   try {
-    let game = await prisma.game.findUnique({
-      where: { id },
-      include: GAME_INCLUDE,
-    });
+    const findGame = () => prisma.game.findUnique({ where: { id }, include: GAME_INCLUDE });
+    let game = await findGame();
 
-    // Stale after a week; games saved before store links existed are refreshed once too
-    const isStale = game && (Date.now() - game.updatedAt.getTime() > GAME_STALE_AFTER || game.stores === null);
-
-    if (!game || isStale) {
+    if (!game) {
+      // Never stored: the page needs IGDB's copy before it can show anything
       try {
-        const mapped = await igdb.getGameDetails(id);
-        if (mapped) {
-          await upsertGame(mapped);
-          game = await prisma.game.findUnique({
-            where: { id },
-            include: GAME_INCLUDE,
-          });
-        }
+        if (await refreshGame(id)) game = await findGame();
       } catch (error) {
         console.error(`Error fetching game ${id} from IGDB:`, error);
-        // Serve the stale copy if we have one; otherwise report the upstream failure
-        if (!game) {
-          return res.status(502).json({ error: 'Failed to fetch game from IGDB' });
-        }
+        return res.status(502).json({ error: 'Failed to fetch game from IGDB' });
       }
+    } else if (Date.now() - game.updatedAt.getTime() > GAME_STALE_AFTER || game.stores === null) {
+      // Stale after a week (games saved before store links existed count as stale too).
+      // A week-old copy is still a good page, so answer with it now and refresh in the
+      // background: the next visitor gets the fresh one. A failed refresh keeps the copy.
+      refreshGame(id).catch((error) => console.error(`Error refreshing game ${id} from IGDB:`, error));
     }
 
     if (!game) {
@@ -160,6 +179,10 @@ export const getGameById = async (req, res) => {
 
     // A gold "Game of the Week" badge on the page during its reign (never blocks the page)
     const gameOfTheWeek = await reigningWeek(id).catch(() => null);
+    // The same page for every visitor (no session, no "my review"): the CDN may keep it.
+    // A player who just changed a review of this game skips that copy with a ?fresh=
+    // query (imgm-client lib/api.js, changedGames), so they see their own review counted.
+    cacheAtEdge(res);
     res.json({ ...toClientGame(game), gameOfTheWeek });
   } catch (error) {
     console.error(`Error fetching game ${req.params.id}:`, error);

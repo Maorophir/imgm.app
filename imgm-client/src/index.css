@@ -62,9 +62,10 @@
   }
 }
 
-/* The display face (Big Shoulders) is only ever used at 800. Google serves it as one
-   variable font (700–900), so without this a plain `font-display` heading would get
-   the nearest weight, 700. In the components layer, so a weight class still wins. */
+/* The display face (Big Shoulders) is only ever used at 800. index.html loads only
+   weight 800, and without this a plain `font-display` heading would show the condensed
+   stand-ins (Avenir Next Condensed, Roboto Condensed, Arial Narrow) at their regular
+   weight while it loads. In the components layer, so a weight class still wins. */
 @layer components {
   .font-display,
   .font-wordmark {
@@ -90,7 +91,7 @@ body {
 @theme {
   /* ── Brand (from the logo) ──
      Noir uses the lime on exactly three things: the one primary action on a page
-     ("Start your first quest", "Start Review Quest"), the full stop of the big
+     ("Rate a game you played", "Start Review Quest"), the full stop of the big
      headline and the logo's power mark. Everything else is ivory on warm black.
      Use it as text-brand / bg-brand / border-brand. */
   --color-brand: #c6eb4e;
@@ -179,11 +180,14 @@ body {
      Host Grotesk (font-sans, the default) for all text, UI and numbers (add
      tabular-nums for figures). Big Shoulders (font-display) for headlines, card
      titles and score numerals, always at 800 (see .font-display above); the IMGM
-     wordmark uses it too (font-wordmark). Noto Serif Display (font-serif, with
-     italic) for review quotes only. */
+     wordmark uses it too (font-wordmark). Until it loads (or if it can't), a narrow
+     face the device already has stands in, so headlines keep their width: Avenir
+     Next Condensed on iPhones and Macs, Roboto Condensed or sans-serif-condensed on
+     Android, Arial Narrow on Windows. Noto Serif Display (font-serif, with italic)
+     for review quotes only. */
   --font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  --font-display: "Big Shoulders", "Big Shoulders Display", "Arial Narrow", sans-serif;
-  --font-wordmark: "Big Shoulders", "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --font-display: "Big Shoulders", "Avenir Next Condensed", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", sans-serif;
+  --font-wordmark: "Big Shoulders", "Avenir Next Condensed", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", sans-serif;
   --font-serif: "Noto Serif Display", Georgia, serif;
 
   /* ── Rarity inks ──
