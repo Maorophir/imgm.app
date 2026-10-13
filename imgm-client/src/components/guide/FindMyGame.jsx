@@ -7,6 +7,9 @@
  * A screen with one single-choice question moves on as soon as it's tapped.
  * The answers live in the chat's prefs (so "Tune it" can edit them later); the
  * last screen's button sends them as the chat's first question.
+ * A player who'd rather just type can skip the questions ("Skip the questions…" on
+ * the first screen, "Skip to the end" on the others): straight to the last screen's
+ * box, keeping whatever they answered so far.
  * Noir: the screen's title in Big Shoulders, a thin ivory progress line, square answer
  * cards, and lime only on "Find my next game" (the quest's one main action).
  */
@@ -156,6 +159,11 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
     go(LAST);
   };
 
+  // Nothing picked (they skipped the questions, or passed on every one): "Anything
+  // else?" would follow answers they never gave, so the last screen asks plainly (and
+  // doesn't call the box optional: it's all there is to go on)
+  const nothingPicked = !Object.values(prefs).flat().some(Boolean);
+
   return (
     <div className="flex-1 flex flex-col rounded-sm border border-slate-700 bg-slate-900 p-5 md:p-8 lg:border-0 lg:bg-transparent lg:p-0">
       {/* Progress */}
@@ -175,20 +183,36 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
       {/* The screen — key={step} replays the fade-in on every screen change */}
       <div key={step} className="animate-fade-in mt-7 lg:my-auto lg:py-8">
         <h2 className="font-display text-[34px] md:text-[54px] leading-[.95] uppercase tracking-[.005em] text-white">
-          {screen.title}
+          {step === LAST && nothingPicked
+            ? "What do you want to play?"
+            : screen.title}
         </h2>
-        {screen.subtitle && (
-          <p className="mt-1 text-slate-400">{screen.subtitle}</p>
+        {step === LAST && nothingPicked ? (
+          <p className="mt-1 text-slate-400">Say it in your own words.</p>
+        ) : (
+          screen.subtitle && <p className="mt-1 text-slate-400">{screen.subtitle}</p>
         )}
 
-        {step === 0 && lastAnswers && (
-          <button
-            type="button"
-            onClick={applyLast}
-            className="mt-2 inline-flex items-center gap-1.5 h-11 text-sm font-medium text-white underline decoration-1 underline-offset-5 decoration-slate-500/80 hover:decoration-current hover:text-slate-50 transition-colors duration-120"
-          >
-            Use my last answers <ArrowRight className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
-          </button>
+        {step === 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-6">
+            {lastAnswers && (
+              <button
+                type="button"
+                onClick={applyLast}
+                className="inline-flex items-center gap-1.5 h-11 text-sm font-medium text-white underline decoration-1 underline-offset-5 decoration-slate-500/80 hover:decoration-current hover:text-slate-50 transition-colors duration-120"
+              >
+                Use my last answers <ArrowRight className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+              </button>
+            )}
+            {/* For players who already know what they're after: no questions, just the box */}
+            <button
+              type="button"
+              onClick={() => go(LAST)}
+              className="inline-flex items-center gap-1.5 min-h-11 text-left text-sm font-medium text-white underline decoration-1 underline-offset-5 decoration-slate-500/80 hover:decoration-current hover:text-slate-50 transition-colors duration-120"
+            >
+              Skip the questions, just tell me what you want <ArrowRight className="shrink-0 w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          </div>
         )}
 
         <div className="mt-6 flex flex-col gap-6">
@@ -230,6 +254,17 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
         >
           <ArrowLeft className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Back
         </button>
+        {/* Had enough questions: on to the last screen with what's answered so far (not
+            on an optional screen, whose own Next already says "Skip") */}
+        {step > 0 && step < LAST && !screen.optional && (
+          <button
+            type="button"
+            onClick={() => go(LAST)}
+            className="ml-3 inline-flex items-center h-11 text-sm font-medium text-slate-400 hover:text-white transition-colors duration-120"
+          >
+            Skip to the end
+          </button>
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-3">
           {screen.any && (
             <button

@@ -130,10 +130,13 @@ function PlayNextChat({ userId }) {
     if (answerLength) bottomRef.current?.scrollIntoView({ block: "end" });
   }, [answerLength]);
 
-  // The quest's last button: its answers become this chat's first question
+  // The quest's last button: its answers become this chat's first question. They're
+  // kept as "last answers" only if there are some: a skipped quest mustn't wipe them.
   const reveal = (note) => {
-    keepLastAnswers(userId, preferences);
-    setLastAnswers(preferences);
+    if (Object.values(preferences).flat().some(Boolean)) {
+      keepLastAnswers(userId, preferences);
+      setLastAnswers(preferences);
+    }
     ask(note || "Find my next game", preferences);
   };
 
