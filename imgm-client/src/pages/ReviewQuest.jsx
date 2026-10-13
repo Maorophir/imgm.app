@@ -37,7 +37,8 @@ import { authClient, useSession } from '../lib/authClient';
 import LoadError from '../components/LoadError';
 import BacklogButton from '../components/BacklogButton';
 import CardStage from '../components/CardStage';
-import CollectibleCard, { CardBack } from '../components/CollectibleCard';
+import CollectibleCard, { CardBack, ChecklistBack } from '../components/CollectibleCard';
+import { tickedChecklist } from '../components/reviewCard/reviewDisplay';
 import ShareCardButton from '../components/ShareCardButton';
 import {
   EMPTY_ANSWERS, BADGES, CHECKLIST, XP_EASY, XP_WRITTEN, MAX_XP, getRarity,
@@ -242,8 +243,10 @@ const ReviewQuest = () => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // The done screen's card: showing its back ("Turn over")
+  // The done screen's card: showing its back ("Turn over"), the checklist answers it
+  // turns over to (none: the shared IMGM back)
   const [flipped, setFlipped] = useState(false);
+  const cardTicks = tickedChecklist(answers);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -458,7 +461,8 @@ const ReviewQuest = () => {
               <p className="text-slate-400 text-sm mb-6">It's live on {game.title}'s page. Thanks for helping other players!</p>
               {result.inBacklog && <BacklogPrompt gameId={game.id} title={game.title} />}
 
-              {/* The quest's reward: the review as a trading card, like the home page's */}
+              {/* The quest's reward: the review as a trading card, like the home page's (and,
+                  turned over, its checklist) */}
               <CardStage
                 tier={rarity.key}
                 flipped={flipped}
@@ -475,7 +479,12 @@ const ReviewQuest = () => {
                     quote={firstLine(answers.reviewText)}
                   />
                 }
-                back={<CardBack />}
+                // Turned over: the checklist they just filled in (or the shared back if they skipped it)
+                back={
+                  cardTicks.length > 0
+                    ? <ChecklistBack score={answers.rating} ticks={cardTicks} name={session.user.displayUsername ?? 'You'} />
+                    : <CardBack />
+                }
               />
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6">
                 <ShareCardButton
@@ -483,7 +492,12 @@ const ReviewQuest = () => {
                   title={`${session.user.displayUsername ?? 'My'}’s card for ${game.title}`}
                   text={`${answers.rating}/10, ${rarity.label} on IMGM`}
                 />
-                <button type="button" onClick={() => setFlipped((turned) => !turned)} className={TEXT_BUTTON}>
+                <button
+                  type="button"
+                  onClick={() => setFlipped((turned) => !turned)}
+                  aria-label={flipped ? 'Turn back to the front' : cardTicks.length > 0 ? 'Turn over to see the checklist' : 'Turn over'}
+                  className={TEXT_BUTTON}
+                >
                   {flipped ? 'Turn back' : 'Turn over'}
                 </button>
               </div>

@@ -1,6 +1,7 @@
 /**
- * CollectibleCard — a review as a Noir trading card, plus CardBack, the back that every
- * IMGM card shares.
+ * CollectibleCard — a review as a Noir trading card, plus its two backs: ChecklistBack
+ * (the reviewer's checklist, for a review that has one) and CardBack (the back that
+ * every IMGM card shares otherwise).
  *
  * The front is printed card stock in the trading-card shape (63:88, rounded corners):
  * a frame in the score's rarity ink (gilt for a Legendary 10), the game's title in big
@@ -41,6 +42,7 @@ import RarityMark from './RarityMark';
 import { PowerIcon } from './Logo';
 import { getRarity } from './reviewQuest/questOptions';
 import { coverSrcSet } from '../lib/igdbImage';
+import CardChecklist from './reviewCard/CardChecklist';
 
 // The card stock: dark, with a faint ivory line just inside its edge. The corner is the
 // trading-card one (3mm on a 63×88mm card), as percentages so it scales with the card.
@@ -81,6 +83,9 @@ const SIZES = {
 
 // The hairline between the parts of the card (ivory at 14%, never thinner than 1px)
 const HAIRLINE = 'border-white/14';
+
+// The small print along the bottom of every card face ("Beta · imgm.app")
+const SMALL_PRINT = `flex justify-between gap-[2cqi] pt-[1.6cqi] border-t-[length:max(1px,.22cqi)] ${HAIRLINE} text-[length:max(9px,2.8cqi)] leading-none text-slate-400`;
 
 // A review's date on the card ("12 Oct 2026") and for screen readers ("12 October 2026")
 const shortDate = (when) => when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -238,11 +243,7 @@ const CollectibleCard = ({
                   </p>
                 )}
                 {/* The small print along the bottom of every card */}
-                <p
-                  className={`flex justify-between gap-[2cqi] pt-[1.6cqi] border-t-[length:max(1px,.22cqi)] ${HAIRLINE} text-[length:max(9px,2.8cqi)] leading-none text-slate-400 ${
-                    reviewer || hasDate ? 'mt-[1.8cqi]' : ''
-                  }`}
-                >
+                <p className={`${SMALL_PRINT} ${reviewer || hasDate ? 'mt-[1.8cqi]' : ''}`}>
                   <span>Beta</span>
                   <span>imgm.app</span>
                 </p>
@@ -297,6 +298,43 @@ export const CardBack = ({ className = '', small = false }) => {
             </span>
           </span>
           <span className={`font-wordmark ${back.wordmark} leading-[.9] tracking-[.04em] -mr-[.04em]`}>IMGM</span>
+        </div>
+      </article>
+    </div>
+  );
+};
+
+/**
+ * ChecklistBack — the back of a review's card when the review has a checklist: the same
+ * stock and frame as its front (the tier's ink, or the gilt for a Legendary 10), with
+ * the reviewer's checklist printed on it (CardChecklist, the same back a game page's
+ * card has). A review without a checklist turns over to CardBack instead. Give it a
+ * width, like the front.
+ * Props: score (sets the frame), ticks (from tickedChecklist), name (the reviewer),
+ * className.
+ */
+export const ChecklistBack = ({ score, ticks, name, className = '' }) => {
+  const rarity = getRarity(score);
+  const legendary = rarity.key === 'legendary';
+  const size = SIZES.full;
+  return (
+    <div className={`@container ${className}`}>
+      <article aria-label={`${name}'s checklist`} className={`${STOCK} ${size.stock}`} style={{ '--ink': rarity.color }}>
+        <div
+          className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${legendary ? size.frameGilt : `${size.frame} bg-(--ink)`}`}
+          style={legendary ? GILT : undefined}
+        >
+          <div className={`flex-1 min-w-0 min-h-0 flex flex-col bg-slate-900 ${legendary ? size.faceGilt : size.face}`}>
+            {/* The answers scroll if a small card can't fit them all; the small print
+                stays at the bottom, as on the front */}
+            <div className="flex-1 min-h-0">
+              <CardChecklist ticks={ticks} name={name} />
+            </div>
+            <p className={`mt-[2.4cqi] ${SMALL_PRINT}`}>
+              <span>Beta</span>
+              <span>imgm.app</span>
+            </p>
+          </div>
         </div>
       </article>
     </div>

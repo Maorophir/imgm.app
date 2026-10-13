@@ -10,6 +10,7 @@ import { notifyReviewChanged } from '../lib/aiIndex.js';
 import { castVote } from '../lib/reviewVotes.js';
 import { refreshGameSummary } from '../lib/aiSummary.js';
 import { cacheAtEdge } from '../lib/cdnCache.js';
+import { CHECKLIST } from '../lib/reviewOptions.js';
 
 // Until a player confirms their email they can post only this many reviews: enough to
 // try IMGM, too few for bots and throwaway accounts to flood a game with fake reviews.
@@ -293,16 +294,21 @@ export const voteOnReview = async (req, res) => {
 // cards' small print), the first artwork (the band; the others would only weigh the
 // answer down), and its IMGM average and review count (the band's caption).
 //
+// Each review also brings its checklist answers (only the ones it ticked), for the back
+// of the home page's card: turned over, it shows the checklist like a game page's card.
+//
 // The site owner can pin one review as the home page's card (HOME_PINNED_REVIEW_ID, see
 // .env.example). It comes back with `pinned: true`: marked in place when it is one of the
 // newest, otherwise added at the end, so the rest of the list stays newest first.
 const PER_GAME = 2;
 const recentQuery = z.object({ limit: z.coerce.number().int().min(1).max(12).default(8) });
+const CHECKLIST_FIELDS = Object.keys(CHECKLIST);
 const RECENT_SELECT = {
   id: true,
   rating: true,
   reviewText: true,
   createdAt: true,
+  ...Object.fromEntries(CHECKLIST_FIELDS.map((field) => [field, true])),
   user: { select: { displayUsername: true } },
   game: {
     select: { id: true, title: true, coverUrl: true, genres: true, releaseDate: true, developer: true, artworks: true },
@@ -361,6 +367,8 @@ export const getRecentReviews = async (req, res) => {
           snippet: text && (text.length > 160 ? `${text.slice(0, 160).trimEnd()}…` : text),
           createdAt: review.createdAt,
           author: review.user?.displayUsername ?? null,
+          // { graphics: 'pretty', story: 'tears', … }, the answers it gave (empty if none)
+          checklist: Object.fromEntries(CHECKLIST_FIELDS.filter((field) => review[field]).map((field) => [field, review[field]])),
           game: {
             ...game,
             artworks: artworks.slice(0, 1),

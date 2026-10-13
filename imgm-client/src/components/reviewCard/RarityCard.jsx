@@ -5,22 +5,24 @@
  *
  * Front: the game's title and the score numeral in the tier's ink, who reviewed it
  * (and the badges it earned), an art window, the tier, "X meets Y", vibes, setup.
- * Back (tap to turn over): the Steam-style checklist. Reviews without a checklist
- * don't turn; quick reviews get a "Quick review" stamp instead.
+ * Back (tap to turn over): the Steam-style checklist (CardChecklist, the same back the
+ * home page's card has). Reviews without a checklist don't turn; quick reviews get a
+ * "Quick review" stamp instead.
  *
  * The art window takes whatever height the text leaves, so sparse cards show more
  * art and busy cards never cut text off. Sizes are in cqi (a share of the card's
  * width), like CollectibleCard, so the card is the same design at any width.
  */
-import { Check, Hourglass, ListChecks, Minus, Monitor } from 'lucide-react';
+import { Hourglass, Monitor } from 'lucide-react';
 import ArtIcon from '../ArtIcon';
 import { useState } from 'react';
 import RarityMark from '../RarityMark';
 import MarqueeText from '../MarqueeText';
 import {
-  getRarity, RATING_LABELS, VIBES, GOT_GOOD_AFTER, COMPLETION_STATUSES, BADGES, checklistColor,
+  getRarity, RATING_LABELS, VIBES, GOT_GOOD_AFTER, COMPLETION_STATUSES, BADGES,
 } from '../reviewQuest/questOptions';
 import { avatarColor, avatarUrl, formatDate, tickedChecklist, isQuickReview, reviewerName } from './reviewDisplay';
+import CardChecklist from './CardChecklist';
 
 // A player's face: their profile picture if they set one, otherwise their coloured initial.
 // `user` = { id, avatarUpdatedAt }; the time in the address makes a new picture show at once.
@@ -235,33 +237,15 @@ const RarityCard = ({ review, game, artUrl }) => {
         {/* ── Back: the checklist ── */}
         {canFlip && (
           <Face rarity={rarity} className="card-face card-face-back">
-            <div className="flex flex-col gap-[2.4cqi] h-full min-h-0 overflow-y-auto">
-              <p className="flex items-center justify-between gap-[2cqi]">
-                <span className="inline-flex items-center gap-[1.4cqi] whitespace-nowrap shrink-0 text-[length:max(12px,4.4cqi)] font-semibold">
-                  <ListChecks className="w-[max(14px,4.6cqi)] h-[max(14px,4.6cqi)] text-slate-400" strokeWidth={1.8} aria-hidden="true" /> The checklist
+            <CardChecklist
+              ticks={ticks}
+              name={name}
+              footer={
+                <span className="mt-auto text-center text-[length:max(11px,3.6cqi)] font-medium text-white underline decoration-1 underline-offset-[3px] decoration-slate-500/80">
+                  Turn back
                 </span>
-                <span className="text-[length:max(10px,3.4cqi)] text-slate-400 truncate min-w-0">{name}</span>
-              </p>
-              <div className="grid gap-[1.8cqi]">
-                {ticks.map(({ category, index, option }) => (
-                  <div key={category.field} className="grid grid-cols-[max(13px,4.6cqi)_26cqi_1fr] gap-[2cqi] items-start leading-snug">
-                    {/* The tick box, in the answer's place on the red → green ladder */}
-                    <span
-                      className="w-[max(13px,4.6cqi)] h-[max(13px,4.6cqi)] mt-[.3cqi] rounded-xs flex items-center justify-center text-slate-950"
-                      style={{ background: checklistColor(category, index).solid }}
-                      aria-hidden="true"
-                    >
-                      {index === 'na' ? <Minus className="w-[80%] h-[80%]" strokeWidth={3} /> : <Check className="w-[80%] h-[80%]" strokeWidth={3} />}
-                    </span>
-                    <span className="text-[length:max(10px,3.4cqi)] text-slate-400 mt-[.2cqi]">{category.title}</span>
-                    <span className={`text-[length:max(11px,3.8cqi)] break-words ${index === 'na' ? 'text-slate-400 italic' : 'text-white'}`}>{option.label}</span>
-                  </div>
-                ))}
-              </div>
-              <span className="mt-auto text-center text-[length:max(11px,3.6cqi)] font-medium text-white underline decoration-1 underline-offset-[3px] decoration-slate-500/80">
-                Turn back
-              </span>
-            </div>
+              }
+            />
           </Face>
         )}
       </div>

@@ -13,7 +13,9 @@
  *   The card     a recent review with the player's words (the Home page picks it: the
  *                owner's pinned one, else the best one with words to quote) as a trading
  *                card, laid across a full-width band of a game's key art. It tilts
- *                toward the pointer, turns over, and its link can be shared.
+ *                toward the pointer, turns over (to the reviewer's checklist, like a
+ *                game page's card, or to the shared IMGM back if there's none), and
+ *                its link can be shared.
  *
  * Everything on it is real. The band shows the card's own game (its key art comes with
  * the review); only when that game has no art does it show a featured game's art, and
@@ -41,7 +43,8 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import CardStage from '../CardStage';
-import CollectibleCard, { CardBack } from '../CollectibleCard';
+import CollectibleCard, { CardBack, ChecklistBack } from '../CollectibleCard';
+import { tickedChecklist } from '../reviewCard/reviewDisplay';
 import RarityMark from '../RarityMark';
 import ShareCardButton from '../ShareCardButton';
 import FaceDownCard from './FaceDownCard';
@@ -61,8 +64,10 @@ const BAND =
 const BROWSE = `items-center justify-center min-h-11 text-base font-medium text-white ${TEXT_LINK}`;
 
 const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
-  // Showing the card's back ("Turn over")
+  // Showing the card's back ("Turn over"): the reviewer's checklist if they filled
+  // one in, otherwise the back every IMGM card shares
   const [flipped, setFlipped] = useState(false);
+  const ticks = review?.checklist ? tickedChecklist(review.checklist) : [];
 
   const rarity = review ? getRarity(review.rating) : null;
   // Opens the game page right at this review
@@ -122,7 +127,12 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       {/* ── The card, standing over the band and hanging past its bottom edge ── */}
       <div className="col-start-2 row-start-3 row-end-5 self-end justify-self-center relative z-3 min-w-0 w-[min(300px,100%)] -mb-12 sm:w-[min(340px,100%)] sm:-mb-14 lg:col-start-3 lg:row-start-2 lg:justify-self-stretch lg:w-auto lg:-mb-12 xl:-mb-14">
         {review ? (
-          <CardStage tier={rarity.key} flipped={flipped} front={<CollectibleCard {...card} />} back={<CardBack />} />
+          <CardStage
+            tier={rarity.key}
+            flipped={flipped}
+            front={<CollectibleCard {...card} />}
+            back={ticks.length > 0 ? <ChecklistBack score={review.rating} ticks={ticks} name={card.reviewer} /> : <CardBack />}
+          />
         ) : (
           // Still loading, or nothing to show: a card face down (never a made-up one)
           <FaceDownCard className="rotate-[-2.5deg]" />
@@ -155,7 +165,13 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
               title={`${card.reviewer}’s card for ${review.game.title}`}
               text={`${review.rating}/10, ${rarity.label} on IMGM`}
             />
-            <button type="button" onClick={() => setFlipped((turned) => !turned)} className={TEXT_BUTTON}>
+            <button
+              type="button"
+              onClick={() => setFlipped((turned) => !turned)}
+              // Screen readers hear what's on the other side (the card itself is a picture to them)
+              aria-label={flipped ? 'Turn back to the front' : ticks.length > 0 ? 'Turn over to see the checklist' : 'Turn over'}
+              className={TEXT_BUTTON}
+            >
               {flipped ? 'Turn back' : 'Turn over'}
             </button>
             <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
