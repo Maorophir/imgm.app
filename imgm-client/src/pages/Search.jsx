@@ -1,26 +1,37 @@
 /**
  * Search page — Full results grid for a game search. Route: /search?q=...
  *
- * The Navbar SearchBar sends users here when they press Enter.
- * Results come from IGDB via our backend (/api/games/search).
+ * The Navbar SearchBar sends users here when they press Enter, and the header's
+ * "Games" link opens it with no query. Results come from IGDB via our backend
+ * (/api/games/search).
  *
- * Quest mode (/search?quest=1, from the home page's "Start your first quest"): the page
- * asks which game you played last, and picking one opens its review quest.
+ * With no query the page is a way in, not a dead end: its own search box, then
+ * "Popular right now" (the home page's featured games), so a visitor can tap a cover
+ * instead of having to remember a title.
  *
- * Noir: the big condensed headline, the search field from the header, and the results
+ * Quest mode (/search?quest=1, from the home page's "Rate a game you played"): the page
+ * asks which game you played last, and picking one opens its review quest. A game
+ * that isn't out yet says when it will be instead, and opens its game page.
+ *
+ * Google doesn't index this page, with or without a query (hooks/useSearchIndexing).
+ *
+ * Noir: the big condensed headline, the search field from the header, and the games
  * on the same shelf as the home page's featured games.
  */
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon } from 'lucide-react';
-import { searchGames } from '../lib/api';
+import { getFeaturedGames, searchGames } from '../lib/api';
 import { coverSrcSet, COVER_SIZES } from '../lib/igdbImage';
-import { WRAP, GHOST_BUTTON } from '../lib/ui';
+import { isUnreleased, releaseLabel } from '../lib/release';
+import { WRAP, GHOST_BUTTON, SECTION_TITLE } from '../lib/ui';
 import GameCard from '../components/GameCard';
 import GameCardSkeleton from '../components/GameCardSkeleton';
 import { MAX_XP } from '../components/reviewQuest/questOptions';
 
 const MIN_QUERY_LENGTH = 2;
+// Popular games on the page with no query: two of the home page's pages of them
+const POPULAR_COUNT = 20;
 
 // The home page's shelf: tiles at least 128px on phones (two columns even at 320px),
 // 160px from tablets up
@@ -38,10 +49,14 @@ const Notice = ({ title, children }) => (
 // Quest mode: each result is one link, straight into that game's review quest. A Noir
 // tile like the game cards: the cover with 2px corners, no box, the title underlined on
 // hover, the year in quiet grey, and "I played this" as a text link along the bottom.
+// A game that isn't out yet can't be reviewed: its tile says when it's out instead (in
+// place of the year too) and opens the game page.
 const QuestPick = ({ game }) => {
-  const year = game.releaseDate ? new Date(game.releaseDate).getFullYear() : null;
+  const notOut = isUnreleased(game.releaseDate);
+  // IGDB dates are midnight UTC, so the year is read in UTC (not the visitor's time zone)
+  const year = game.releaseDate && !notOut ? new Date(game.releaseDate).getUTCFullYear() : null;
   return (
-    <Link to={`/game/${game.id}/review`} className="group flex flex-col min-w-0 text-white">
+    <Link to={notOut ? `/game/${game.id}` : `/game/${game.id}/review`} className="group flex flex-col min-w-0 text-white">
       <div className="aspect-[3/4] overflow-hidden rounded-sm bg-slate-900">
         {game.coverUrl && (
           <img
@@ -60,9 +75,13 @@ const QuestPick = ({ game }) => {
       </p>
       {year && <p className="mt-1 text-sm tabular-nums text-slate-400">{year}</p>}
       {/* mt-auto: lines up along the bottom of a grid row, whatever the title's length */}
-      <p className="mt-auto pt-2 text-sm font-medium underline decoration-1 underline-offset-5 decoration-slate-500/80 group-hover:decoration-current group-hover:text-slate-50 transition-colors duration-120">
-        I played this
-      </p>
+      {notOut ? (
+        <p className="mt-auto pt-2 text-sm tabular-nums text-slate-400">{releaseLabel(game.releaseDate)}</p>
+      ) : (
+        <p className="mt-auto pt-2 text-sm font-medium underline decoration-1 underline-offset-5 decoration-slate-500/80 group-hover:decoration-current group-hover:text-slate-50 transition-colors duration-120">
+          I played this
+        </p>
+      )}
     </Link>
   );
 };
@@ -92,12 +111,46 @@ const Search = () => {
     return () => controller.abort();
   }, [query, isSearchable]);
 
-  // Quest mode has its own search box: the navbar's would drop ?quest=1
-  const searchForQuest = (event) => {
+  // The popular games, fetched the first time the page has no query (null = loading,
+  // false = they couldn't be loaded: the section then steps aside)
+  const [popular, setPopular] = useState(null);
+  useEffect(() => {
+    if (isSearchable || popular !== null) return;
+
+    const controller = new AbortController();
+    getFeaturedGames(controller.signal)
+      .then((games) => setPopular(games.slice(0, POPULAR_COUNT)))
+      .catch((error) => error.name !== 'AbortError' && setPopular(false));
+
+    return () => controller.abort();
+  }, [isSearchable, popular]);
+
+  // The page's own search box. Quest mode always has it (the navbar's would drop
+  // ?quest=1); with no query it's there too, as the navbar's field hides behind a
+  // button on phones.
+  const showSearchBox = questMode || !isSearchable;
+  const searchHere = (event) => {
     event.preventDefault();
     const q = String(new FormData(event.currentTarget).get('q') ?? '').trim();
-    setSearchParams({ quest: '1', q });
+    setSearchParams(questMode ? { quest: '1', q } : { q });
   };
+
+  // One game on the shelf: a quest pick in quest mode, otherwise its game card
+  const tile = (game) => questMode ? (
+    <QuestPick key={game.id} game={game} />
+  ) : (
+    <GameCard
+      key={game.id}
+      id={game.id}
+      title={game.title}
+      coverUrl={game.coverUrl}
+      genres={game.genres}
+      platforms={game.platforms}
+      ratings={game.ratings}
+      reviewCount={game.reviewCount}
+      releaseDate={game.releaseDate}
+    />
+  );
 
   return (
     <section className={`${WRAP} pt-10 sm:pt-14 pb-12 md:pb-16 min-h-[80vh]`}>
@@ -106,35 +159,36 @@ const Search = () => {
           {questMode ? 'What did you play last?' : isSearchable ? `Results for “${query}”` : 'Search games'}
         </h1>
         {questMode && (
-          <>
-            <p className="mt-3 text-base leading-[1.6] text-white">
-              Pick it to start its quest: about two minutes, up to {MAX_XP} XP, and a card at the end.
-            </p>
-            <form role="search" onSubmit={searchForQuest} className="mt-6 flex gap-2 max-w-xl">
-              {/* The header's search field: card stock, a control-grey edge that turns
-                  ivory while it has focus */}
-              <label className="flex flex-1 min-w-0 items-center gap-2.5 h-11 px-3.5 rounded-sm bg-slate-900 border border-slate-500 focus-within:border-white transition-colors duration-120">
-                <span className="sr-only">A game you played</span>
-                <SearchIcon className="w-4 h-4 shrink-0 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
-                {/* text-base (16px): smaller text makes iPhones zoom in on focus.
-                    Focused only on arrival, not when coming back to results. */}
-                <input
-                  type="search"
-                  name="q"
-                  defaultValue={query}
-                  required
-                  minLength={MIN_QUERY_LENGTH}
-                  autoFocus={!query}
-                  autoComplete="off"
-                  placeholder="Search games"
-                  className="flex-1 min-w-0 h-10 bg-transparent text-base text-white placeholder:text-slate-400 appearance-none focus:outline-hidden [&::-webkit-search-cancel-button]:appearance-none"
-                />
-              </label>
-              <button type="submit" className={GHOST_BUTTON}>
-                Search
-              </button>
-            </form>
-          </>
+          <p className="mt-3 text-base leading-[1.6] text-white">
+            Pick it to start its quest: about two minutes, up to {MAX_XP} XP, and a card at the end.
+          </p>
+        )}
+        {showSearchBox && (
+          <form role="search" onSubmit={searchHere} className="mt-6 flex gap-2 max-w-xl">
+            {/* The header's search field: card stock, a control-grey edge that turns
+                ivory while it has focus */}
+            <label className="flex flex-1 min-w-0 items-center gap-2.5 h-11 px-3.5 rounded-sm bg-slate-900 border border-slate-500 focus-within:border-white transition-colors duration-120">
+              <span className="sr-only">{questMode ? 'A game you played' : 'Search games'}</span>
+              <SearchIcon className="w-4 h-4 shrink-0 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
+              {/* text-base (16px): smaller text makes iPhones zoom in on focus.
+                  Quest mode focuses it on arrival (not when coming back to results);
+                  the plain page doesn't, as people may come to browse. */}
+              <input
+                type="search"
+                name="q"
+                defaultValue={query}
+                required
+                minLength={MIN_QUERY_LENGTH}
+                autoFocus={questMode && !query}
+                autoComplete="off"
+                placeholder="Search games"
+                className="flex-1 min-w-0 h-10 bg-transparent text-base text-white placeholder:text-slate-400 appearance-none focus:outline-hidden [&::-webkit-search-cancel-button]:appearance-none"
+              />
+            </label>
+            <button type="submit" className={GHOST_BUTTON}>
+              Search
+            </button>
+          </form>
         )}
         {isSearchable && !isLoading && !results.error && (
           <p className={`text-sm tabular-nums text-slate-400 ${questMode ? 'mt-4' : 'mt-3'}`}>
@@ -143,8 +197,20 @@ const Search = () => {
         )}
       </div>
 
-      {!isSearchable && !questMode && (
-        <p className="text-base text-slate-400">Type at least {MIN_QUERY_LENGTH} characters in the search bar above.</p>
+      {/* No query: popular games to tap instead (quest picks in quest mode) */}
+      {!isSearchable && popular !== false && (
+        <section aria-labelledby="popular-title" className="mt-6 sm:mt-10">
+          <h2 id="popular-title" className={`${SECTION_TITLE} mb-6 sm:mb-8`}>Popular right now</h2>
+          {popular === null ? (
+            <div className={SHELF}>
+              {Array.from({ length: POPULAR_COUNT }, (_, i) => <GameCardSkeleton key={i} />)}
+            </div>
+          ) : (
+            <div className={`${SHELF} animate-fade-in`}>
+              {popular.map(tile)}
+            </div>
+          )}
+        </section>
       )}
 
       {isLoading && (
@@ -153,7 +219,7 @@ const Search = () => {
         </div>
       )}
 
-      {!isLoading && results.error && (
+      {isSearchable && !isLoading && results.error && (
         <Notice title={results.error === 'rate-limited' ? 'Too many searches' : 'Search is unavailable right now'}>
           Please try again in a moment.
         </Notice>
@@ -163,23 +229,9 @@ const Search = () => {
         <Notice title="No games found">Try a different title or spelling.</Notice>
       )}
 
-      {!isLoading && results.games.length > 0 && (
+      {isSearchable && !isLoading && results.games.length > 0 && (
         <div className={`${SHELF} animate-fade-in`}>
-          {results.games.map((game) => questMode ? (
-            <QuestPick key={game.id} game={game} />
-          ) : (
-            <GameCard
-              key={game.id}
-              id={game.id}
-              title={game.title}
-              coverUrl={game.coverUrl}
-              genres={game.genres}
-              platforms={game.platforms}
-              ratings={game.ratings}
-              reviewCount={game.reviewCount}
-              releaseDate={game.releaseDate}
-            />
-          ))}
+          {results.games.map(tile)}
         </div>
       )}
     </section>

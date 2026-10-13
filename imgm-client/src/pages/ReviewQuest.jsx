@@ -13,6 +13,11 @@
  *     posting updates that review (one review per person per game).
  *   - Once posted, the done screen deals the review's card: the same trading card the
  *     home page shows, which can be turned over and shared.
+ *   - Logged out, the page asks you to sign up first ("Rate <game>", Sign up, or "I
+ *     already have an account"); either way you come straight back to the quest.
+ *   - A game that isn't out yet can't be rated: the page shows its release date, Add
+ *     to Backlog and the way back to the game page instead. A player who already has a
+ *     review of it (its date was pushed back) can still edit or delete that review.
  *
  * Noir: one flat panel of card stock over the game's art (no blur, no glow), the big
  * condensed headings, and lime only on the screen's one main action.
@@ -22,6 +27,7 @@ import ArtIcon from '../components/ArtIcon';
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { getGame, getMyReview, saveReview, deleteMyReview, setBacklogFinished } from '../lib/api';
+import { isUnreleased, releaseLabel } from '../lib/release';
 import { refreshMyProgress } from '../hooks/useMyProgress';
 import { getProgress } from '../lib/levels';
 import { shortGenre } from '../lib/gameLabels';
@@ -29,6 +35,7 @@ import { PRIMARY_BUTTON, GHOST_BUTTON_SM, GHOST_BUTTON_TALL, TEXT_BUTTON, TEXT_B
 import { XpBar } from '../components/LevelBadge';
 import { authClient, useSession } from '../lib/authClient';
 import LoadError from '../components/LoadError';
+import BacklogButton from '../components/BacklogButton';
 import CardStage from '../components/CardStage';
 import CollectibleCard, { CardBack } from '../components/CollectibleCard';
 import ShareCardButton from '../components/ShareCardButton';
@@ -91,9 +98,10 @@ const LevelProgress = ({ before, after }) => {
 // nothing; the card clamps a long line itself)
 const firstLine = (text) => text?.split('\n').map((line) => line.trim()).find(Boolean) ?? null;
 
-// The small print on the card: "RPG · 2015"
+// The small print on the card: "RPG · 2015" (IGDB dates are midnight UTC, so the year
+// is read in UTC: a 1 January release would show the year before in the Americas)
 const gameMeta = (game) =>
-  [game.genres?.[0] && shortGenre(game.genres[0]), game.releaseDate && new Date(game.releaseDate).getFullYear()]
+  [game.genres?.[0] && shortGenre(game.genres[0]), game.releaseDate && new Date(game.releaseDate).getUTCFullYear()]
     .filter(Boolean)
     .join(' · ') || undefined;
 
@@ -191,6 +199,23 @@ const BacklogPrompt = ({ gameId, title }) => {
     </div>
   );
 };
+
+// A game that isn't out yet: its release date, and the Backlog to remember it by. The
+// Backlog button is a ghost: with nothing to post, there's no lime on this page.
+const NotOutYet = ({ game }) => (
+  <div className="max-w-xl mx-auto px-4 sm:px-6 py-24 text-center">
+    <h1 className={`${SECTION_TITLE} text-balance mb-3`}>{game.title}</h1>
+    <p className="text-slate-400 mb-8">
+      <span className="font-medium text-white">{releaseLabel(game.releaseDate)}.</span> You can rate it once it's out.
+    </p>
+    <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+      <BacklogButton gameId={game.id} variant="pill" />
+      <Link to={`/game/${game.id}`} className={`inline-flex items-center h-11 font-medium text-white ${TEXT_LINK}`}>
+        Back to the game page
+      </Link>
+    </div>
+  </div>
+);
 
 const ReviewQuest = () => {
   const { id } = useParams();
@@ -313,16 +338,24 @@ const ReviewQuest = () => {
   if (!game || sessionLoading || (session && !existing.loaded)) {
     return <div className="min-h-[calc(100vh-80px)] animate-pulse bg-slate-900/40" />;
   }
+  // Not out yet: nothing to rate, logged in or not (but their own review stays editable)
+  if (isUnreleased(game.releaseDate) && !existing.review) return <NotOutYet game={game} />;
   if (!session) {
+    // Most people here are new, so signing up is the main action. Either way they come
+    // straight back to this quest (new players choose a gamer tag on the way).
+    const back = encodeURIComponent(`/game/${id}/review`);
     return (
       <div className="max-w-xl mx-auto px-4 sm:px-6 py-24 text-center">
-        <Gamepad2 className="mx-auto mb-5 w-8 h-8 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
-        <h1 className={`${SECTION_TITLE} text-balance mb-3`}>Log in to review {game.title}</h1>
-        <p className="text-slate-400 mb-8">Your review helps other players decide what to play next.</p>
-        {/* After logging in, come straight back here */}
-        <Link to={`/login?redirect=${encodeURIComponent(`/game/${id}/review`)}`} className={PRIMARY_BUTTON}>
-          Log in
-        </Link>
+        <h1 className={`${SECTION_TITLE} text-balance mb-3`}>Rate {game.title}</h1>
+        <p className="text-slate-400 mb-8">Make a free account to keep your card.</p>
+        <div className="flex flex-col items-center gap-3">
+          <Link to={`/login?mode=signup&redirect=${back}`} className={PRIMARY_BUTTON}>
+            Sign up
+          </Link>
+          <Link to={`/login?redirect=${back}`} className={`inline-flex items-center h-11 font-medium text-white ${TEXT_LINK}`}>
+            I already have an account
+          </Link>
+        </div>
       </div>
     );
   }

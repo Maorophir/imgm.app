@@ -1,11 +1,15 @@
 /**
  * Auth — log in or sign up. Route: /login (?redirect=… brings the player back after).
+ * It opens on Log in; /login?mode=signup (the header's "Sign up") opens on Sign up.
+ * The mode lives in the address, so that link works from this page too, and switching
+ * with the link under the form keeps the ?redirect.
  *
  * Email and password, or Google (in a popup). New players go on to choose a gamer
  * tag (/welcome). Behind the card, real popular games' covers drift by, dimmed.
  *
  * Noir: a flat card of card stock (no frosted glass), a Big Shoulders heading, the
- * lime "Log in" as the page's one main action, and Google's own dark sign-in button.
+ * lime "Log in" (or "Sign up") as the page's one main action, and Google's own dark
+ * sign-in button.
  */
 import { useState, useEffect } from 'react';
 import { signIn, signUp, authClient, useSession } from '../lib/authClient';
@@ -20,7 +24,9 @@ import { AUTH_PANEL, AUTH_TITLE, ErrorBox, buttonClass, inputClass } from '../co
 const LABEL_CLASS = 'block text-sm font-medium text-white mb-1.5';
 
 function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const redirectTo = safeRedirect(searchParams.get('redirect'));
+  const isLogin = searchParams.get('mode') !== 'signup';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -29,8 +35,16 @@ function Auth() {
   const [bgGames, setBgGames] = useState([]);
   const navigate = useNavigate();
   const { refetch: refreshSession } = useSession(); // the shared login state every page reads
-  const [searchParams] = useSearchParams();
-  const redirectTo = safeRedirect(searchParams.get('redirect'));
+
+  // Log in ⇄ Sign up, in place: replace, so Back still leaves the page in one step
+  const switchMode = () => {
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      if (isLogin) next.set('mode', 'signup');
+      else next.delete('mode');
+      return next;
+    }, { replace: true });
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -227,7 +241,7 @@ function Auth() {
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button
             type="button"
-            onClick={() => setIsLogin(!isLogin)}
+            onClick={switchMode}
             className={`font-medium text-white ${TEXT_LINK}`}
           >
             {isLogin ? 'Sign up' : 'Log in'}

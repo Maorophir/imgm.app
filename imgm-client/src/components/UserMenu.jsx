@@ -2,7 +2,7 @@
  * UserMenu — the logged-in player's chip in the navbar: avatar (with level) + gamer tag.
  * Clicking it opens a small dropdown: tier + XP bar, Backlog, Send feedback, Profile,
  * Log out. Closes on an outside click, on Esc, or after picking an item.
- * Styled like the header's "Log in": a ghost button with a control-grey edge.
+ * Styled like the header's "Sign up": a ghost button with a control-grey edge.
  */
 import { Bookmark, ChevronDown, LogOut, MessageSquarePlus, User } from 'lucide-react';
 import { openFeedback } from './Feedback';
