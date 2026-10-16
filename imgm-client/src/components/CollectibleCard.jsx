@@ -22,7 +22,9 @@
  *
  * Props (all but title and score are optional):
  *   title      the game's name
- *   score      1–10: one reviewer's score, or a game's average (8.4); sets the rarity
+ *   score      1–10: one reviewer's score, or a game's average (8.4); sets the rarity.
+ *              null = not rated yet: a "?" in neutral ivory, "Yours to rate" (the home
+ *              page's Be the first reviewer)
  *   coverUrl   the art for the window: an IGDB cover (sharp on retina screens too) or
  *              any image address
  *   meta       one quiet line under the title, e.g. "Platformer · 2025" (full only)
@@ -103,7 +105,10 @@ const shortDate = (when) => when.toLocaleDateString('en-GB', { day: 'numeric', m
 const longDate = (when) => when.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
 
 // A reviewer's score is a whole number (10); a game's average keeps one decimal (8.4)
-const scoreText = (score) => (Number.isInteger(score) ? String(score) : score.toFixed(1));
+const scoreText = (score) => (score == null ? '?' : Number.isInteger(score) ? String(score) : score.toFixed(1));
+
+// A card with no score yet: neutral ivory, and the empty ring for its mark
+const UNRATED = { key: 'unrated', mark: 'junk', label: 'Yours to rate', color: '#b9b0a2', deep: '#25221d' };
 
 const CollectibleCard = ({
   title,
@@ -127,7 +132,7 @@ const CollectibleCard = ({
 
   const mini = variant === 'mini';
   const size = SIZES[mini ? 'mini' : 'full'];
-  const rarity = getRarity(score);
+  const rarity = score == null ? UNRATED : getRarity(score);
   const legendary = rarity.key === 'legendary';
   const shown = scoreText(score);
   const showArt = Boolean(coverUrl) && brokenUrl !== coverUrl;
@@ -138,7 +143,7 @@ const CollectibleCard = ({
 
   // What a screen reader hears for the whole card
   const label = [
-    `Review card: ${title}, ${shown} out of 10, ${rarity.label}.`,
+    score == null ? `A card for ${title}, not rated yet.` : `Review card: ${title}, ${shown} out of 10, ${rarity.label}.`,
     reviewer && `Reviewed by ${reviewer}${hasDate ? ` on ${longDate(when)}` : ''}.`,
     !share && earned.length > 0 && `Badges: ${earned.map((key) => BADGES[key].label).join(', ')}.`,
   ].filter(Boolean).join(' ');
@@ -216,7 +221,7 @@ const CollectibleCard = ({
               ) : (
                 // No art: the tier's dark panel with its mark, drawn large
                 <span aria-hidden="true" className="flex-[1_1_0] min-h-0 grid place-items-center bg-(--deep)">
-                  <RarityMark tier={rarity.key} thin className="w-[34cqi] h-[34cqi] text-(--ink)" />
+                  <RarityMark tier={rarity.mark ?? rarity.key} thin className="w-[34cqi] h-[34cqi] text-(--ink)" />
                 </span>
               )}
               {/* A fine line around the window, in the ink on full cards */}
@@ -238,12 +243,12 @@ const CollectibleCard = ({
                 }`}
               >
                 <RarityMark
-                  tier={rarity.key}
+                  tier={rarity.mark ?? rarity.key}
                   className={`min-w-2.5 min-h-2.5 ${mini ? 'w-[5.4cqi] h-[5.4cqi]' : 'w-[3.8cqi] h-[3.8cqi]'}`}
                 />
                 {rarity.label}
               </span>
-              {!mini && credit && (
+              {!mini && credit && score != null && (
                 <span className="min-w-0 truncate text-[length:max(9px,2.8cqi)] leading-none text-slate-400">{credit}</span>
               )}
             </div>

@@ -9,10 +9,13 @@
  *                  key art with a card still lying face down on it, then a row per game,
  *                  each a shortcut into its review quest and the First Reviewer badge
  */
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+import { cardMeta } from '../../lib/reviewCard';
 import CardStage from '../CardStage';
 import CollectibleCard from '../CollectibleCard';
-import FaceDownCard from './FaceDownCard';
 import { timeAgo } from '../../lib/timeAgo';
 import { gameMetaParts } from '../../lib/gameLabels';
 import { getRarity } from '../reviewQuest/questOptions';
@@ -96,42 +99,122 @@ export const FreshReviews = ({ reviews }) => {
   );
 };
 
+// "Be the first reviewer": one waiting game at a time, its key art with the card it's
+// waiting for hanging off the edge (its cover, a "?" for the score, "Yours to rate").
+// The arrows and dots step through the games; it also moves on by itself every few
+// seconds, but never while the pointer or keyboard is on it, nor for players who asked
+// their device for less motion. The card and the button open that game's review quest.
+const ROTATE_MS = 6000;
+const FirstsCarousel = ({ games }) => {
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const reducedMotion = usePrefersReducedMotion();
+  const count = games.length;
+
+  useEffect(() => {
+    if (paused || reducedMotion || count < 2) return undefined;
+    const timer = setInterval(() => setIndex((i) => (i + 1) % count), ROTATE_MS);
+    return () => clearInterval(timer);
+  }, [paused, reducedMotion, count]);
+
+  const game = games[index % count];
+  const go = (step) => setIndex((i) => (i + step + count) % count);
+  const art = game.artworks?.[0] ?? null;
+  const year = game.releaseDate ? new Date(game.releaseDate).getUTCFullYear() : null;
+  const makers = [game.developer, year].filter(Boolean).join(', ');
+  const quest = `/game/${game.id}/review`;
+
+  return (
+    <div
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Games waiting for their first review"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+      onFocus={() => setPaused(true)}
+      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget) && setPaused(false)}
+    >
+      <div className="relative">
+        {art ? (
+          <img
+            key={game.id}
+            src={art}
+            alt={`${game.title} key art`}
+            loading="lazy"
+            decoding="async"
+            className="block w-full aspect-[2.4/1] object-cover object-[50%_35%] rounded-sm bg-slate-900 animate-fade-in"
+          />
+        ) : (
+          <div aria-hidden="true" className="w-full aspect-[2.4/1] rounded-sm bg-slate-900" />
+        )}
+        {/* The card it's waiting for, hanging off the art's bottom edge */}
+        <Link
+          key={`card-${game.id}`}
+          to={quest}
+          aria-label={`Rate ${game.title} first`}
+          className="absolute z-2 right-4 -bottom-14 w-28 sm:right-12 sm:-bottom-24 sm:w-[200px] animate-fade-in rotate-[2deg] hover:rotate-0 transition-transform duration-200"
+        >
+          <CollectibleCard
+            title={game.title}
+            score={null}
+            coverUrl={game.coverUrl}
+            meta={cardMeta(game)}
+            credit={game.developer ? `Cover · ${game.developer}` : undefined}
+            reviewer="You"
+          />
+        </Link>
+      </div>
+
+      {/* Whose art it is, and the controls. Narrower than the art on the left, so it
+          never runs under the card */}
+      <div className="mt-3 flex flex-col gap-3 max-w-[calc(100%-140px)] sm:max-w-[calc(100%-300px)]">
+        <p className="text-sm text-slate-400">
+          Key art · {game.title}{makers && ` (${makers})`}
+        </p>
+        {count > 1 && (
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => go(-1)} aria-label="Previous game" className="w-11 h-11 grid place-items-center text-slate-400 hover:text-white">
+              <ChevronLeft className="w-5 h-5" aria-hidden="true" />
+            </button>
+            {games.map((g, i) => (
+              <button
+                key={g.id}
+                type="button"
+                onClick={() => setIndex(i)}
+                aria-label={`Show ${g.title}`}
+                aria-current={i === index % count ? 'true' : undefined}
+                className="w-6 h-11 grid place-items-center"
+              >
+                <span className={`block h-1.5 rounded-full transition-all duration-200 ${i === index % count ? 'w-4 bg-white' : 'w-1.5 bg-slate-600'}`} />
+              </button>
+            ))}
+            <button type="button" onClick={() => go(1)} aria-label="Next game" className="w-11 h-11 grid place-items-center text-slate-400 hover:text-white">
+              <ChevronRight className="w-5 h-5" aria-hidden="true" />
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // games: the featured list (null while loading). avoidArt: the id of the game whose
 // key art is already in the hero, so the page doesn't show the same picture twice.
 export const NeedsReview = ({ games, avoidArt }) => {
   const unreviewed = (games ?? []).filter((game) => !game.reviewCount);
   const waiting = unreviewed.slice(0, FIRSTS_COUNT);
   if (waiting.length === 0) return null;
+  const rank = (game) => (game.id === avoidArt ? 2 : game.artworks?.length ? 0 : 1);
 
-  // The art over the list: a waiting game's key art (one in the list when it can be)
-  const artGame = unreviewed.find((game) => game.artworks?.length && game.id !== avoidArt);
-  const artYear = artGame?.releaseDate ? new Date(artGame.releaseDate).getFullYear() : null;
-  const artMakers = artGame ? [artGame.developer, artYear].filter(Boolean).join(', ') : '';
 
   return (
     <section aria-labelledby="first-title" className="mt-30 sm:mt-50">
       <div className={WRAP}>
-        {artGame && (
-          <>
-            <div className="relative">
-              <img
-                src={artGame.artworks[0]}
-                alt={`${artGame.title} key art`}
-                loading="lazy"
-                decoding="async"
-                className="block w-full aspect-[2.4/1] object-cover object-[50%_35%] rounded-sm bg-slate-900"
-              />
-              {/* A card still face down, hanging off the art's bottom edge */}
-              <FaceDownCard small className="absolute z-2 right-4 -bottom-14 w-28 sm:right-12 sm:-bottom-24 sm:w-[200px]" />
-            </div>
-            {/* Narrower than the art, so it never runs under the face-down card */}
-            <p className="mt-3 max-w-[calc(100%-140px)] sm:max-w-[calc(100%-300px)] text-sm text-slate-400">
-              Key art · {artGame.title}{artMakers && ` (${artMakers})`}
-            </p>
-          </>
-        )}
+        {/* One waiting game at a time, with its card: games with key art first, and the
+            game whose art is already in the hero last (no picture twice in a row) */}
+        <FirstsCarousel games={[...waiting].sort((a, b) => rank(a) - rank(b))} />
 
-        <h2 id="first-title" className={`${artGame ? 'mt-12' : ''} font-display text-[34px] leading-none tracking-[.005em] text-white`}>
+        <h2 id="first-title" className={`mt-20 sm:mt-28 font-display text-[34px] leading-none tracking-[.005em] text-white`}>
           Be the first reviewer
         </h2>
         <p className="mt-3 max-w-[520px] text-base leading-[1.6] text-white">
