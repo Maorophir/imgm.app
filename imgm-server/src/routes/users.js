@@ -6,7 +6,7 @@ import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { checkUsername, setUsername, getMyProgress } from '../controllers/usersController.js';
 import {
-  uploadAvatar, deleteAvatar, getAvatar, getAvatarPresets, getMyProfile, getMyReviews, getMyAccount, deleteMyAccount,
+  uploadAvatar, deleteAvatar, getAvatar, getAvatarPresets, getAvatarPresetImage, getMyProfile, getMyReviews, getMyAccount, deleteMyAccount,
   getPublicProfile, getPublicReviews,
 } from '../controllers/profileController.js';
 
@@ -47,6 +47,7 @@ const pictureLimiter = rateLimit({
   message: { error: 'Too many picture changes. Try again in an hour.' },
 });
 router.get('/avatars/presets', getAvatarPresets);
+router.get('/avatars/presets/:file', getAvatarPresetImage);
 router.put('/me/avatar', pictureLimiter, uploadAvatar);
 router.delete('/me/avatar', deleteAvatar);
 router.get('/:id/avatar', getAvatar);

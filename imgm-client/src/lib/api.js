@@ -151,7 +151,7 @@ export const deleteAvatar = () => fetchJson('/api/users/me/avatar', { method: 'D
 export const getMyAccount = (signal) => fetchJson('/api/users/me/account', { signal });
 export const deleteMyAccount = (body) => fetchJson('/api/users/me', { method: 'DELETE', body });
 
-// Ready-made character avatars: [{ key, name, game, url }], and choosing one
+// Ready-made avatars (IMGM's original characters): [{ key, name, url }], and choosing one
 export const getAvatarPresets = (signal) => fetchJson('/api/users/avatars/presets', { signal });
 export const chooseAvatarPreset = (preset) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { preset } });
 

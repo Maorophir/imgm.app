@@ -17,7 +17,7 @@ import { aiServiceUrl, internalApiKey } from '../lib/config.js';
 import { getPlayerXp } from '../lib/playerXp.js';
 import { withMaskedText } from '../lib/reviewText.js';
 import { voterStats, weekOf } from '../lib/gotw.js';
-import { AVATAR_PRESETS, presetByKey } from '../lib/avatarPresets.js';
+import { AVATAR_PRESETS, presetByKey, presetFile } from '../lib/avatarPresets.js';
 import { normalizeUsername, USERNAME_MAX } from '../lib/usernameRules.js';
 
 const MAX_PICTURE = 300_000; // bytes
@@ -30,10 +30,23 @@ const requireLogin = async (req, res) => {
   return user;
 };
 
-// GET /api/users/avatars/presets — the ready-made character avatars
+// GET /api/users/avatars/presets — the ready-made avatars: [{ key, name, url }]
 export const getAvatarPresets = (req, res) => {
   res.set('Cache-Control', 'public, max-age=86400');
-  res.json(AVATAR_PRESETS.map(({ key, name, game, url }) => ({ key, name, game, url })));
+  res.json(AVATAR_PRESETS);
+};
+
+// Sends one ready-made avatar's picture (cached for good: a redrawn one gets a new key)
+const sendPreset = (res, key) => {
+  if (!presetByKey.has(key)) return res.status(404).end();
+  res.set({ 'Content-Type': 'image/webp', 'Cache-Control': 'public, max-age=31536000, immutable' });
+  return res.sendFile(presetFile(key));
+};
+
+// GET /api/users/avatars/presets/:file — one ready-made avatar, e.g. "rogue.webp"
+export const getAvatarPresetImage = (req, res) => {
+  const match = /^([a-z]+)\.webp$/.exec(req.params.file ?? '');
+  return match ? sendPreset(res, match[1]) : res.status(404).end();
 };
 
 // Saves the avatar row and its time (the time is in the picture's address)
@@ -112,13 +125,8 @@ export const getAvatar = async (req, res) => {
   try {
     const avatar = await prisma.userAvatar.findUnique({ where: { userId: req.params.id } });
     if (!avatar) return res.status(404).end();
-    // A character avatar lives on IGDB: send the browser there (cached like a picture)
-    if (avatar.preset) {
-      const preset = presetByKey.get(avatar.preset);
-      if (!preset) return res.status(404).end();
-      res.set('Cache-Control', 'public, max-age=31536000, immutable');
-      return res.redirect(302, preset.url);
-    }
+    // A ready-made avatar: its picture from our own files
+    if (avatar.preset) return sendPreset(res, avatar.preset);
     res.set({ 'Content-Type': avatar.mime, 'Cache-Control': 'public, max-age=31536000, immutable' });
     res.send(Buffer.from(avatar.data));
   } catch (error) {

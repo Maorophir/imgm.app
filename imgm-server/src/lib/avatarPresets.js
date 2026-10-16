@@ -1,30 +1,43 @@
 /**
- * Ready-made avatars: famous game characters (official art via IGDB), so every player
- * can have a face from the start, no upload needed. A fixed list, so it never depends
- * on IGDB answering; choosing one stores just its key (no safety check needed).
+ * Ready-made avatars: 24 original IMGM characters, so every player can have a face from
+ * the start, no upload needed. Each is a nod to a kind of game (a soulslike knight, a
+ * cyberpunk netrunner, a wild-west gunslinger…) but nobody's character: they were drawn
+ * for IMGM with Google's Gemini image model, so no other company's art is used.
+ *
+ * The pictures are 256px WebP files in src/assets/avatars/<key>.webp, served by this
+ * server (GET /api/users/avatars/presets/<key>.webp), cached for good: a redrawn
+ * picture gets a new key. Choosing one stores just its key.
  */
+import { fileURLToPath } from 'node:url';
+
 export const AVATAR_PRESETS = [
-  { key: 'geralt', name: 'Geralt', game: 'The Witcher', imageId: 'cm36u' },
-  { key: 'ciri', name: 'Ciri', game: 'The Witcher 3', imageId: 'b2f4qo7yzuzr1ly0swci' },
-  { key: 'triss', name: 'Triss', game: 'The Witcher 3', imageId: 'jec1fydhokwngsgfypix' },
-  { key: 'kratos', name: 'Kratos', game: 'God of War', imageId: 'cm2zp' },
-  { key: 'arthur', name: 'Arthur Morgan', game: 'Red Dead Redemption 2', imageId: 'cm32b' },
-  { key: 'joel', name: 'Joel', game: 'The Last of Us', imageId: 'dyad0ufdamgsjft6a5a5' },
-  { key: 'ellie', name: 'Ellie', game: 'The Last of Us', imageId: 'jfisdrxsrdewyre5rquq' },
-  { key: 'lara', name: 'Lara Croft', game: 'Tomb Raider', imageId: 'x8dvko1lp7rqv3bx3rpr' },
-  { key: 'drake', name: 'Nathan Drake', game: 'Uncharted', imageId: 'jler3mb6yjfotv9vlesw' },
-  { key: 'link', name: 'Link', game: 'The Legend of Zelda', imageId: 'cm31d' },
-  { key: 'zelda', name: 'Zelda', game: 'The Legend of Zelda', imageId: 'q64bgyomnbk5spyikkex' },
-  { key: 'mario', name: 'Mario', game: 'Super Mario', imageId: 'iurhmhenrrsdnsc4zbva' },
-  { key: 'pikachu', name: 'Pikachu', game: 'Pokémon', imageId: 'y52bnmip6yfux4tmwmzj' },
-  { key: 'samus', name: 'Samus Aran', game: 'Metroid', imageId: 'ilgqsndahl8sjk5navaw' },
-  { key: 'cloud', name: 'Cloud Strife', game: 'Final Fantasy VII', imageId: 'cm36y' },
-  { key: 'snake', name: 'Solid Snake', game: 'Metal Gear Solid', imageId: 'cm33n' },
-  { key: 'dante', name: 'Dante', game: 'Devil May Cry', imageId: 'e1du3dmaitikgdrxail0' },
-  { key: 'bayonetta', name: 'Bayonetta', game: 'Bayonetta', imageId: 'cm37x' },
-  { key: 'kiryu', name: 'Kazuma Kiryu', game: 'Like a Dragon', imageId: 'cm33a' },
-  { key: 'gordon', name: 'Gordon Freeman', game: 'Half-Life', imageId: 'o19hpyobzv0vbjcebokj' },
-  { key: 'ratchet', name: 'Ratchet', game: 'Ratchet & Clank', imageId: 'cm329' },
-].map((preset) => ({ ...preset, url: `https://images.igdb.com/igdb/image/upload/t_cover_big/${preset.imageId}.jpg` }));
+  { key: 'rogue', name: 'Rogue' },
+  { key: 'knight', name: 'Knight' },
+  { key: 'mage', name: 'Mage' },
+  { key: 'pilot', name: 'Pilot' },
+  { key: 'ranger', name: 'Ranger' },
+  { key: 'cyborg', name: 'Cyborg' },
+  { key: 'mechanic', name: 'Mechanic' },
+  { key: 'witchhunter', name: 'Witch Hunter' },
+  { key: 'survivor', name: 'Survivor' },
+  { key: 'netrunner', name: 'Netrunner' },
+  { key: 'soulknight', name: 'Fallen Knight' },
+  { key: 'viking', name: 'Viking' },
+  { key: 'gunslinger', name: 'Gunslinger' },
+  { key: 'ronin', name: 'Ronin' },
+  { key: 'bountyhunter', name: 'Bounty Hunter' },
+  { key: 'elfarcher', name: 'Elf Archer' },
+  { key: 'dwarf', name: 'Dwarf' },
+  { key: 'orc', name: 'Orc' },
+  { key: 'robot', name: 'Robot' },
+  { key: 'alien', name: 'Alien' },
+  { key: 'detective', name: 'Detective' },
+  { key: 'racer', name: 'Racer' },
+  { key: 'farmer', name: 'Farmer' },
+  { key: 'esports', name: 'Esports Pro' },
+].map((preset) => ({ ...preset, url: `/api/users/avatars/presets/${preset.key}.webp` }));
 
 export const presetByKey = new Map(AVATAR_PRESETS.map((preset) => [preset.key, preset]));
+
+// The picture's file on disk
+export const presetFile = (key) => fileURLToPath(new URL(`../assets/avatars/${key}.webp`, import.meta.url));
