@@ -4,6 +4,7 @@
  * While Play Next works, the Ask button turns into Stop.
  */
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import GuidePreferences from "./GuidePreferences";
 import { summarize } from "./preferenceOptions";
 
@@ -30,9 +31,9 @@ const GuideComposer = ({
     <div className="flex flex-col gap-3">
       {/* Tune it: optional questions, folded away so the page stays clean */}
       {tuning && (
-        <div className="max-h-[45vh] overflow-y-auto rounded-2xl border border-brand/30 bg-slate-900/60 p-4">
+        <div className="max-h-[45vh] overflow-y-auto rounded-sm border border-slate-600 bg-slate-900 p-4">
           <p className="mb-4 text-sm text-slate-300">
-            <span className="font-bold text-white">Get a better match.</span> A
+            <span className="font-semibold text-white">Get a better match.</span> A
             few quick picks tell it what you're after. Skip any you don't care
             about.
           </p>
@@ -45,7 +46,7 @@ const GuideComposer = ({
           e.preventDefault();
           submit(text);
         }}
-        className="flex items-center gap-2 rounded-2xl bg-slate-900 border border-slate-700 focus-within:border-brand/60 p-2 transition"
+        className="flex items-center gap-2 rounded-sm bg-slate-900 border border-slate-500 focus-within:border-white p-1.5 transition-colors duration-120"
       >
         <input
           value={text}
@@ -58,16 +59,16 @@ const GuideComposer = ({
           }
           disabled={disabled}
           aria-label="Ask Play Next"
-          className="flex-1 min-w-0 bg-transparent px-3 py-2 text-white placeholder:text-slate-500 outline-none"
+          className="flex-1 min-w-0 bg-transparent px-2.5 py-2 text-base text-white placeholder:text-slate-400 outline-none"
         />
         {running ? (
           <button
             type="button"
             onClick={onStop}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-white bg-slate-800 border border-slate-600 hover:border-brand/70 transition"
+            className="flex items-center gap-2 h-11 px-5 rounded-sm font-medium text-white border border-slate-500 hover:border-white transition-colors duration-120"
           >
             <span
-              className="block w-2.5 h-2.5 rounded-[3px] bg-brand"
+              className="block w-2.5 h-2.5 rounded-xs bg-white"
               aria-hidden="true"
             />
             Stop
@@ -76,7 +77,8 @@ const GuideComposer = ({
           <button
             type="submit"
             disabled={disabled || !text.trim()}
-            className="px-5 py-2.5 rounded-xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition disabled:opacity-40"
+            // Play Next's one lime action
+            className="h-11 px-6 rounded-sm font-semibold bg-brand hover:brightness-107 text-slate-950 transition-[filter] duration-120 disabled:opacity-40 disabled:hover:brightness-100"
           >
             Ask
           </button>
@@ -88,13 +90,13 @@ const GuideComposer = ({
           type="button"
           onClick={() => setTuning((t) => !t)}
           aria-expanded={tuning}
-          className="shrink-0 px-4 py-2 rounded-full font-extrabold uppercase tracking-wider text-xs border-2 border-brand text-white bg-brand/10 hover:bg-brand/20 shadow-[0_0_18px_-6px_var(--color-brand)] transition"
+          className="shrink-0 inline-flex items-center gap-1.5 h-11 px-4 rounded-sm font-medium border border-slate-500 text-white hover:border-white transition-colors duration-120"
         >
-          {tuning ? "Done tuning" : "Tune it"}{" "}
-          <span className="text-brand">{tuning ? "▴" : "▾"}</span>
+          {tuning ? "Done tuning" : "Tune it"}
+          <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-120 ${tuning ? "rotate-180" : ""}`} strokeWidth={1.8} aria-hidden="true" />
         </button>
         <span
-          className={`min-w-0 truncate ${summary ? "text-slate-400" : "text-slate-500"}`}
+          className="min-w-0 truncate text-slate-400"
         >
           {summary || "Change your answers for the next question"}
         </span>

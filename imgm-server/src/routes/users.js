@@ -1,7 +1,14 @@
+/**
+ * /api/users — players: your gamer tag, XP, profile, account and picture (/me/…), and
+ * anyone's public profile by gamer tag (/:username/…).
+ */
 import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { checkUsername, setUsername, getMyProgress } from '../controllers/usersController.js';
-import { uploadAvatar, deleteAvatar, getAvatar, getAvatarPresets, getMyProfile, getMyReviews, getMyAccount, deleteMyAccount } from '../controllers/profileController.js';
+import {
+  uploadAvatar, deleteAvatar, getAvatar, getAvatarPresets, getAvatarPresetImage, getMyProfile, getMyReviews, getMyAccount, deleteMyAccount,
+  getPublicProfile, getPublicReviews,
+} from '../controllers/profileController.js';
 
 const router = Router();
 
@@ -40,8 +47,14 @@ const pictureLimiter = rateLimit({
   message: { error: 'Too many picture changes. Try again in an hour.' },
 });
 router.get('/avatars/presets', getAvatarPresets);
+router.get('/avatars/presets/:file', getAvatarPresetImage);
 router.put('/me/avatar', pictureLimiter, uploadAvatar);
 router.delete('/me/avatar', deleteAvatar);
 router.get('/:id/avatar', getAvatar);
+
+// Anyone's public profile, by gamer tag (the page at /u/<tag>). After the /me/… routes
+// on purpose: "me" is too short to be a gamer tag, so it never reaches these.
+router.get('/:username/profile', getPublicProfile);
+router.get('/:username/reviews', getPublicReviews);
 
 export default router;

@@ -8,6 +8,7 @@ import re
 import time
 import unicodedata
 
+from langchain_ollama import ChatOllama
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END
@@ -75,7 +76,14 @@ formatter = get_model(lambda m: m.with_structured_output(Recommendations))
 # The screen node: one small call that decides what a message needs.
 # include_raw: when the reply isn't the expected form (a small model may write just
 # "no"), we still get its raw text instead of an error
-screener = get_model(lambda m: m.with_structured_output(Screening, include_raw=True))
+# The local model (Gemma on Ollama) answers the screen's form properly through tool
+# calling; Ollama's default (a JSON schema) got a bare "chat" back, which still worked
+# (see screen_question) but left a failed step in every trace
+screener = get_model(
+    lambda m: m.with_structured_output(
+        Screening, include_raw=True, **({"method": "function_calling"} if isinstance(m, ChatOllama) else {})
+    )
+)
 FIND, CHAT_ROUTE, OFF_TOPIC = "find", "chat", "off_topic"
 DEFAULT_DECLINE = (
     "I can only help with games. Tell me what you're in the mood to play, and I'll find "

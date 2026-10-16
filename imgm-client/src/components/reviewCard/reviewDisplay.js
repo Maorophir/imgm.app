@@ -2,17 +2,17 @@
  * Helpers for showing a saved review (the card + written review on game pages).
  */
 import { CHECKLIST } from '../reviewQuest/questOptions';
-
-// A steady colour per reviewer name, for the letter avatar
-// A profile picture's address (the time keeps browsers from showing an old picture)
 import { API_BASE } from '../../lib/api';
 
+// A profile picture's address (the time keeps browsers from showing an old picture)
 export const avatarUrl = (user) =>
   `${API_BASE}/api/users/${user.id}/avatar?v=${new Date(user.avatarUpdatedAt).getTime()}`;
 
+// A steady colour per reviewer name, for the letter avatar. Muted and dark (12%
+// saturation), so it sits with Noir's warm greys instead of shouting next to them.
 export const avatarColor = (name = '?') => {
   const hue = [...name].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % 360;
-  return `hsl(${hue} 50% 40%)`;
+  return `hsl(${hue} 12% 26%)`;
 };
 
 export const formatDate = (iso) =>

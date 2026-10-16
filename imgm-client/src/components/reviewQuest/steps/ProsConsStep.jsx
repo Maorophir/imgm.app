@@ -2,13 +2,16 @@
  * ⑦ Pros & cons — short phrases added as chips (up to 5 each).
  */
 import { useState } from 'react';
+import { X } from 'lucide-react';
+import { FIELD, GHOST_BUTTON_SM } from '../../../lib/ui';
 
 const MAX_ITEMS = 5;
 const MAX_LENGTH = 60;
 
+// The + and − are the only colour: the uncommon green and a muted red, on plain chips
 const TONES = {
-  pro: { sign: '+', chip: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-200', button: 'bg-emerald-600 hover:bg-emerald-500' },
-  con: { sign: '−', chip: 'bg-red-500/15 border-red-500/40 text-red-200', button: 'bg-red-600 hover:bg-red-500' },
+  pro: { sign: '+', ink: 'text-rarity-uncommon' },
+  con: { sign: '−', ink: 'text-red-400' },
 };
 
 const ChipList = ({ title, tone, placeholder, items, onChange }) => {
@@ -25,8 +28,8 @@ const ChipList = ({ title, tone, placeholder, items, onChange }) => {
 
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-        {title} <span className="tabular-nums text-slate-500">{items.length}/{MAX_ITEMS}</span>
+      <p className="text-sm text-slate-400 mb-2">
+        <span className="font-medium text-white">{title}</span> <span className="tabular-nums">{items.length}/{MAX_ITEMS}</span>
       </p>
       {/* A form, so pressing Enter adds the phrase */}
       <form
@@ -43,28 +46,24 @@ const ChipList = ({ title, tone, placeholder, items, onChange }) => {
           disabled={full}
           placeholder={full ? `That's ${MAX_ITEMS}!` : placeholder}
           aria-label={title}
-          className="flex-1 min-w-0 bg-slate-950/60 border border-slate-700/50 rounded-xl px-3 py-2 text-sm text-slate-200 placeholder:text-slate-600 focus:outline-none focus:border-brand/60 disabled:opacity-50"
+          className={`${FIELD} flex-1 min-w-0 disabled:opacity-50`}
         />
-        <button
-          type="submit"
-          disabled={!draft.trim() || full}
-          className={`px-3 rounded-xl text-sm font-bold text-white transition disabled:opacity-30 disabled:cursor-not-allowed ${style.button}`}
-        >
+        <button type="submit" disabled={!draft.trim() || full} className={GHOST_BUTTON_SM}>
           Add
         </button>
       </form>
       <div className="flex flex-wrap gap-2">
         {items.map((item) => (
-          <span key={item} className={`inline-flex items-center gap-1.5 pl-3 pr-1.5 py-1 rounded-full border text-sm animate-fade-in ${style.chip}`}>
-            <span className="font-black">{style.sign}</span>
+          <span key={item} className="inline-flex items-center gap-1.5 pl-3 pr-0.5 rounded-sm border border-slate-600 bg-slate-950 text-sm text-white animate-fade-in">
+            <span className={`font-semibold ${style.ink}`}>{style.sign}</span>
             {item}
             <button
               type="button"
               onClick={() => onChange(items.filter((i) => i !== item))}
               aria-label={`Remove ${item}`}
-              className="w-5 h-5 rounded-full hover:bg-white/10 text-xs"
+              className="w-9 h-9 grid place-items-center rounded-sm text-slate-400 hover:text-white transition-colors duration-120"
             >
-              ✕
+              <X className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" />
             </button>
           </span>
         ))}

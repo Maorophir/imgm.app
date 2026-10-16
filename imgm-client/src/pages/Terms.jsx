@@ -3,6 +3,7 @@
  */
 import { Link } from 'react-router-dom';
 import LegalPage, { LegalSection as S } from '../components/LegalPage';
+import { TEXT_LINK } from '../lib/ui';
 
 const Terms = () => (
   <LegalPage
@@ -48,7 +49,7 @@ const Terms = () => (
     </S>
 
     <S title="7. IMGM's site and code">
-      <p>The IMGM name, logo, design and site belong to IMGM. IMGM's source code is published under the <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer" className="text-brand hover:underline">PolyForm Noncommercial License 1.0.0</a>: you may use it for non-commercial purposes with credit, and commercial use needs written permission.</p>
+      <p>The IMGM name, logo, design and site belong to IMGM. IMGM's source code is published under the <a href="https://polyformproject.org/licenses/noncommercial/1.0.0" target="_blank" rel="noopener noreferrer" className={`font-medium text-white ${TEXT_LINK}`}>PolyForm Noncommercial License 1.0.0</a>: you may use it for non-commercial purposes with credit, and commercial use needs written permission.</p>
     </S>
 
     <S title="8. IMGM is in beta">
@@ -76,7 +77,7 @@ const Terms = () => (
     </S>
 
     <S title="14. Contact">
-      <p>Questions or reports? Use the Feedback button on any page. See also our <Link to="/privacy" className="text-brand hover:underline">Privacy Policy</Link>.</p>
+      <p>Questions or reports? Use the Feedback button on any page. See also our <Link to="/privacy" className={`font-medium text-white ${TEXT_LINK}`}>Privacy Policy</Link>.</p>
     </S>
   </LegalPage>
 );

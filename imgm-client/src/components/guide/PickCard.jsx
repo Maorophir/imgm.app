@@ -4,22 +4,26 @@
  * (#2 Epic purple, #3 Rare blue). Every card links to the game's IMGM page.
  * With onNotForMe, each card's bottom row also gets "Played it" and "Not for me" (each
  * swaps that game out; onNotForMe(pick, "played") for the first).
+ * Noir: the frames are thin edges in the tier's ink (the gilt for the Best Pick), with
+ * square corners, square buttons and the tier's mark instead of words in capitals.
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, Star, X } from 'lucide-react';
 import { getRarity } from '../reviewQuest/questOptions';
 import BacklogButton from '../BacklogButton';
+import RarityMark from '../RarityMark';
 import RichText from './RichText';
 
 export const ImgmBadge = ({ rating, reviewCount }) => {
-  if (!rating) return <span className="text-xs text-slate-500">No IMGM reviews yet</span>;
+  if (!rating) return <span className="text-sm text-slate-400">No IMGM reviews yet</span>;
   const rarity = getRarity(rating);
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs font-bold" style={{ color: rarity.color }}>
-      <span className="uppercase tracking-wider">{rarity.label}</span>
+    <span className="inline-flex items-center gap-1.5 text-sm" style={{ color: rarity.color }}>
+      <RarityMark tier={rarity.key} />
+      <span className="font-semibold">{rarity.label}</span>
       <span className="tabular-nums">{Number(rating).toFixed(1)}</span>
-      <span className="text-slate-500 font-semibold">
+      <span className="text-slate-400">
         · {reviewCount} review{reviewCount === 1 ? '' : 's'}
       </span>
     </span>
@@ -50,7 +54,7 @@ const SwapButton = ({ onClick, disabled, title, hover, children }) => (
       onClick();
     }}
     title={title}
-    className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[11px] font-bold text-slate-300 bg-slate-950/60 border border-slate-700 hover:text-white ${hover} transition disabled:opacity-40 disabled:cursor-not-allowed`}
+    className={`inline-flex items-center gap-1 h-8 px-2.5 rounded-sm text-xs font-medium text-white border border-slate-600 ${hover} transition-colors duration-120 disabled:opacity-40 disabled:cursor-not-allowed`}
   >
     {children}
   </button>
@@ -62,9 +66,9 @@ const SwapButtons = ({ pick, onNotForMe, disabled }) => (
       onClick={() => onNotForMe(pick, 'played')}
       disabled={disabled}
       title={`Already played ${pick.title}: swap it for one you haven't`}
-      hover="hover:border-brand/70"
+      hover="hover:border-white"
     >
-      ✓ Played it
+      <Check className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} aria-hidden="true" /> Played it
     </SwapButton>
     <SwapButton
       onClick={() => onNotForMe(pick)}
@@ -72,7 +76,7 @@ const SwapButtons = ({ pick, onNotForMe, disabled }) => (
       title={`Not for me: swap ${pick.title} for something else`}
       hover="hover:border-red-400/70"
     >
-      ✕ Not for me
+      <X className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} aria-hidden="true" /> Not for me
     </SwapButton>
   </>
 );
@@ -85,10 +89,11 @@ const Actions = ({ pick, onNotForMe, disabled }) => (
   </div>
 );
 
-// Rank → tier frame for the compact rows (#1 is the Legendary Best Pick card)
+// Rank → tier frame for the compact rows (#1 is the Legendary Best Pick card).
+// Colours come from the rarity table, so they always match the review cards.
 const RANK_TIERS = {
-  2: { frame: 'rarity-frame is-epic', color: '#c084fc' },
-  3: { frame: 'rarity-frame', color: '#60a5fa' }, // Rare: a plain frame in its blue
+  2: { frame: 'rarity-frame is-epic', color: getRarity(8).color },
+  3: { frame: 'rarity-frame', color: getRarity(6).color }, // Rare: a plain frame in its blue
 };
 
 // Why the guide picked it. Long ones fold to 3 lines with "Read more"; the Best Pick
@@ -112,10 +117,10 @@ const Why = ({ text, defaultOpen = false, className = '' }) => {
             e.stopPropagation();
             setOpen((o) => !o);
           }}
-          className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-slate-400 hover:text-white transition"
+          className="mt-1 inline-flex items-center gap-1 min-h-8 text-sm font-medium text-slate-400 hover:text-white transition-colors duration-120"
         >
           {open ? 'Show less' : 'Read more'}
-          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${open ? 'rotate-180' : ''}`} aria-hidden="true" />
+          <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-120 ${open ? 'rotate-180' : ''}`} strokeWidth={1.8} aria-hidden="true" />
         </button>
       )}
     </div>
@@ -129,17 +134,17 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
     return (
       <Link
         to={`/game/${pick.game_id}`}
-        className="relative rarity-frame is-legendary block animate-fade-in hover:scale-[1.01] transition"
-        style={{ '--rc': '#fbbf24' }}
+        className="relative rarity-frame is-legendary block animate-fade-in hover:brightness-110 transition-[filter] duration-120"
+        style={{ '--rc': getRarity(10).color }}
       >
-        <article className="rounded-[17px] bg-slate-900 overflow-hidden flex gap-4 p-4">
-          <Cover src={pick.cover} title={pick.title} className="w-28 h-40 rounded-xl shrink-0" />
+        <article className="rounded-xs bg-slate-900 overflow-hidden flex gap-4 p-4">
+          <Cover src={pick.cover} title={pick.title} className="w-28 h-40 rounded-sm shrink-0" />
           <div className="min-w-0 flex flex-col gap-1.5">
-            <span className="self-start text-[10px] font-black uppercase tracking-[0.2em] text-slate-900 bg-amber-300 rounded px-2 py-0.5">
-              ★ Best pick
+            <span className="self-start inline-flex items-center gap-1 h-6 px-2 rounded-xs border border-rarity-legendary-edge text-rarity-legendary text-xs font-medium">
+              <Star className="w-3 h-3" strokeWidth={2} aria-hidden="true" /> Best pick
             </span>
-            <h3 className="text-xl font-black text-white leading-tight">{pick.title}</h3>
-            <p className="text-xs text-slate-400">
+            <h3 className="font-display text-[28px] uppercase tracking-[.005em] text-white leading-[.9] text-balance">{pick.title}</h3>
+            <p className="text-sm text-slate-400">
               {[pick.year, hoursText(pick.hours), platformsText(pick.platforms)].filter(Boolean).join(' · ')}
             </p>
             <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
@@ -154,15 +159,15 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
   const tier = RANK_TIERS[rank];
   const row = (
     <>
-      <Cover src={pick.cover} title={pick.title} className="w-14 h-20 rounded-lg shrink-0" />
+      <Cover src={pick.cover} title={pick.title} className="w-14 h-20 rounded-sm shrink-0" />
       <div className="min-w-0 flex flex-col gap-1">
-        <h3 className="font-bold text-white leading-tight">
-          <span className="mr-1.5 tabular-nums" style={{ color: tier?.color ?? '#64748b' }}>{rank}.</span>
+        <h3 className="font-semibold text-white leading-tight">
+          <span className="mr-1.5 tabular-nums" style={{ color: tier?.color ?? 'var(--color-slate-400)' }}>{rank}.</span>
           {pick.title}
         </h3>
         <span className="flex flex-wrap items-center gap-x-2">
           <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
-          {hoursText(pick.hours) && <span className="text-xs text-slate-400">· {hoursText(pick.hours)}</span>}
+          {hoursText(pick.hours) && <span className="text-sm text-slate-400">· {hoursText(pick.hours)}</span>}
         </span>
         <Why text={pick.why} className="text-sm text-slate-300 leading-snug" />
         {actions}
@@ -175,10 +180,10 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
     return (
       <Link
         to={`/game/${pick.game_id}`}
-        className={`relative block animate-fade-in hover:scale-[1.01] transition ${tier.frame}`}
+        className={`relative block animate-fade-in hover:brightness-110 transition-[filter] duration-120 ${tier.frame}`}
         style={{ '--rc': tier.color }}
       >
-        <article className="rounded-[17px] bg-slate-900 flex gap-3 p-3">{row}</article>
+        <article className="rounded-xs bg-slate-900 flex gap-3 p-3">{row}</article>
       </Link>
     );
   }
@@ -186,7 +191,7 @@ const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
   return (
     <Link
       to={`/game/${pick.game_id}`}
-      className="relative flex gap-3 p-3 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-brand/60 transition animate-fade-in"
+      className="relative flex gap-3 p-3 rounded-sm bg-slate-900 border border-slate-700 hover:border-white transition-colors duration-120 animate-fade-in"
     >
       {row}
     </Link>

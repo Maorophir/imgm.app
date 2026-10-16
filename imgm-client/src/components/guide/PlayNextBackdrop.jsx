@@ -49,16 +49,15 @@ const PlayNextBackdrop = ({ covers }) => {
                 src={cover}
                 alt=""
                 loading="lazy"
-                className="h-[30vh] aspect-[3/4] object-cover rounded-xl shrink-0 animate-fade-in"
+                className="h-[30vh] aspect-[3/4] object-cover rounded-sm shrink-0 animate-fade-in"
               />
             ))}
           </div>
         ))}
       </div>
 
-      {/* A soft lime glow, and a vignette that keeps the middle (the chat) calm */}
-      <div className="absolute -top-40 -left-40 w-[42rem] h-[42rem] rounded-full bg-brand/[0.10] blur-[140px]" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_65%_at_50%_45%,rgb(13_15_18/0.75),rgb(13_15_18/0.25))]" />
+      {/* A vignette in the page black that keeps the middle (the chat) calm */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_65%_at_50%_45%,rgb(16_15_13/0.75),rgb(16_15_13/0.25))]" />
       <div className="absolute inset-0 bg-gradient-to-b from-slate-950/30 via-transparent to-slate-950/80" />
     </div>
   );

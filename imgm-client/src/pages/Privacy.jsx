@@ -3,6 +3,7 @@
  */
 import { Link } from 'react-router-dom';
 import LegalPage, { LegalSection as S } from '../components/LegalPage';
+import { TEXT_LINK } from '../lib/ui';
 
 const Privacy = () => (
   <LegalPage
@@ -85,7 +86,7 @@ const Privacy = () => (
     </S>
 
     <S title="13. Contact">
-      <p>Questions about your data? Use the Feedback button on any page. See also our <Link to="/terms" className="text-brand hover:underline">Terms of Use</Link>.</p>
+      <p>Questions about your data? Use the Feedback button on any page. See also our <Link to="/terms" className={`font-medium text-white ${TEXT_LINK}`}>Terms of Use</Link>.</p>
     </S>
   </LegalPage>
 );

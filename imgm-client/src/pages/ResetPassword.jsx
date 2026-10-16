@@ -23,7 +23,7 @@ function ResetPassword() {
   if (!token || searchParams.get('error')) {
     return (
       <AuthCard title="This link has expired" subtitle="Reset links work for 1 hour and only once.">
-        <Link to="/forgot-password" className={`${buttonClass} block text-center`}>Send a new link</Link>
+        <Link to="/forgot-password" className={buttonClass}>Send a new link</Link>
       </AuthCard>
     );
   }
@@ -31,7 +31,7 @@ function ResetPassword() {
   if (done) {
     return (
       <AuthCard title="Password changed" subtitle="You're all set. For your safety, other devices were logged out.">
-        <Link to="/login" className={`${buttonClass} block text-center`}>Log in</Link>
+        <Link to="/login" className={buttonClass}>Log in</Link>
       </AuthCard>
     );
   }
@@ -54,12 +54,12 @@ function ResetPassword() {
       {error && <ErrorBox>{error}</ErrorBox>}
       <form onSubmit={submit} className="space-y-5">
         <div>
-          <label htmlFor="new-password" className="block text-sm font-semibold text-slate-300 mb-1">New password</label>
+          <label htmlFor="new-password" className="block text-sm font-medium text-white mb-1.5">New password</label>
           <input id="new-password" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputClass} />
           <PasswordChecklist password={password} />
         </div>
         <div>
-          <label htmlFor="confirm-password" className="block text-sm font-semibold text-slate-300 mb-1">Repeat it</label>
+          <label htmlFor="confirm-password" className="block text-sm font-medium text-white mb-1.5">Repeat it</label>
           <input id="confirm-password" type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className={inputClass} />
         </div>
         <button type="submit" disabled={loading} className={buttonClass}>

@@ -54,30 +54,27 @@ const HelpfulVote = ({ review }) => {
         type="button"
         onClick={() => vote(choice)}
         aria-pressed={active}
-        className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border transition ${
-          active
-            ? choice
-              ? 'bg-brand/15 border-brand text-white'
-              : 'bg-red-500/10 border-red-400/60 text-white'
-            : 'border-slate-700 text-slate-300 hover:text-white hover:border-slate-500'
+        // Your choice: raised stock with an ivory edge (no lime: that's the page's main action's)
+        className={`inline-flex items-center gap-1.5 h-9 px-3 rounded-sm text-sm font-medium border transition-colors duration-120 ${
+          active ? 'bg-slate-800 border-white text-white' : 'border-slate-600 text-white hover:border-white'
         }`}
       >
-        <Icon className="w-3.5 h-3.5" aria-hidden="true" />
+        <Icon className={`w-3.5 h-3.5 ${active ? '' : 'text-slate-400'}`} strokeWidth={1.8} aria-hidden="true" />
         {label}
       </button>
     );
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 border-t border-slate-800">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 pt-4 border-t border-slate-700">
       {!own && (
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-slate-400">Was this helpful?</span>
+          <span className="text-sm text-slate-400">Was this helpful?</span>
           {button(true, ThumbsUp, 'Yes')}
           {button(false, ThumbsDown, 'No')}
         </div>
       )}
-      {count && <span className="text-xs text-slate-500">{count}</span>}
+      {count && <span className="text-sm text-slate-400">{count}</span>}
     </div>
   );
 };

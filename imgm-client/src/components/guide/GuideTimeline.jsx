@@ -4,19 +4,22 @@
  * Once the picks are in, the steps fold into one line that can be reopened.
  */
 import { useEffect, useState } from "react";
+import { Check as CheckIcon, ChevronDown } from "lucide-react";
+
+// Ivory, quiet: Play Next keeps its lime for "Ask"
 const Spinner = () => (
   <span
-    className="block w-3.5 h-3.5 rounded-full border-2 border-brand/25 border-t-brand animate-spin shrink-0"
+    className="block w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin shrink-0"
     aria-hidden="true"
   />
 );
 
 const Check = () => (
   <span
-    className="w-3.5 h-3.5 rounded-full bg-brand/15 text-brand text-[9px] font-black flex items-center justify-center shrink-0"
+    className="w-3.5 h-3.5 flex items-center justify-center shrink-0 text-slate-400"
     aria-hidden="true"
   >
-    ✓
+    <CheckIcon className="w-3.5 h-3.5" strokeWidth={2.4} />
   </span>
 );
 
@@ -34,7 +37,7 @@ const WarmingUp = () => {
         Warming up…
       </span>
       {slow && (
-        <span className="pl-6 text-slate-500 animate-fade-in">
+        <span className="pl-6 text-slate-400 animate-fade-in">
           The first question after a quiet spell takes a little longer.
         </span>
       )}
@@ -54,11 +57,11 @@ const GuideTimeline = ({ steps, running, collapsible = false }) => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="self-start flex items-center gap-2 text-sm text-slate-400 hover:text-white transition"
+        className="self-start flex items-center gap-2 min-h-11 text-sm text-slate-400 hover:text-white transition-colors duration-120"
       >
         <Check />
         Worked through {steps.length} steps
-        <span className="text-xs">▾</span>
+        <ChevronDown className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" />
       </button>
     );
   }
@@ -92,7 +95,7 @@ const GuideTimeline = ({ steps, running, collapsible = false }) => {
               {step.label}
             </span>
             {step.detail && (
-              <span className="text-slate-500"> · {step.detail}</span>
+              <span className="text-slate-400"> · {step.detail}</span>
             )}
           </span>
         </li>

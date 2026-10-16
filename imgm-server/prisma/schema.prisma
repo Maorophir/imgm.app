@@ -170,6 +170,11 @@ model Review {
 
   // ⑨ Final words (optional — quick reviews may have none)
   reviewText       String?
+  // The player's own card: its picture (one of the game's cover, artworks or
+  // screenshots; null = chosen automatically) and the sentence of reviewText printed on
+  // it (its position; null = the most quotable one, picked automatically)
+  cardArt          String?
+  cardQuote        Int?
 
   // Awarded by the server when the review is saved
   badges           String[]
@@ -338,6 +343,7 @@ model BacklogItem {
   position Float    @default(0) // the player's own order (lowest first; new games go on top)
   addedAt  DateTime @default(now())
   finishedAt DateTime? // the player finished it (kept, under Finished); null = still to play
+  playingAt  DateTime? // started playing it (under Playing now); finishing it clears this
 
   @@id([userId, gameId])
   @@index([userId, position])

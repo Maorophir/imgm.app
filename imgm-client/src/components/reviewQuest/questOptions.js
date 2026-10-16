@@ -17,13 +17,18 @@ export const RATING_LABELS = {
 // Loot rarity — the review's verdict, from the reviewer's own score (not AI).
 // Replaces positive / mixed / negative everywhere. Legendary is a perfect 10 only.
 // `min` = lowest score of the tier; `range` is the label shown in the rarity index.
+// The Noir inks, three per tier (the same values as the --color-rarity-* tokens in
+// src/index.css, keep the two in step):
+//   color  the ink: text, symbols, score numerals (readable on the dark page)
+//   edge   the painted card edge and bars
+//   deep   the dark panel behind a card that has no cover art
 export const RARITIES = [
-  { key: 'junk',      label: 'Junk',      min: 1,  range: '1–2', color: '#8b93a7' },
-  { key: 'common',    label: 'Common',    min: 3,  range: '3–4', color: '#d4dae6' },
-  { key: 'uncommon',  label: 'Uncommon',  min: 5,  range: '5',   color: '#4ade80' },
-  { key: 'rare',      label: 'Rare',      min: 6,  range: '6–7', color: '#60a5fa' },
-  { key: 'epic',      label: 'Epic',      min: 8,  range: '8–9', color: '#c084fc' },
-  { key: 'legendary', label: 'Legendary', min: 10, range: '10',  color: '#fbbf24' },
+  { key: 'junk',      label: 'Junk',      min: 1,  range: '1–2', color: '#8a8378', edge: '#6e685e', deep: '#1f1d1a' },
+  { key: 'common',    label: 'Common',    min: 3,  range: '3–4', color: '#d6cfc2', edge: '#cfc7b7', deep: '#25231f' },
+  { key: 'uncommon',  label: 'Uncommon',  min: 5,  range: '5',   color: '#5dbe94', edge: '#2f8f66', deep: '#13241c' },
+  { key: 'rare',      label: 'Rare',      min: 6,  range: '6–7', color: '#6b9ae8', edge: '#3567c9', deep: '#141c2b' },
+  { key: 'epic',      label: 'Epic',      min: 8,  range: '8–9', color: '#b276d6', edge: '#8a45b8', deep: '#22182b' },
+  { key: 'legendary', label: 'Legendary', min: 10, range: '10',  color: '#e2b65e', edge: '#c9a04e', deep: '#261f11' },
 ];
 
 // The tier for a score. Averages are rounded first, so one table serves both:

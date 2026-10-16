@@ -19,7 +19,7 @@ const MeetsStep = ({ answers, update, game }) => {
           excludeIds={[game.id, b?.id]}
           placeholder="First game…"
         />
-        <span className="text-center font-black uppercase tracking-widest text-sm text-brand">meets</span>
+        <span className="text-center text-sm font-medium text-slate-400">meets</span>
         <GamePicker
           value={b}
           onChange={(g) => update({ comparedB: g })}
@@ -30,9 +30,10 @@ const MeetsStep = ({ answers, update, game }) => {
 
       {/* Live preview of the sentence */}
       {(a || b) && (
-        <p className="mt-6 text-center text-lg text-slate-300 animate-fade-in">
-          “{game.title} is like <span className="text-white font-bold">{a?.title ?? '___'}</span>
-          {' '}meets <span className="text-white font-bold">{b?.title ?? '___'}</span>”
+        // Their words, so the review-quote serif
+        <p className="mt-6 text-center font-serif italic text-[21px] leading-[1.35] text-slate-300 animate-fade-in">
+          “{game.title} is like <span className="text-white">{a?.title ?? '___'}</span>
+          {' '}meets <span className="text-white">{b?.title ?? '___'}</span>”
         </p>
       )}
     </div>

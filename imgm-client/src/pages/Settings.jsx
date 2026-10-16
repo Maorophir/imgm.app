@@ -13,6 +13,7 @@ import { setUsername } from '../lib/api';
 import GamerTagField from '../components/GamerTagField';
 import { useGamerTagCheck } from '../hooks/useGamerTagCheck';
 import AccountSettings from '../components/profile/AccountSettings';
+import { GHOST_BUTTON, TEXT_LINK } from '../lib/ui';
 
 const COOLDOWN_DAYS = 30;
 const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
@@ -54,23 +55,23 @@ function Settings() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-12 flex flex-col gap-6">
+    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12 flex flex-col gap-6">
       <header>
-        <Link to="/profile" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-400 hover:text-white">
-          <ArrowLeft className="w-4 h-4" aria-hidden="true" /> Your profile
+        <Link to="/profile" className={`inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-white ${TEXT_LINK}`}>
+          <ArrowLeft className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Your profile
         </Link>
-        <h1 className="font-display text-5xl uppercase tracking-tight text-white mt-3">Settings<span className="text-brand">.</span></h1>
+        <h1 className="font-display text-[54px] md:text-[88px] leading-[.9] uppercase tracking-[.005em] text-white mt-2">Settings</h1>
       </header>
-      <form onSubmit={save} className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col gap-5">
+      <form onSubmit={save} className="bg-slate-900 border border-slate-700 rounded-sm p-6 flex flex-col gap-5">
         <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Your gamer tag</p>
-          <p className="text-3xl font-black text-white mt-1 break-all">{current}</p>
+          <p className="text-sm text-slate-400">Your gamer tag</p>
+          <p className="font-display text-[34px] leading-none tracking-[.005em] text-white mt-1 break-all">{current}</p>
           <p className="text-sm text-slate-400 mt-1">This is the name everyone sees on your reviews. Your real name stays private.</p>
         </div>
 
         {waiting && (
-          <p className="text-sm text-amber-200 bg-amber-500/10 border border-amber-400/30 rounded-xl px-4 py-2.5">
-            <Hourglass className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />You can pick a new tag on {formatDate(nextChange)}. Until then you can still change its capitals
+          <p className="text-sm text-slate-200 border border-slate-600 rounded-sm px-4 py-2.5">
+            <Hourglass className="inline w-4 h-4 mr-1.5 -mt-0.5 text-slate-400" strokeWidth={1.8} aria-hidden="true" />You can pick a new tag on {formatDate(nextChange)}. Until then you can still change its capitals
             (e.g. “{current?.toLowerCase()}” → “{current}”).
           </p>
         )}
@@ -78,16 +79,13 @@ function Settings() {
         <GamerTagField id="new-gamer-tag" value={name} onChange={setName} check={check} />
 
         {result && (
-          <p role="status" className={`text-sm rounded-xl px-4 py-2.5 border ${result.ok ? 'text-emerald-200 bg-emerald-500/10 border-emerald-400/30' : 'text-red-300 bg-red-500/10 border-red-500/30'}`}>
+          <p role="status" className={`text-sm rounded-sm px-4 py-2.5 border ${result.ok ? 'text-rarity-uncommon border-rarity-uncommon-edge' : 'text-red-300 border-red-400/40'}`}>
             {result.text}
           </p>
         )}
 
-        <button
-          type="submit"
-          disabled={!canSave}
-          className="self-start px-6 py-3 rounded-xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition disabled:opacity-40 disabled:cursor-not-allowed"
-        >
+        {/* A ghost: the page has several saves, so none of them takes the lime */}
+        <button type="submit" disabled={!canSave} className={`${GHOST_BUTTON} self-start`}>
           {saving ? 'Saving…' : 'Save new tag'}
         </button>
       </form>

@@ -1,88 +1,38 @@
 /**
- * GameCard — Reusable card component for displaying a game in grid/list views.
+ * GameCard — a game in the Home and Search grids, as a Noir tile: the cover with a
+ * thin strip in its rarity colour under it, the title, one quiet line (year · genre ·
+ * platforms) and the IMGM verdict in the tier's ink (● 8.0 Epic · 3 reviews). A game
+ * nobody has reviewed leaves that line empty rather than saying so (most games in a
+ * grid have no reviews yet, and a column of "No reviews yet" only advertises it), but
+ * the line keeps its height, so every tile in a grid row is the same size.
  *
- * Data sources:
- *   FROM IGDB (game metadata):
- *   - coverUrl, title, genres, platforms, releaseDate
+ * Data: coverUrl, title, genres, platforms and releaseDate come from IGDB;
+ * ratings.imgm (the average score) and reviewCount from IMGM reviews.
  *
- *   FROM IMGM (our platform):
- *   - ratings.imgm: average score from IMGM user reviews (1-10 scale)
- *   - aiSentiment: AI-generated sentiment from our ReviewAnalysis pipeline
- *   - aiSummary: AI-generated summary from our GameAISummary table
- *
- *   FROM EXTERNAL SOURCES (scraped/API):
- *   - ratings.metacritic: Metacritic score (0-100)
- *   - ratings.ign: IGN score (1-10)
- *   - ratings.steam: Steam user review percentage (0-100)
- *
- * The IMGM score is displayed prominently as the hero badge.
- * External scores appear as a compact comparison row in the card body.
+ * The whole tile is one link to the game page (the title's link stretches over it),
+ * so it works with the keyboard, Cmd-click and "Open in new tab". There is no box
+ * around it: like the rest of Noir, it sits straight on the page.
  */
-import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import RarityMark from './RarityMark';
 import { getRarity } from './reviewQuest/questOptions';
+import { PowerIcon } from './Logo';
+import { coverSrcSet, COVER_SIZES } from '../lib/igdbImage';
+import { gameMetaParts } from '../lib/gameLabels';
 
-/**
- * Maps sentiment strings to their visual styling (color + icon).
- * Keeps the rendering logic clean and makes it trivial to add new sentiments.
- */
-const SENTIMENT_CONFIG = {
-  Positive: {
-    textColor: 'text-emerald-400',
-    bgColor: 'bg-emerald-500/15',
-    borderColor: 'border-emerald-500/30',
-    icon: '▲',
-  },
-  Mixed: {
-    textColor: 'text-amber-400',
-    bgColor: 'bg-amber-500/15',
-    borderColor: 'border-amber-500/30',
-    icon: '◆',
-  },
-  Negative: {
-    textColor: 'text-red-400',
-    bgColor: 'bg-red-500/15',
-    borderColor: 'border-red-500/30',
-    icon: '▼',
-  },
-  Neutral: {
-    textColor: 'text-slate-400',
-    bgColor: 'bg-slate-500/15',
-    borderColor: 'border-slate-500/30',
-    icon: '●',
-  },
-};
+// Noir's UI timing: quick, and settles without a bounce
+const EASE = 'ease-[cubic-bezier(.2,.9,.1,1)]';
 
-/**
- * Configuration for each rating source — label, brand color, and display format.
- * Order matters: this is the order they render in the ratings row.
- */
-const RATING_SOURCES = [
-  {
-    key: 'metacritic',
-    label: 'MC',
-    color: 'text-yellow-400',
-    bgColor: 'bg-yellow-400/10',
-    borderColor: 'border-yellow-400/20',
-    format: (v) => Math.round(v),
-  },
-  {
-    key: 'ign',
-    label: 'IGN',
-    color: 'text-red-400',
-    bgColor: 'bg-red-400/10',
-    borderColor: 'border-red-400/20',
-    format: (v) => v.toFixed(1),
-  },
-  {
-    key: 'steam',
-    label: 'Steam',
-    color: 'text-sky-400',
-    bgColor: 'bg-sky-400/10',
-    borderColor: 'border-sky-400/20',
-    format: (v) => `${Math.round(v)}%`,
-  },
-];
-
+// No cover, or it failed to load: the title on dark stock, so the tile still looks intended
+const CoverFallback = ({ title }) => (
+  <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-4 text-center bg-slate-900">
+    <PowerIcon className="w-8 h-8 text-slate-600" />
+    <span className="font-display text-2xl uppercase leading-none text-slate-400 text-balance line-clamp-3">
+      {title}
+    </span>
+  </div>
+);
 
 const GameCard = ({
   id,
@@ -90,222 +40,99 @@ const GameCard = ({
   coverUrl,
   genres = [],
   platforms = [],
-  ratings = {},
+  ratings,
   reviewCount,
-  aiSentiment,
-  aiSummary,
   releaseDate,
-  onClick,
 }) => {
-  const sentiment = SENTIMENT_CONFIG[aiSentiment] || SENTIMENT_CONFIG.Neutral;
-  const imgmScore = ratings.imgm;
-  const displayImgmScore = typeof imgmScore === 'number' ? imgmScore.toFixed(1) : null;
-  const releaseYear = releaseDate ? new Date(releaseDate).getFullYear() : null;
+  const [loaded, setLoaded] = useState(false);
+  const [broken, setBroken] = useState(!coverUrl);
 
-  const navigate = useNavigate();
-
-  // Filter to only external sources that have a value
-  const externalRatings = RATING_SOURCES.filter((src) => ratings[src.key] != null);
-
-  const handleClick = () => {
-    if (onClick) {
-      onClick(id);
-    } else {
-      navigate(`/game/${id}`);
-    }
-  };
+  // Some lists send no ratings at all for a game nobody has reviewed
+  const score = ratings?.imgm;
+  const rarity = typeof score === 'number' ? getRarity(score) : null;
+  // A score shows unless the list says outright that nobody has reviewed the game
+  const reviewed = Boolean(rarity) && reviewCount !== 0;
+  const meta = gameMetaParts({ releaseDate, genres, platforms });
 
   return (
     <article
       id={`game-card-${id}`}
-      onClick={handleClick}
-      className="
-        group relative flex flex-col
-        bg-slate-900/60 backdrop-blur-sm
-        border border-slate-800/50
-        rounded-2xl overflow-hidden
-        cursor-pointer
-        transition-all duration-300 ease-out
-        hover:border-brand/70
-        hover:shadow-[0_0_28px_-4px_rgb(184_240_58/0.35)]
-        hover:-translate-y-1
-      "
+      className="group relative flex flex-col min-w-0 has-[.card-link:focus-visible]:outline-2 has-[.card-link:focus-visible]:outline-offset-4 has-[.card-link:focus-visible]:outline-white"
+      // The tier's colours: --ink for the verdict, --edge for the strip under the cover
+      style={reviewed ? { '--ink': rarity.color, '--edge': rarity.edge } : undefined}
     >
-      {/* ── Cover Art ── */}
-      <div className="relative aspect-[3/4] overflow-hidden">
-        <img
-          src={coverUrl}
-          alt={`${title} cover art`}
-          loading="lazy"
-          className="
-            w-full h-full object-cover
-            transition-transform duration-500 ease-out
-            group-hover:scale-105
-          "
-        />
-
-        {/* IMGM score badge — top-right, in the average's loot-rarity colour */}
-        {displayImgmScore && (
-          <div className="absolute top-2.5 right-2.5 flex flex-col items-center gap-0.5">
-            <div
-              className="
-                text-slate-950 font-black text-sm
-                w-11 h-11 rounded-xl
-                flex items-center justify-center
-                shadow-lg shadow-black/30
-                ring-2 ring-white/10
-                transition-transform duration-300
-                group-hover:scale-110
-              "
-              style={{ background: getRarity(imgmScore).color }}
-              title={`${getRarity(imgmScore).label} · ${displayImgmScore}/10 on IMGM`}
-            >
-              {displayImgmScore}
-            </div>
-            <span className="text-[9px] font-bold text-white/70 uppercase tracking-wider drop-shadow">
-              IMGM{reviewCount > 0 && ` · ${reviewCount}`}
-            </span>
-          </div>
+      {/* ── Cover ── a grey pulse until it loads, then it fades in */}
+      <div className={`relative aspect-[3/4] overflow-hidden rounded-sm bg-slate-900 ${loaded || broken ? '' : 'motion-safe:animate-pulse'}`}>
+        {broken ? (
+          <CoverFallback title={title} />
+        ) : (
+          <img
+            src={coverUrl}
+            // 264px for 1x screens, 528px for retina, so covers stay sharp
+            srcSet={coverSrcSet(coverUrl)}
+            sizes={COVER_SIZES}
+            alt="" // the title link already names the card
+            loading="lazy"
+            decoding="async"
+            onLoad={() => setLoaded(true)}
+            onError={() => setBroken(true)}
+            className={`w-full h-full object-cover transition-opacity duration-500 ease-out ${loaded ? 'opacity-100' : 'opacity-0'}`}
+          />
         )}
-
-        {/* No reviews yet: an invitation that jumps straight into the Review Quest */}
-        {reviewCount === 0 && (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation(); // don't also open the game page
-              navigate(`/game/${id}/review`);
-            }}
-            title="Nobody has reviewed this yet. Earn the First Reviewer badge!"
-            className="
-              absolute top-2.5 right-2.5 overflow-hidden
-              flex items-center gap-1 px-2.5 py-1.5 rounded-lg
-              text-[10px] font-black uppercase tracking-wider text-amber-200
-              bg-slate-950/75 backdrop-blur-sm border border-dashed border-amber-400/60
-              shadow-lg shadow-black/40
-              transition duration-300
-              hover:bg-amber-400 hover:text-slate-950 hover:border-solid hover:scale-105
-            "
-          >
-            <span aria-hidden="true">✦</span> Be the first
-            {/* A light sweep across the chip, reusing the card shine animation */}
-            <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-transparent via-white/25 to-transparent animate-shine" />
-          </button>
-        )}
-
-        {/* Gradient fade at the bottom of the image */}
-        <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-slate-900/90 to-transparent" />
       </div>
 
-      {/* ── Card Body ── */}
-      <div className="flex flex-col gap-3 p-4 flex-1">
-        {/* Title + Year */}
-        <div>
-          <h3 className="text-base font-bold text-white leading-tight line-clamp-2">
-            {title}
-          </h3>
-          {releaseYear && (
-            <span className="text-xs text-slate-500 font-medium mt-0.5 block">
-              {releaseYear}
+      {/* The rarity strip: the card's painted edge peeking out under the cover. It grows
+          a little on hover. Unreviewed games keep the same 4px of space, so titles in a
+          row line up. */}
+      <span
+        aria-hidden="true"
+        className={`block h-1 mx-0.5 rounded-b-sm origin-top ${
+          reviewed
+            ? `bg-(--edge) shadow-[0_1px_0_rgba(0,0,0,.5)] transition-transform duration-180 ${EASE} group-hover:scale-y-175 group-has-[.card-link:focus-visible]:scale-y-175`
+            : ''
+        }`}
+      />
+
+      {/* Title: two lines tall at most (and always), so every tile in a grid row lines up */}
+      <h3 className="mt-3.5 text-base font-medium leading-[1.3] text-white line-clamp-2 min-h-[2.6em]">
+        {/* Stretched link: its ::after covers the whole tile. Underlined on hover. */}
+        <Link
+          to={`/game/${id}`}
+          className={`card-link after:absolute after:inset-0 focus-visible:outline-none underline decoration-1 underline-offset-4 decoration-transparent transition-[text-decoration-color] duration-120 ${EASE} group-hover:decoration-white group-has-[.card-link:focus-visible]:decoration-white`}
+        >
+          {title}
+        </Link>
+      </h3>
+
+      {/* One quiet line: year · genre · platforms. On a narrow tile a part that doesn't
+          fit drops out whole (it wraps onto a hidden second line) instead of being cut */}
+      <p className="flex flex-wrap gap-x-1 h-[21px] mt-1 overflow-hidden text-sm leading-[21px] text-slate-400">
+        {meta.map((part, i) => (
+          <span key={i} className="whitespace-nowrap">
+            {i > 0 && '· '}{part}
+          </span>
+        ))}
+      </p>
+
+      {/* The IMGM verdict in the tier's ink, or an empty line of the same height */}
+      {reviewed ? (
+        // The review count drops out whole the same way when the tile is too narrow
+        <p className="flex flex-wrap items-center gap-x-1 h-5 mt-2 overflow-hidden text-sm leading-5 text-(--ink)">
+          <span className="flex items-center gap-2 h-5 whitespace-nowrap">
+            <RarityMark tier={rarity.key} />
+            <span>
+              <span className="text-xs tabular-nums">{score.toFixed(1)}</span> {rarity.label}
+            </span>
+          </span>
+          {reviewCount > 0 && (
+            <span className="whitespace-nowrap text-slate-400">
+              · {reviewCount} review{reviewCount === 1 ? '' : 's'}
             </span>
           )}
-        </div>
-
-        {/* Genre pills — show up to 2 to keep the card compact */}
-        {genres.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {genres.slice(0, 2).map((genre) => (
-              <span
-                key={genre}
-                className="
-                  text-[11px] font-semibold uppercase tracking-wider
-                  text-slate-400
-                  bg-slate-800/60 border border-slate-700/40
-                  px-2 py-0.5 rounded-md
-                "
-              >
-                {genre}
-              </span>
-            ))}
-            {genres.length > 2 && (
-              <span className="text-[11px] text-slate-500 font-medium self-center">
-                +{genres.length - 2}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Platform tags — show up to 3; IGDB games often list many platforms */}
-        {platforms.length > 0 && (
-          <div className="flex flex-wrap gap-1.5">
-            {platforms.slice(0, 3).map((platform) => (
-              <span
-                key={platform}
-                className="
-                  text-[10px] font-bold uppercase tracking-widest
-                  text-slate-300
-                  bg-slate-800/60 border border-slate-700/60
-                  px-1.5 py-0.5 rounded
-                "
-              >
-                {platform}
-              </span>
-            ))}
-            {platforms.length > 3 && (
-              <span className="text-[10px] text-slate-500 font-medium self-center">
-                +{platforms.length - 3}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* ── External Ratings Row ── */}
-        {externalRatings.length > 0 && (
-          <div className="flex items-center gap-1.5">
-            {externalRatings.map((src) => (
-              <div
-                key={src.key}
-                className={`
-                  flex items-center gap-1
-                  ${src.bgColor} ${src.borderColor}
-                  border rounded-md px-1.5 py-1
-                  flex-1 justify-center
-                `}
-              >
-                <span className={`text-[9px] font-bold ${src.color} opacity-70`}>
-                  {src.label}
-                </span>
-                <span className={`text-[11px] font-bold ${src.color}`}>
-                  {src.format(ratings[src.key])}
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Spacer to push sentiment to the bottom */}
-        <div className="flex-1" />
-
-        {/* AI Sentiment badge */}
-        {aiSentiment && (
-          <div
-            className={`
-              flex items-center gap-2
-              ${sentiment.bgColor} ${sentiment.borderColor}
-              border rounded-lg px-3 py-2
-              transition-all duration-300
-              group-hover:border-opacity-60
-            `}
-          >
-            <span className={`text-xs ${sentiment.textColor}`}>
-              {sentiment.icon}
-            </span>
-            <span className={`text-xs font-semibold ${sentiment.textColor}`}>
-              {aiSentiment}
-            </span>
-          </div>
-        )}
-      </div>
+        </p>
+      ) : (
+        <div className="h-5 mt-2" aria-hidden="true" />
+      )}
     </article>
   );
 };
