@@ -57,7 +57,7 @@ import { TEXT_LINK, TEXT_BUTTON, PRIMARY_BUTTON } from '../../lib/ui';
 // band than tablets: the title and the words sit above it there, and the card that
 // hangs off its bottom edge still has to end inside an 800px-tall screen.
 const BAND =
-  'col-span-full row-start-4 relative z-1 block w-full h-[300px] sm:h-[360px] lg:h-[260px] xl:h-[280px] object-cover object-[50%_40%] bg-slate-900';
+  'col-span-full row-start-4 relative z-1 block w-full h-[300px] sm:h-[360px] lg:h-[340px] xl:h-[380px] object-cover object-[50%_40%] bg-slate-900';
 
 // "Browse games": a real link to the section (it works without the scroll, and in a
 // new tab), but the page scrolls itself: a plain #link would count as a new page
@@ -70,8 +70,10 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
   const ticks = review?.checklist ? tickedChecklist(review.checklist) : [];
 
   const rarity = review ? getRarity(review.rating) : null;
-  // Opens the game page right at this review
-  const reviewLink = review ? `/game/${review.game.id}?review=${review.id}#review-${review.id}` : null;
+  // Opens the game page right at this review. A showcase card (id null) is a sample, not
+  // a real review: it has nothing to share or open, so it links to its game instead.
+  const sample = review && !review.id;
+  const reviewLink = review && !sample ? `/game/${review.game.id}?review=${review.id}#review-${review.id}` : null;
 
   // The band game's IMGM verdict, when players have scored it
   const bandScore = bandGame?.ratings?.imgm;
@@ -88,7 +90,7 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
     // makes the same width as the page's other sections, so the edges line up.
     <section
       aria-labelledby="home-title"
-      className="grid pt-5 grid-cols-[16px_minmax(0,1fr)_16px] grid-rows-[auto_auto_88px_300px_auto_auto_auto] sm:pt-8 sm:grid-cols-[24px_minmax(0,1fr)_24px] sm:grid-rows-[auto_auto_104px_360px_auto_auto] lg:pt-10 lg:grid-cols-[minmax(32px,1fr)_minmax(0,880px)_360px_minmax(32px,1fr)] lg:grid-rows-[auto_auto_32px_260px_auto] xl:grid-cols-[minmax(48px,1fr)_minmax(0,944px)_400px_minmax(48px,1fr)] xl:grid-rows-[auto_auto_32px_280px_auto]"
+      className="grid pt-5 grid-cols-[16px_minmax(0,1fr)_16px] grid-rows-[auto_auto_88px_300px_auto_auto_auto] sm:pt-8 sm:grid-cols-[24px_minmax(0,1fr)_24px] sm:grid-rows-[auto_auto_104px_360px_auto_auto] lg:pt-10 lg:grid-cols-[minmax(32px,1fr)_minmax(0,880px)_360px_minmax(32px,1fr)] lg:grid-rows-[auto_auto_32px_340px_auto] xl:grid-cols-[minmax(48px,1fr)_minmax(0,944px)_400px_minmax(48px,1fr)] xl:grid-rows-[auto_auto_32px_380px_auto]"
     >
       {/* The logo's headline: heavy ivory capitals, one lime full stop. The page's h1 (its
           main headline for search engines). One line everywhere: it is about 5.4em
@@ -161,12 +163,14 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       <div className="col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:justify-start lg:pt-[68px] xl:pt-[76px]">
         {review ? (
           <>
+            {!sample && (
             <ShareCardButton
               url={reviewLink}
               title={`${card.reviewer}’s card for ${review.game.title}`}
               text={`${review.rating}/10, ${rarity.label} on IMGM`}
               card={card}
             />
+            )}
             <button
               type="button"
               onClick={() => setFlipped((turned) => !turned)}
@@ -176,9 +180,15 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
             >
               {flipped ? 'Turn back' : 'Turn over'}
             </button>
-            <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
-              Read the review
-            </Link>
+            {sample ? (
+              <Link to={`/game/${review.game.id}`} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
+                See the game
+              </Link>
+            ) : (
+              <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
+                Read the review
+              </Link>
+            )}
           </>
         ) : (
           !loading && !failed && (

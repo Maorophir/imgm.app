@@ -16,7 +16,7 @@
  * Two editions of the full card:
  *   site   (the default) the card as the site shows it: the review's badges (Deep Diver,
  *          First Reviewer…) in the corner, and no words on the card. Pages show the
- *          review's words BESIDE it (CardQuote), where there's room for all of them.
+ *          review's words beside it (the game page's review panel), where there's room for all of them.
  *   share  the card on its own, to be shared as a picture: the review's line printed on
  *          the card, and the IMGM power mark in the corner (the brand travels with it).
  *

@@ -8,14 +8,13 @@
  * With no review to show, the ladder stands alone.
  *
  * Props:
- *   card     CollectibleCard props for the example review, or null. Its quote is shown
- *            under the card (CardQuote), not on it
+ *   card     CollectibleCard props for the example card (the home page's fixed showcase,
+ *            lib/homeShowcase), shown as a share card: its words and the IMGM mark on it
  *   loading  true while the reviews are on their way: a quiet placeholder keeps the
  *            card's space, so the ladder doesn't jump when the card arrives
  */
 import CardStage from '../CardStage';
 import CollectibleCard from '../CollectibleCard';
-import CardQuote from '../CardQuote';
 import RarityMark from '../RarityMark';
 import { RARITIES, getRarity } from '../reviewQuest/questOptions';
 import { WRAP, SECTION_TITLE } from '../../lib/ui';
@@ -85,10 +84,7 @@ const RaritySection = ({ card, loading }) => {
             <div className="lg:col-start-1 lg:row-start-1 justify-self-start w-[min(380px,100%)]">
               {card ? (
                 // Standing straight (no resting angle), with a slightly gentler lean
-                <>
-                  <CardStage tier={getRarity(card.score).key} rest={0} maxTilt={10} front={<CollectibleCard {...card} />} />
-                  <CardQuote text={card.quote} reviewer={card.reviewer} lines={4} className="mt-6" />
-                </>
+                <CardStage tier={getRarity(card.score).key} rest={0} maxTilt={10} front={<CollectibleCard {...card} edition="share" />} />
               ) : (
                 <div aria-hidden="true" className="aspect-[63/88] rounded-[4.76%/3.41%] bg-slate-900 motion-safe:animate-pulse" />
               )}
