@@ -15,6 +15,7 @@
  *   label      the button's words (default "Share card"), e.g. "Share profile"
  *   card       CollectibleCard props: share the card as a picture (see above)
  *   small      the small text size (under cards in a grid)
+ *   customize  for your own review: { gameId, onChange }, see ShareCardDialog
  *   className  placement
  */
 import { useEffect, useState } from 'react';
@@ -23,7 +24,7 @@ import ShareCardDialog from './share/ShareCardDialog';
 
 const COPIED_FOR = 2000; // ms "Link copied" stays up
 
-const ShareCardButton = ({ url, title, text, label = 'Share card', card, small = false, className = '' }) => {
+const ShareCardButton = ({ url, title, text, label = 'Share card', card, small = false, customize, className = '' }) => {
   // 'idle', 'copied', or 'failed' (the clipboard said no)
   const [status, setStatus] = useState('idle');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -81,6 +82,7 @@ const ShareCardButton = ({ url, title, text, label = 'Share card', card, small =
           url={url}
           title={title}
           text={text}
+          customize={customize}
         />
       )}
     </>

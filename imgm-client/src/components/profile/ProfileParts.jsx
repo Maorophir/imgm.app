@@ -272,7 +272,7 @@ export const StatsGrid = ({ stats, own = false }) => {
 // edge (standing still, the game's name on it), the player's words under it, how long
 // ago and how many found it helpful. The whole card opens the game page right at this
 // review.
-const ReviewCard = ({ review, sharedBy }) => {
+const ReviewCard = ({ review, sharedBy, onCardChange }) => {
   const rarity = getRarity(review.rating);
   return (
     // The keyboard outline goes around the whole card, like the home page's cards
@@ -320,6 +320,7 @@ const ReviewCard = ({ review, sharedBy }) => {
               quote: review.quote,
               badges: review.badges,
             })}
+            customize={{ gameId: review.game.id, onChange: (choice) => onCardChange(review.id, choice) }}
           />
         )}
       </figcaption>
@@ -355,7 +356,17 @@ export const PlayerReviews = ({ first, total, loadMore, empty, sharedBy }) => {
       {/* The home page's grid: two columns on phones, then as many 240px columns as fit.
           auto-fill keeps the empty columns, so one or two cards stay card-sized. */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-x-8 sm:gap-y-14">
-        {reviews.map((review) => <ReviewCard key={review.id} review={review} sharedBy={sharedBy} />)}
+        {reviews.map((review) => (
+          <ReviewCard
+            key={review.id}
+            review={review}
+            sharedBy={sharedBy}
+            // The list's copy of the review follows the card's new picture and words
+            onCardChange={(id, { art, quote }) =>
+              setReviews((current) => current.map((r) => (r.id === id ? { ...r, art, quote } : r)))
+            }
+          />
+        ))}
       </div>
       {reviews.length < total && (
         <div className="flex flex-col items-center gap-2">

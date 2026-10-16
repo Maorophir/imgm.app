@@ -95,6 +95,12 @@ export const getGameReviews = (gameId, { sort, tier, rating, offset, limit, focu
   return fetchJson(`/api/reviews/game/${gameId}?${params}`, { signal });
 };
 
+// Your card for a game: its picture and words now, and what you may choose
+// ({ art, quote, pictures, sentences, sentence }); and choosing ({ art?, sentence? },
+// null = back to the automatic choice)
+export const getMyCard = (gameId, signal) => fetchJson(`/api/reviews/mine/${gameId}/card`, { signal });
+export const setMyCard = (gameId, choice) => fetchJson(`/api/reviews/mine/${gameId}/card`, { method: 'PUT', body: choice });
+
 // The logged-in user's review of a game, or null if they haven't reviewed it
 export const getMyReview = (gameId, signal) => fetchJson(`/api/reviews/mine/${gameId}`, { signal });
 

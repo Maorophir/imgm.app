@@ -170,6 +170,11 @@ model Review {
 
   // ⑨ Final words (optional — quick reviews may have none)
   reviewText       String?
+  // The player's own card: its picture (one of the game's cover, artworks or
+  // screenshots; null = chosen automatically) and the sentence of reviewText printed on
+  // it (its position; null = the most quotable one, picked automatically)
+  cardArt          String?
+  cardQuote        Int?
 
   // Awarded by the server when the review is saved
   badges           String[]

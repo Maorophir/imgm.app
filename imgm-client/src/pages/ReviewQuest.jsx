@@ -330,6 +330,7 @@ const Quest = ({ id }) => {
         badges: saved.badges, // every badge the review has (shown on its card)
         postedAt: new Date().toISOString(), // the card's date
         art: saved.art, // the card's own picture
+        cardQuote: saved.cardQuote, // and its words
         playerXp: saved.playerXp, // { before, after }
         inBacklog: saved.inBacklog, // in their Backlog: offer to remove it (never automatic)
       });
@@ -410,7 +411,7 @@ const Quest = ({ id }) => {
     rating: answers.rating,
     reviewer: session?.user?.displayUsername,
     date: existing.review?.createdAt ?? result?.postedAt,
-    quote: answers.reviewText?.trim(),
+    quote: result?.cardQuote ?? answers.reviewText?.trim(), // the most quotable sentence (or theirs)
   });
 
   return (
@@ -510,6 +511,10 @@ const Quest = ({ id }) => {
                   title={`${session.user.displayUsername ?? 'My'}’s card for ${game.title}`}
                   text={`${answers.rating}/10, ${rarity.label} on IMGM`}
                   card={rewardCard}
+                  customize={{
+                    gameId: game.id,
+                    onChange: ({ art, quote }) => setResult((current) => ({ ...current, art, cardQuote: quote })),
+                  }}
                 />
                 <button
                   type="button"

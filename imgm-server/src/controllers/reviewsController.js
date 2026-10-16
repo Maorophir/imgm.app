@@ -10,7 +10,8 @@ import { notifyReviewChanged } from '../lib/aiIndex.js';
 import { castVote } from '../lib/reviewVotes.js';
 import { refreshGameSummary } from '../lib/aiSummary.js';
 import { cacheAtEdge } from '../lib/cdnCache.js';
-import { ART_SELECT, reviewArt } from '../lib/reviewArt.js';
+import { ART_SELECT, artChoices, reviewArt } from '../lib/reviewArt.js';
+import { cardQuoteOf, sentencesOf } from '../lib/cardQuote.js';
 import { CHECKLIST } from '../lib/reviewOptions.js';
 
 // Until a player confirms their email they can post only this many reviews: enough to
@@ -92,7 +93,12 @@ export const getReviewsByGameId = async (req, res) => {
         : null,
       prisma.game.findUnique({ where: { id: gameId }, select: ART_SELECT }), // each review's own art
     ]);
-    const withArt = (list) => list.map((review) => ({ ...review, art: reviewArt(art, review.id) }));
+    const withArt = (list) =>
+      list.map((review) => ({
+        ...review,
+        art: reviewArt(art, review), // its card's picture
+        cardQuote: cardQuoteOf(review.masked?.reviewText ?? review.reviewText, review.cardQuote), // its card's words
+      }));
     const [reviews, [mineForClient = null], [focusedForClient = null]] = await Promise.all([
       forClient(page).then(withArt),
       forClient(mine ? [mine] : []).then(withArt),
@@ -198,7 +204,7 @@ export const saveReview = async (req, res) => {
     // 4. Badges
     const existing = await prisma.review.findUnique({
       where: { userId_gameId: { userId: user.id, gameId } },
-      select: { badges: true, xp: true },
+      select: { badges: true, xp: true, reviewText: true },
     });
     const otherReviews = await prisma.review.count({
       where: { gameId, userId: { not: user.id } },
@@ -211,6 +217,9 @@ export const saveReview = async (req, res) => {
     // 5. Save — one review per user per game, so this creates or updates
     const xp = reviewXp(answers);
     const data = { rating, ...answers, badges, xp };
+    // New words: the card's chosen sentence may not exist any more, so it goes back to
+    // the automatic pick (its chosen picture stays)
+    if (existing && (existing.reviewText ?? null) !== (answers.reviewText ?? null)) data.cardQuote = null;
     const review = await prisma.review.upsert({
       where: { userId_gameId: { userId: user.id, gameId } },
       create: { ...data, userId: user.id, gameId },
@@ -230,7 +239,13 @@ export const saveReview = async (req, res) => {
     const { xp: after } = await getPlayerXp(user.id);
     const playerXp = { before: after - xp + (existing?.xp ?? 0), after };
 
-    res.status(existing ? 200 : 201).json({ ...review, playerXp, inBacklog, art: reviewArt(game, review.id) });
+    res.status(existing ? 200 : 201).json({
+      ...review,
+      playerXp,
+      inBacklog,
+      art: reviewArt(game, review), // its card's picture
+      cardQuote: cardQuoteOf(withMaskedText(review).masked?.reviewText ?? review.reviewText, review.cardQuote),
+    });
   } catch (error) {
     console.error('Error saving review:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -324,6 +339,8 @@ const RECENT_SELECT = {
   reviewText: true,
   createdAt: true,
   badges: true,
+  cardArt: true,
+  cardQuote: true,
   ...Object.fromEntries(CHECKLIST_FIELDS.map((field) => [field, true])),
   user: { select: { displayUsername: true } },
   game: {
@@ -383,7 +400,8 @@ export const getRecentReviews = async (req, res) => {
           snippet: excerpt(text, 160), // the small tiles
           excerpt: excerpt(text, EXCERPT_LENGTH), // beside the big cards
           badges: review.badges,
-          art: reviewArt(review.game, review.id), // its card's own picture
+          art: reviewArt(review.game, review), // its card's own picture
+          cardQuote: cardQuoteOf(text, review.cardQuote), // its card's words
           createdAt: review.createdAt,
           author: review.user?.displayUsername ?? null,
           // { graphics: 'pretty', story: 'tears', … }, the answers it gave (empty if none)
@@ -400,6 +418,80 @@ export const getRecentReviews = async (req, res) => {
     );
   } catch (error) {
     console.error('Error fetching recent reviews:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// ── Your card: its picture and its words ─────────────────
+
+// What a player may choose for their card, and what's chosen now
+const cardOptions = (review, game) => {
+  const text = withMaskedText(review).masked?.reviewText ?? review.reviewText;
+  const sentences = sentencesOf(text);
+  return {
+    art: reviewArt(game, review),
+    quote: cardQuoteOf(text, review.cardQuote),
+    pick: cardQuoteOf(text, null), // IMGM's own pick (the most quotable sentence)
+    pictures: artChoices(game),
+    sentences,
+    sentence: Number.isInteger(review.cardQuote) && review.cardQuote < sentences.length ? review.cardQuote : null,
+  };
+};
+
+const loadMyCard = async (userId, gameId) => {
+  const review = await prisma.review.findUnique({
+    where: { userId_gameId: { userId, gameId } },
+    select: { id: true, reviewText: true, cardArt: true, cardQuote: true, game: { select: ART_SELECT } },
+  });
+  return review;
+};
+
+// GET /api/reviews/mine/:gameId/card — your card's picture and words, and the choices
+export const getMyCard = async (req, res) => {
+  const gameId = Number.parseInt(req.params.gameId, 10);
+  if (Number.isNaN(gameId)) return res.status(400).json({ error: 'Invalid game id' });
+  try {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'You must be logged in.' });
+    const review = await loadMyCard(user.id, gameId);
+    if (!review) return res.status(404).json({ error: "You haven't reviewed this game." });
+    res.json(cardOptions(review, review.game));
+  } catch (error) {
+    console.error('Error loading a card:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// PUT /api/reviews/mine/:gameId/card  { art?, sentence? } — choose your card's picture
+// (one of the game's own) and words (a sentence of your review, by position). null goes
+// back to the automatic choice.
+const cardSchema = z.object({
+  art: z.string().url().max(300).nullable().optional(),
+  sentence: z.number().int().min(0).max(200).nullable().optional(),
+});
+export const setMyCard = async (req, res) => {
+  const gameId = Number.parseInt(req.params.gameId, 10);
+  const body = cardSchema.safeParse(req.body ?? {});
+  if (Number.isNaN(gameId) || !body.success) return res.status(400).json({ error: 'Invalid request' });
+  try {
+    const user = await getUser(req);
+    if (!user) return res.status(401).json({ error: 'You must be logged in.' });
+    const review = await loadMyCard(user.id, gameId);
+    if (!review) return res.status(404).json({ error: "You haven't reviewed this game." });
+    const { art, sentence } = body.data;
+    // Only the game's own pictures, and only a sentence the review really has
+    if (art && !artChoices(review.game).includes(art)) return res.status(400).json({ error: "That picture isn't this game's." });
+    if (Number.isInteger(sentence) && sentence >= sentencesOf(review.reviewText).length) {
+      return res.status(400).json({ error: 'Your review has no such sentence.' });
+    }
+    const updated = await prisma.review.update({
+      where: { id: review.id },
+      data: { ...(art !== undefined && { cardArt: art }), ...(sentence !== undefined && { cardQuote: sentence }) },
+      select: { id: true, reviewText: true, cardArt: true, cardQuote: true },
+    });
+    res.json(cardOptions(updated, review.game));
+  } catch (error) {
+    console.error('Error saving a card:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

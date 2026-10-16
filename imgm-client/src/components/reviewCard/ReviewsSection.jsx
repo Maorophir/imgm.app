@@ -258,9 +258,15 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
                           rating: review.rating,
                           reviewer: review.user?.displayUsername,
                           date: review.createdAt,
-                          quote: review.reviewText?.trim(),
+                          quote: review.cardQuote,
                           badges: review.badges,
                         })}
+                        customize={{
+                          gameId,
+                          // The page's copy of your review follows your choices
+                          onChange: ({ art, quote }) =>
+                            setList((current) => ({ ...current, mine: { ...current.mine, art, cardQuote: quote } })),
+                        }}
                       />
                     </div>
                   )}

@@ -19,6 +19,7 @@ import { withMaskedText } from '../lib/reviewText.js';
 import { voterStats, weekOf } from '../lib/gotw.js';
 import { AVATAR_PRESETS, presetByKey, presetFile } from '../lib/avatarPresets.js';
 import { reviewArt } from '../lib/reviewArt.js';
+import { cardQuoteOf } from '../lib/cardQuote.js';
 import { normalizeUsername, USERNAME_MAX } from '../lib/usernameRules.js';
 
 const MAX_PICTURE = 300_000; // bytes
@@ -138,7 +139,7 @@ export const getAvatar = async (req, res) => {
 
 // A review as the profile lists it: the game, the score, a short masked snippet
 const REVIEW_SELECT = {
-  id: true, rating: true, reviewText: true, createdAt: true, badges: true, helpfulCount: true,
+  id: true, rating: true, reviewText: true, createdAt: true, badges: true, helpfulCount: true, cardArt: true, cardQuote: true,
   game: { select: { id: true, title: true, coverUrl: true, genres: true, releaseDate: true, developer: true, artworks: true, screenshots: true } },
 };
 const asListItem = (review) => {
@@ -148,10 +149,10 @@ const asListItem = (review) => {
   return {
     ...rest,
     game,
-    art: reviewArt(review.game, review.id), // its card's own picture (for sharing it)
+    art: reviewArt(review.game, review), // its card's own picture (for sharing it)
     snippet: text && (text.length > 180 ? `${text.slice(0, 180).trimEnd()}…` : text),
-    // The words for a shared card (the card shows a few lines of them)
-    quote: text && (text.length > 420 ? `${text.slice(0, 420).trimEnd()}…` : text),
+    // The words on its card (the chosen sentence, or the most quotable one)
+    quote: cardQuoteOf(text, review.cardQuote),
   };
 };
 
