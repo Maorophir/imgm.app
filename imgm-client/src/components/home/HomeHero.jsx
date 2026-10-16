@@ -12,10 +12,14 @@
  *                featured games.
  *   The card     a recent review with the player's words (the Home page picks it: the
  *                owner's pinned one, else the best one with words to quote) as a trading
- *                card in its share edition (the words and the IMGM mark on the card), laid across a full-width band of a game's key art. It tilts
+ *                card in its share edition (the words and the IMGM mark on the card), standing on a game's key art. It tilts
  *                toward the pointer, turns over (to the reviewer's checklist, like a
  *                game page's card, or to the shared IMGM back if there's none), and
  *                its link can be shared.
+ *
+ * The key art is the hero's backdrop: edge to edge, from the promise down to under the
+ * card, fading in from the page above (the big title stays on the plain page) and out
+ * into it below, darkened so the words over it stay readable.
  *
  * Everything on it is real. The band shows the card's own game (its key art comes with
  * the review); only when that game has no art does it show a featured game's art, and
@@ -51,14 +55,21 @@ import FaceDownCard from './FaceDownCard';
 import { getRarity } from '../reviewQuest/questOptions';
 import { artSrcSet } from '../../lib/igdbImage';
 import { TEXT_LINK, TEXT_BUTTON, PRIMARY_BUTTON } from '../../lib/ui';
+import FlipIcon from '../reviewCard/FlipIcon';
 
-// The band of key art, edge to edge. Its height steps down with the screen; the grid
-// row it sits in (see the section's classes) has the same height. Desktop gets a lower
-// band than tablets: the title and the words sit above it there. Short laptop screens
-// (850px tall or less: 1280×800, 1366×768) get a lower band, so the card that hangs off
-// its bottom edge still ends inside the first screen.
-const BAND =
-  'col-span-full row-start-4 relative z-1 block w-full h-[300px] sm:h-[360px] lg:h-[340px] xl:h-[380px] lg:short:h-[260px] xl:short:h-[256px] object-cover object-[50%_40%] bg-slate-900';
+// The key art behind the hero ("the band"): from the promise (row 2) down to the row
+// the card hangs off (row 4), whose height steps down with the screen (see the
+// section's classes); short laptop screens (850px tall or less: 1280×800, 1366×768) get
+// a lower one, so the card still ends inside the first screen. It starts a little under
+// the top of row 2, and fades in from the page there and out into it at the bottom.
+const BAND = 'col-span-full row-start-2 row-end-5 mt-10 sm:mt-14 lg:mt-12 relative z-1 overflow-hidden';
+// The shades over the art: phones and tablets darken it evenly (the words run across
+// it); desktop darkens the left, under the words, and leaves the right to the art
+const BAND_SHADES = [
+  'bg-slate-950/45 lg:bg-transparent lg:bg-gradient-to-r lg:from-slate-950/85 lg:via-slate-950/40 lg:to-slate-950/5',
+  'bg-gradient-to-b from-slate-950 via-transparent via-35% to-transparent',
+  'bg-gradient-to-t from-slate-950 via-transparent via-30% to-transparent',
+];
 
 // "Browse games": a real link to the section (it works without the scroll, and in a
 // new tab), but the page scrolls itself: a plain #link would count as a new page
@@ -96,7 +107,7 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
           smaller (8vw) so the card under it fits on the screen. */}
       <h1
         id="home-title"
-        className="col-start-2 row-start-1 lg:col-end-4 font-display uppercase tracking-[.005em] text-white text-[length:clamp(40px,15vw,128px)] leading-[.82] lg:text-[length:clamp(80px,8vw,136px)] lg:leading-[.8]"
+        className="col-start-2 row-start-1 lg:col-end-4 relative z-5 font-display uppercase tracking-[.005em] text-white text-[length:clamp(40px,15vw,128px)] leading-[.82] lg:text-[length:clamp(80px,8vw,136px)] lg:leading-[.8]"
       >
         I Am Gaming<span className="text-brand">.</span>
       </h1>
@@ -140,22 +151,25 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
         )}
       </div>
 
-      {/* ── The band: a game's key art, edge to edge (a dark band until the reviews load).
-          It's the largest picture on the first screen, so it loads first and never lazily;
+      {/* ── The band: a game's key art behind the hero (nothing until it's known). It's
+          the largest picture on the first screen, so it loads first and never lazily;
           the browser picks the 1280px or the 1920px copy for the screen. ── */}
-      {bandGame ? (
-        <img
-          src={bandGame.artworks[0]}
-          srcSet={artSrcSet(bandGame.artworks[0])}
-          sizes="100vw"
-          alt={`${bandGame.title} key art`}
-          fetchPriority="high"
-          decoding="async"
-          className={BAND}
-        />
-      ) : (
-        <div aria-hidden="true" className={BAND} />
-      )}
+      <div className={BAND}>
+        {bandGame && (
+          <img
+            src={bandGame.artworks[0]}
+            srcSet={artSrcSet(bandGame.artworks[0])}
+            sizes="100vw"
+            alt={`${bandGame.title} key art`}
+            fetchPriority="high"
+            decoding="async"
+            className="absolute inset-0 w-full h-full object-cover object-[50%_35%]"
+          />
+        )}
+        {BAND_SHADES.map((shade) => (
+          <div key={shade} aria-hidden="true" className={`absolute inset-0 ${shade}`} />
+        ))}
+      </div>
 
       {/* ── What you can do with the card: under it ── */}
       <div className={`col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:pt-[68px] xl:pt-[76px] ${sample ? '' : 'lg:justify-start'}`}>
@@ -174,9 +188,10 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
               onClick={() => setFlipped((turned) => !turned)}
               // Screen readers hear what's on the other side (the card itself is a picture to them)
               aria-label={flipped ? 'Flip back to the front' : ticks.length > 0 ? 'Flip to see the checklist' : 'Flip'}
-              className={TEXT_BUTTON}
+              className={`inline-flex items-center gap-2 ${TEXT_BUTTON}`}
             >
-              {flipped ? 'Flip back' : 'Flip'}
+              <span>{flipped ? 'Flip back' : 'Flip'}</span>
+              <FlipIcon flipped={flipped} />
             </button>
             {/* A showcase card only turns over (the caption links to its game) */}
             {!sample && (

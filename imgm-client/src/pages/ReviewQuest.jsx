@@ -61,6 +61,7 @@ import MeetsStep from '../components/reviewQuest/steps/MeetsStep';
 import ProsConsStep from '../components/reviewQuest/steps/ProsConsStep';
 import MomentsStep from '../components/reviewQuest/steps/MomentsStep';
 import WordsStep from '../components/reviewQuest/steps/WordsStep';
+import FlipIcon from '../components/reviewCard/FlipIcon';
 
 // The quest, in order. `fields` = what "Skip" clears; `xp` = what answering it earns.
 const STEPS = [
@@ -525,9 +526,10 @@ const Quest = ({ id }) => {
                   type="button"
                   onClick={() => setFlipped((turned) => !turned)}
                   aria-label={flipped ? 'Flip back to the front' : cardTicks.length > 0 ? 'Flip to see the checklist' : 'Flip'}
-                  className={TEXT_BUTTON}
+                  className={`inline-flex items-center gap-2 ${TEXT_BUTTON}`}
                 >
-                  {flipped ? 'Flip back' : 'Flip'}
+                  <span>{flipped ? 'Flip back' : 'Flip'}</span>
+                  <FlipIcon flipped={flipped} />
                 </button>
               </div>
 

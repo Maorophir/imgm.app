@@ -1,12 +1,11 @@
 /**
  * GameDetails — The core page of IMGM. Route: /game/:id
  *
- * Layout (top to bottom): what players think comes before the media, since the
- * cards are what IMGM has that no store page does.
- *   1. Header — cover, title, the verdict line and details, with the game's artwork behind them
+ * Layout (top to bottom):
+ *   1. Header — the title, then the cover, verdict line and facts beside the trailer and
+ *      screenshots (MediaViewer), with the game's artwork behind them
  *   2. What players think — PlayerVerdict: score, rating histogram, AI summary + chips
  *   3. Community reviews — ReviewsSection: rating breakdown, sort, pages of rarity-card reviews
- *   4. Screenshots & Videos — tabs; screenshots first, videos filtered to the relevant few
  */
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
@@ -15,11 +14,10 @@ import PlayerVerdict from '../components/game/PlayerVerdict';
 import LoadError from '../components/LoadError';
 import ReviewsSection from '../components/reviewCard/ReviewsSection';
 import GameHeader from '../components/game/GameHeader';
-import MediaSection from '../components/game/MediaSection';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { WRAP, PRIMARY_BUTTON } from '../lib/ui';
 
-// Keyed by id so all page state (fetched data, media tabs…) resets on navigation
+// Keyed by id so all page state (fetched data, the media viewer…) resets on navigation
 // The game's line in Google: its IMGM numbers when it has reviews, an invitation when not
 const gameDescription = (game) => {
   // IGDB dates are midnight UTC, so the year is read in UTC
@@ -129,9 +127,6 @@ const GameDetailsContent = ({ id }) => {
       />
 
       <ReviewsSection game={game} gameId={id} filter={reviewFilter} onFilterChange={setReviewFilter} />
-
-      {/* The screenshots and videos come after the reviews */}
-      <MediaSection game={game} />
     </div>
   );
 };

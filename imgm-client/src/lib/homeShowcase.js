@@ -34,7 +34,7 @@ export const HOME_SHOWCASE = {
       credit: 'Cover · Sandfall Interactive',
       reviewer: 'You',
       date: TODAY,
-      quote: 'Turn-based combat that plays like a rhythm game, and a story I still think about.',
+      quote: "The best turn-based combat I've played in years. Parrying turned every fight into a rhythm game and I was hooked.",
       badges: ['deep_diver'],
     },
     band: {
@@ -55,7 +55,7 @@ export const HOME_SHOWCASE = {
       credit: 'Art · Team Cherry',
       reviewer: 'You',
       date: TODAY,
-      quote: 'Brutal, beautiful and worth every death. Hornet moves like a dancer.',
+      quote: 'Pharloom breaks you, then teaches you to fly. Every boss is a duel I lost twenty times and finally won. Two points off for the long runbacks.',
       badges: [],
     },
   },
