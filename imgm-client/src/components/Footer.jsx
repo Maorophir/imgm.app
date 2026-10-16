@@ -1,6 +1,7 @@
 /**
  * Footer — a quiet line at the bottom of every page (not on Play Next, whose chat
- * fills the screen): the brand, that IMGM is in beta, Terms, Privacy and feedback.
+ * fills the screen): the brand, that IMGM is in beta, Terms, Privacy and feedback, and
+ * the credit for the game data (covers, art, release dates, platforms) from IGDB.
  * Noir: one hairline on top, metadata-grey text, the power mark in ivory (the lime
  * one lives in the header).
  */
@@ -21,10 +22,18 @@ const Footer = () => {
     // gap the design leaves above the footer
     <footer className="mt-12 md:mt-16 border-t border-slate-700">
       <div className={`${WRAP} pt-6 pb-10 flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-4`}>
-        <p className="flex items-center gap-2.5 text-sm text-slate-400">
-          <Logo quiet />
-          <span>I Am Gaming · beta</span>
-        </p>
+        <div className="flex flex-col gap-1">
+          <p className="flex items-center gap-2.5 text-sm text-slate-400">
+            <Logo quiet />
+            <span>I Am Gaming · beta</span>
+          </p>
+          <p className="text-xs text-slate-500">
+            Game data and art from{' '}
+            <a href="https://www.igdb.com" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-slate-50 transition-colors duration-120">
+              IGDB.com
+            </a>
+          </p>
+        </div>
         <nav aria-label="Footer">
           <ul className="flex flex-wrap gap-x-7">
             <li><Link to="/terms" className={linkClass}>Terms</Link></li>
