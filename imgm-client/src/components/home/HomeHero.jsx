@@ -45,8 +45,8 @@ import { Link } from 'react-router-dom';
 import CardStage from '../CardStage';
 import CollectibleCard, { CardBack, ChecklistBack } from '../CollectibleCard';
 import { tickedChecklist } from '../reviewCard/reviewDisplay';
-import RarityMark from '../RarityMark';
 import ShareCardButton from '../ShareCardButton';
+import GameVerdictLink from './GameVerdictLink';
 import FaceDownCard from './FaceDownCard';
 import { getRarity } from '../reviewQuest/questOptions';
 import { artSrcSet } from '../../lib/igdbImage';
@@ -54,10 +54,11 @@ import { TEXT_LINK, TEXT_BUTTON, PRIMARY_BUTTON } from '../../lib/ui';
 
 // The band of key art, edge to edge. Its height steps down with the screen; the grid
 // row it sits in (see the section's classes) has the same height. Desktop gets a lower
-// band than tablets: the title and the words sit above it there, and the card that
-// hangs off its bottom edge still has to end inside an 800px-tall screen.
+// band than tablets: the title and the words sit above it there. Short laptop screens
+// (850px tall or less: 1280×800, 1366×768) get a lower band, so the card that hangs off
+// its bottom edge still ends inside the first screen.
 const BAND =
-  'col-span-full row-start-4 relative z-1 block w-full h-[300px] sm:h-[360px] lg:h-[340px] xl:h-[380px] object-cover object-[50%_40%] bg-slate-900';
+  'col-span-full row-start-4 relative z-1 block w-full h-[300px] sm:h-[360px] lg:h-[340px] xl:h-[380px] lg:short:h-[260px] xl:short:h-[256px] object-cover object-[50%_40%] bg-slate-900';
 
 // "Browse games": a real link to the section (it works without the scroll, and in a
 // new tab), but the page scrolls itself: a plain #link would count as a new page
@@ -75,9 +76,6 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
   const sample = review && !review.id;
   const reviewLink = review && !sample ? `/game/${review.game.id}?review=${review.id}#review-${review.id}` : null;
 
-  // The band game's IMGM verdict, when players have scored it
-  const bandScore = bandGame?.ratings?.imgm;
-  const bandRarity = typeof bandScore === 'number' && bandGame.reviewCount !== 0 ? getRarity(bandScore) : null;
   // IGDB dates are midnight UTC, so the year is read in UTC (not the visitor's time zone)
   const bandYear = bandGame?.releaseDate ? new Date(bandGame.releaseDate).getUTCFullYear() : null;
   const artCredit = bandGame ? [bandGame.developer, bandYear].filter(Boolean).join(', ') || bandGame.title : '';
@@ -90,7 +88,7 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
     // makes the same width as the page's other sections, so the edges line up.
     <section
       aria-labelledby="home-title"
-      className="grid pt-5 grid-cols-[16px_minmax(0,1fr)_16px] grid-rows-[auto_auto_88px_300px_auto_auto_auto] sm:pt-8 sm:grid-cols-[24px_minmax(0,1fr)_24px] sm:grid-rows-[auto_auto_104px_360px_auto_auto] lg:pt-10 lg:grid-cols-[minmax(32px,1fr)_minmax(0,880px)_360px_minmax(32px,1fr)] lg:grid-rows-[auto_auto_32px_340px_auto] xl:grid-cols-[minmax(48px,1fr)_minmax(0,944px)_400px_minmax(48px,1fr)] xl:grid-rows-[auto_auto_32px_380px_auto]"
+      className="grid pt-5 grid-cols-[16px_minmax(0,1fr)_16px] grid-rows-[auto_auto_88px_300px_auto_auto_auto] sm:pt-8 sm:grid-cols-[24px_minmax(0,1fr)_24px] sm:grid-rows-[auto_auto_104px_360px_auto_auto] lg:pt-10 lg:grid-cols-[minmax(32px,1fr)_minmax(0,880px)_360px_minmax(32px,1fr)] lg:grid-rows-[auto_auto_32px_340px_auto] lg:short:grid-rows-[auto_auto_32px_260px_auto] xl:grid-cols-[minmax(48px,1fr)_minmax(0,944px)_400px_minmax(48px,1fr)] xl:grid-rows-[auto_auto_32px_380px_auto] xl:short:grid-rows-[auto_auto_32px_256px_auto]"
     >
       {/* The logo's headline: heavy ivory capitals, one lime full stop. The page's h1 (its
           main headline for search engines). One line everywhere: it is about 5.4em
@@ -160,7 +158,7 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       )}
 
       {/* ── What you can do with the card: under it ── */}
-      <div className="col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:justify-start lg:pt-[68px] xl:pt-[76px]">
+      <div className={`col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:pt-[68px] xl:pt-[76px] ${sample ? '' : 'lg:justify-start'}`}>
         {review ? (
           <>
             {!sample && (
@@ -180,11 +178,8 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
             >
               {flipped ? 'Turn back' : 'Turn over'}
             </button>
-            {sample ? (
-              <Link to={`/game/${review.game.id}`} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
-                See the game
-              </Link>
-            ) : (
+            {/* A showcase card only turns over (the caption links to its game) */}
+            {!sample && (
               <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
                 Read the review
               </Link>
@@ -202,22 +197,7 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       {/* ── The caption: whose art the band is, and that game's IMGM verdict ── */}
       {bandGame && (
         <div className="col-start-2 row-start-6 lg:row-start-5 min-w-0 flex flex-wrap items-center justify-between gap-x-8 pt-2 lg:pt-3 lg:pr-12 xl:pr-16">
-          <p
-            className="flex flex-wrap items-center gap-x-2.5 min-h-11 text-sm text-slate-400"
-            style={bandRarity ? { '--ink': bandRarity.color } : undefined}
-          >
-            {bandRarity && <RarityMark tier={bandRarity.key} className="text-(--ink)" />}
-            <Link to={`/game/${bandGame.id}`} className={`inline-flex items-center min-h-11 font-medium text-white ${TEXT_LINK}`}>
-              {bandGame.title}
-            </Link>
-            {bandRarity && (
-              <span>
-                <span className="text-xs tabular-nums text-(--ink)">{bandScore.toFixed(1)}</span>{' '}
-                <span className="text-(--ink)">{bandRarity.label}</span> on IMGM
-                {bandGame.reviewCount > 0 && ` · ${bandGame.reviewCount} review${bandGame.reviewCount === 1 ? '' : 's'}`}
-              </span>
-            )}
-          </p>
+          <GameVerdictLink game={bandGame} />
           <p className="flex items-center min-h-11 text-sm text-slate-400">Key art · {artCredit}</p>
         </div>
       )}

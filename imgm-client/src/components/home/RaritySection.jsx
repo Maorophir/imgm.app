@@ -10,11 +10,13 @@
  * Props:
  *   card     CollectibleCard props for the example card (the home page's fixed showcase,
  *            lib/homeShowcase), shown as a share card: its words and the IMGM mark on it
+ *   game     its game ({ id, title, ratings, reviewCount }): a link under the card
  *   loading  true while the reviews are on their way: a quiet placeholder keeps the
  *            card's space, so the ladder doesn't jump when the card arrives
  */
 import CardStage from '../CardStage';
 import CollectibleCard from '../CollectibleCard';
+import GameVerdictLink from './GameVerdictLink';
 import RarityMark from '../RarityMark';
 import { RARITIES, getRarity } from '../reviewQuest/questOptions';
 import { WRAP, SECTION_TITLE } from '../../lib/ui';
@@ -32,7 +34,7 @@ const ROW = 'col-span-2 grid grid-cols-subgrid';
 // The cells: ten equal blocks with a hairline of page showing between them
 const CELLS = 'grid grid-cols-10 gap-[3px]';
 
-const RaritySection = ({ card, loading }) => {
+const RaritySection = ({ card, game, loading }) => {
   const withCard = Boolean(card) || loading;
 
   return (
@@ -84,7 +86,11 @@ const RaritySection = ({ card, loading }) => {
             <div className="lg:col-start-1 lg:row-start-1 justify-self-start w-[min(380px,100%)]">
               {card ? (
                 // Standing straight (no resting angle), with a slightly gentler lean
-                <CardStage tier={getRarity(card.score).key} rest={0} maxTilt={10} front={<CollectibleCard {...card} edition="share" />} />
+                <>
+                  <CardStage tier={getRarity(card.score).key} rest={0} maxTilt={10} front={<CollectibleCard {...card} edition="share" />} />
+                  {/* The real game behind the example card, with its IMGM verdict */}
+                  {game && <GameVerdictLink game={game} className="mt-4" />}
+                </>
               ) : (
                 <div aria-hidden="true" className="aspect-[63/88] rounded-[4.76%/3.41%] bg-slate-900 motion-safe:animate-pulse" />
               )}

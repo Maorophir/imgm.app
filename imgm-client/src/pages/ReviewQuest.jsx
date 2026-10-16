@@ -45,6 +45,7 @@ import CardStage from '../components/CardStage';
 import CollectibleCard, { CardBack, ChecklistBack } from '../components/CollectibleCard';
 import { tickedChecklist } from '../components/reviewCard/reviewDisplay';
 import ShareCardButton from '../components/ShareCardButton';
+import ChangePictureButton from '../components/share/ChangePictureButton';
 import FaceDownCard from '../components/home/FaceDownCard';
 import RateAnother from '../components/reviewQuest/RateAnother';
 import {
@@ -515,6 +516,10 @@ const Quest = ({ id }) => {
                     gameId: game.id,
                     onChange: ({ art, quote }) => setResult((current) => ({ ...current, art, cardQuote: quote })),
                   }}
+                />
+                <ChangePictureButton
+                  gameId={game.id}
+                  onChange={({ art, quote }) => setResult((current) => ({ ...current, art, cardQuote: quote }))}
                 />
                 <button
                   type="button"

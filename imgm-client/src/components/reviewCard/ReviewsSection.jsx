@@ -25,6 +25,7 @@ import { useSearchParams } from 'react-router-dom';
 import { cardArtUrl } from '../../lib/igdbImage';
 import { reviewCardProps } from '../../lib/reviewCard';
 import ShareCardButton from '../ShareCardButton';
+import ChangePictureButton from '../share/ChangePictureButton';
 import { Medal, MessageSquareWarning, X } from 'lucide-react';
 import { getGameReviews } from '../../lib/api';
 import { isUnreleased } from '../../lib/release';
@@ -245,8 +246,16 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
                 <div key={review.id} id={`review-${review.id}`} className="scroll-mt-24 py-10 first:pt-0 not-first:border-t not-first:border-slate-700">
                   {review === pinned && (
                     // Your review, and sharing its card (any time, not just right after posting)
-                    <div className="mb-3 flex items-center justify-between gap-4">
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-x-4">
                       <p className="text-sm text-slate-400">Your review</p>
+                      <span className="flex items-center gap-x-5">
+                      <ChangePictureButton
+                        small
+                        gameId={gameId}
+                        onChange={({ art, quote }) =>
+                          setList((current) => ({ ...current, mine: { ...current.mine, art, cardQuote: quote } }))
+                        }
+                      />
                       <ShareCardButton
                         small
                         url={`/game/${gameId}?review=${review.id}#review-${review.id}`}
@@ -268,6 +277,7 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
                             setList((current) => ({ ...current, mine: { ...current.mine, art, cardQuote: quote } })),
                         }}
                       />
+                      </span>
                     </div>
                   )}
                   {/* Each review's own artwork or screenshot (chosen by the server from the

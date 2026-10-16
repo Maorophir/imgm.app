@@ -29,7 +29,7 @@
 import { HOME_SHOWCASE } from '../lib/homeShowcase';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getFeaturedGames, getRecentReviews } from '../lib/api';
+import { getFeaturedGames, getGame, getRecentReviews } from '../lib/api';
 import { WRAP, TEXT_BUTTON, TEXT_BUTTON_SM, SECTION_TITLE } from '../lib/ui';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import GameCard from '../components/GameCard';
@@ -86,6 +86,22 @@ const Home = () => {
 
   const recent = reviews || [];
 
+  // The showcase games' IMGM average and review count, for the captions under the
+  // cards: { 305152: { ratings: { imgm: 8.5 }, reviewCount: 32 } } (empty until loaded)
+  const [showcaseStats, setShowcaseStats] = useState({});
+  useEffect(() => {
+    const controller = new AbortController();
+    const ids = [HOME_SHOWCASE.hero.band.id, HOME_SHOWCASE.rarity.game.id];
+    Promise.all(ids.map((id) => getGame(id, controller.signal).catch(() => null))).then((found) =>
+      setShowcaseStats(
+        Object.fromEntries(
+          found.filter(Boolean).map((game) => [game.id, { ratings: game.ratings, reviewCount: game.reviewStats?.count ?? 0 }])
+        )
+      )
+    );
+    return () => controller.abort();
+  }, []);
+
   const retry = () => {
     setError(false);
     setGames(null); // back to the loading skeleton
@@ -141,15 +157,16 @@ const Home = () => {
         </div>
       )}
 
-      {/* The two big cards are a fixed showcase (lib/homeShowcase), not players' reviews */}
+      {/* The two big cards are a fixed showcase (lib/homeShowcase), not players' reviews;
+          the captions under them carry their games' live IMGM numbers */}
       <HomeHero
         review={HOME_SHOWCASE.hero.review}
         card={HOME_SHOWCASE.hero.card}
-        bandGame={HOME_SHOWCASE.hero.band}
+        bandGame={{ ...HOME_SHOWCASE.hero.band, ...showcaseStats[HOME_SHOWCASE.hero.band.id] }}
         onBrowse={browse}
       />
 
-      <RaritySection card={HOME_SHOWCASE.rarity.card} />
+      <RaritySection card={HOME_SHOWCASE.rarity.card} game={{ ...HOME_SHOWCASE.rarity.game, ...showcaseStats[HOME_SHOWCASE.rarity.game.id] }} />
 
       {/* ── Featured Games: the heading on the left, the shelf of game tiles on the right ──
           The section is where "Browse games" lands (tabIndex -1 lets it take focus);

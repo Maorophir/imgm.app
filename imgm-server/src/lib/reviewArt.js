@@ -1,10 +1,11 @@
 /**
  * A review's own art: the picture on its card. The player can choose it (one of the
  * game's cover, artworks or screenshots: `cardArt` on the review); until then it's one
- * of the game's official artworks, chosen from the review's id, so the same review
+ * of the game's artworks or screenshots, chosen from the review's id, so the same review
  * always gets the same picture (on the game page, the home page, the review quest's
- * reward and the picture shared from it) and one game's reviews get different ones.
- * A game with no artworks uses its screenshots, and one with neither its cover.
+ * reward and the picture shared from it) and one game's reviews get different ones
+ * (the whole pool, not just the official artworks: a game often has only one or two).
+ * A game with neither uses its cover.
  *
  * The address is IGDB's 1080p copy (or the cover); the website asks for the size it
  * needs (lib/igdbImage).
@@ -33,7 +34,7 @@ export const reviewArt = (game, review) => {
   const id = typeof review === 'object' ? review?.id : review;
   const chosen = typeof review === 'object' ? review?.cardArt : null;
   if (chosen && artChoices(game).includes(chosen)) return chosen;
-  const pool = game?.artworks?.length ? game.artworks : game?.screenshots ?? [];
+  const pool = [...(game?.artworks ?? []), ...(game?.screenshots ?? [])];
   if (pool.length === 0) return game?.coverUrl ?? null;
   return pool[hash(String(id)) % pool.length];
 };

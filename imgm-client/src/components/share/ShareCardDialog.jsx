@@ -25,9 +25,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Download, Link2, Share2, X } from 'lucide-react';
 import ShareImage from './ShareImage';
+import PictureChoices from './PictureChoices';
 import { makeCardImage, SHARE_IMAGE_SIZE } from '../../lib/cardImage';
 import { getMyCard, setMyCard } from '../../lib/api';
-import { cardArtUrl, igdbImage, isCover } from '../../lib/igdbImage';
+import { cardArtUrl, isCover } from '../../lib/igdbImage';
 import { PRIMARY_BUTTON, GHOST_BUTTON, TEXT_BUTTON_SM } from '../../lib/ui';
 
 // "Hollow Knight: Silksong" → "imgm-hollow-knight-silksong-card.png"
@@ -35,34 +36,12 @@ const fileName = (title) => `imgm-${title.toLowerCase().replace(/[^a-z0-9]+/g, '
 
 // "Make it yours": the card's picture (the game's own: cover, artworks, screenshots) and
 // its words (one sentence of the review, or IMGM's pick). Thumbnails scroll sideways.
-const CHOICE = 'shrink-0 rounded-sm border-2 transition-colors duration-120 disabled:opacity-50';
 const MakeItYours = ({ choices, busy, onChoose }) => (
   <fieldset className="flex flex-col gap-4 border-t border-slate-700 pt-4" disabled={busy}>
     <legend className="sr-only">Make your card yours</legend>
     <div>
       <p className="text-sm font-medium text-white mb-2">Picture</p>
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {choices.pictures.map((picture) => {
-          const on = picture === choices.art;
-          return (
-            <button
-              key={picture}
-              type="button"
-              onClick={() => !on && onChoose({ art: picture })}
-              aria-pressed={on}
-              aria-label={isCover(picture) ? 'The cover' : 'Game art'}
-              className={`${CHOICE} ${on ? 'border-white' : 'border-transparent hover:border-slate-500'}`}
-            >
-              <img
-                src={isCover(picture) ? picture : igdbImage(picture, 't_screenshot_med')}
-                alt=""
-                loading="lazy"
-                className={`block h-16 rounded-[1px] object-cover ${isCover(picture) ? 'w-12' : 'w-28'}`}
-              />
-            </button>
-          );
-        })}
-      </div>
+      <PictureChoices pictures={choices.pictures} current={choices.art} busy={busy} onChoose={(art) => onChoose({ art })} />
     </div>
     {choices.sentences.length > 1 && (
       <div>

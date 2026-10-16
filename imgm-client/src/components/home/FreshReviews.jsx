@@ -152,7 +152,7 @@ const FirstsCarousel = ({ games }) => {
           key={`card-${game.id}`}
           to={quest}
           aria-label={`Rate ${game.title} first`}
-          className="absolute z-2 right-4 -bottom-14 w-28 sm:right-12 sm:-bottom-24 sm:w-[200px] animate-fade-in rotate-[2deg] hover:rotate-0 transition-transform duration-200"
+          className="absolute z-2 right-4 -bottom-20 w-36 sm:right-12 sm:-bottom-32 sm:w-[250px] animate-fade-in rotate-[2deg] hover:rotate-0 transition-transform duration-200"
         >
           <CollectibleCard
             title={game.title}
@@ -167,7 +167,7 @@ const FirstsCarousel = ({ games }) => {
 
       {/* Whose art it is, and the controls. Narrower than the art on the left, so it
           never runs under the card */}
-      <div className="mt-3 flex flex-col gap-3 max-w-[calc(100%-140px)] sm:max-w-[calc(100%-300px)]">
+      <div className="mt-3 flex flex-col gap-3 max-w-[calc(100%-170px)] sm:max-w-[calc(100%-330px)]">
         <p className="text-sm text-slate-400">
           Key art · {game.title}{makers && ` (${makers})`}
         </p>
@@ -214,7 +214,7 @@ export const NeedsReview = ({ games, avoidArt }) => {
             game whose art is already in the hero last (no picture twice in a row) */}
         <FirstsCarousel games={[...waiting].sort((a, b) => rank(a) - rank(b))} />
 
-        <h2 id="first-title" className={`mt-20 sm:mt-28 font-display text-[34px] leading-none tracking-[.005em] text-white`}>
+        <h2 id="first-title" className={`mt-6 sm:mt-8 font-display text-[34px] leading-none tracking-[.005em] text-white`}>
           Be the first reviewer
         </h2>
         <p className="mt-3 max-w-[520px] text-base leading-[1.6] text-white">

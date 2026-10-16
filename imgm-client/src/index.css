@@ -15,6 +15,10 @@
  */
 @import "tailwindcss";
 
+/* short: a screen 850px tall or less (1280×800 and 1366×768 laptops). The home hero's
+   band steps down there, so its card still fits on the first screen. */
+@custom-variant short (@media (max-height: 850px));
+
 @layer base {
   /* Keyboard focus: an ivory outline. Lime is kept for the one primary action, so
      focus doesn't use it. In the base layer, so a component's own focus: classes

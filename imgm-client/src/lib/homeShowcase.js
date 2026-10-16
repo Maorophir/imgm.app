@@ -46,6 +46,7 @@ export const HOME_SHOWCASE = {
     },
   },
   rarity: {
+    game: { id: 115289, title: 'Hollow Knight: Silksong' },
     card: {
       title: 'Hollow Knight: Silksong',
       score: 8,
