@@ -12,7 +12,7 @@
  *                featured games.
  *   The card     a recent review with the player's words (the Home page picks it: the
  *                owner's pinned one, else the best one with words to quote) as a trading
- *                card, laid across a full-width band of a game's key art. It tilts
+ *                card in its share edition (the words and the IMGM mark on the card), laid across a full-width band of a game's key art. It tilts
  *                toward the pointer, turns over (to the reviewer's checklist, like a
  *                game page's card, or to the shared IMGM back if there's none), and
  *                its link can be shared.
@@ -47,7 +47,6 @@ import CollectibleCard, { CardBack, ChecklistBack } from '../CollectibleCard';
 import { tickedChecklist } from '../reviewCard/reviewDisplay';
 import RarityMark from '../RarityMark';
 import ShareCardButton from '../ShareCardButton';
-import CardQuote from '../CardQuote';
 import FaceDownCard from './FaceDownCard';
 import { getRarity } from '../reviewQuest/questOptions';
 import { artSrcSet } from '../../lib/igdbImage';
@@ -131,7 +130,8 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
           <CardStage
             tier={rarity.key}
             flipped={flipped}
-            front={<CollectibleCard {...card} />}
+            // The share edition: the player's words and the IMGM mark on the card itself
+            front={<CollectibleCard {...card} edition="share" />}
             back={ticks.length > 0 ? <ChecklistBack score={review.rating} ticks={ticks} name={card.reviewer} /> : <CardBack />}
           />
         ) : (
@@ -157,31 +157,15 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
         <div aria-hidden="true" className={BAND} />
       )}
 
-      {/* ── The player's words, beside the card (the card itself carries none). Desktop:
-          over the band's left side, on a fade that keeps them readable over the art ── */}
-      {review && card.quote && (
-        <>
-          <div aria-hidden="true" className="hidden lg:block col-span-full row-start-4 relative z-2 bg-gradient-to-r from-slate-950/90 via-slate-950/60 to-transparent" />
-          <CardQuote
-            text={card.quote}
-            reviewer={card.reviewer}
-            lines={5}
-            size="lg"
-            className="hidden lg:block col-start-2 row-start-4 self-center relative z-3 max-w-[640px] lg:pr-12 xl:pr-16"
-          />
-        </>
-      )}
-
       {/* ── What you can do with the card: under it ── */}
       <div className="col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:justify-start lg:pt-[68px] xl:pt-[76px]">
-        {/* Phones and tablets: the words under the card, before its buttons */}
-        {review && <CardQuote text={card.quote} reviewer={card.reviewer} className="lg:hidden w-full max-w-[560px] mb-3" />}
         {review ? (
           <>
             <ShareCardButton
               url={reviewLink}
               title={`${card.reviewer}’s card for ${review.game.title}`}
               text={`${review.rating}/10, ${rarity.label} on IMGM`}
+              card={card}
             />
             <button
               type="button"

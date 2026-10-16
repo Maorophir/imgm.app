@@ -55,7 +55,9 @@ import CardChecklist from './reviewCard/CardChecklist';
 
 // The card stock: dark, with a faint ivory line just inside its edge. The corner is the
 // trading-card one (3mm on a 63×88mm card), as percentages so it scales with the card.
-const STOCK = 'relative flex flex-col aspect-[63/88] rounded-[4.76%/3.41%] overflow-hidden bg-slate-900 text-white inset-ring inset-ring-white/7';
+// text-left: the card sets its own alignment, so a centred page (the quest's done screen)
+// can't centre its title and quote.
+const STOCK = 'relative flex flex-col aspect-[63/88] rounded-[4.76%/3.41%] overflow-hidden bg-slate-900 text-white text-left inset-ring inset-ring-white/7';
 
 // The Legendary frame: the gilt, larger than the frame so that moving it (--gilt-at,
 // set by a tilting CardStage) slides the shine across. At rest it sits in the middle.

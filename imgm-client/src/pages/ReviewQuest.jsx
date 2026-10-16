@@ -45,7 +45,6 @@ import CardStage from '../components/CardStage';
 import CollectibleCard, { CardBack, ChecklistBack } from '../components/CollectibleCard';
 import { tickedChecklist } from '../components/reviewCard/reviewDisplay';
 import ShareCardButton from '../components/ShareCardButton';
-import CardQuote from '../components/CardQuote';
 import FaceDownCard from '../components/home/FaceDownCard';
 import RateAnother from '../components/reviewQuest/RateAnother';
 import {
@@ -335,6 +334,7 @@ const Quest = ({ id }) => {
         isNew: !isEditing,
         newBadges: saved.badges.filter((b) => !previousBadges.includes(b)),
         badges: saved.badges, // every badge the review has (shown on its card)
+        postedAt: new Date().toISOString(), // the card's date
         playerXp: saved.playerXp, // { before, after }
         inBacklog: saved.inBacklog, // in their Backlog: offer to remove it (never automatic)
       });
@@ -407,6 +407,18 @@ const Quest = ({ id }) => {
   // The posted review, and the link that opens it on the game page
   const savedId = existing.review?.id;
   const reviewLink = savedId ? `/game/${game.id}?review=${savedId}#review-${savedId}` : `/game/${game.id}`;
+  // The card earned by posting: what the done screen shows and what "Share card" turns
+  // into a picture (the share edition: their words and the IMGM mark on it)
+  const rewardCard = {
+    title: game.title,
+    score: answers.rating,
+    coverUrl: game.coverUrl,
+    meta: gameMeta(game),
+    credit: game.developer ? `Cover · ${game.developer}` : undefined,
+    reviewer: session?.user?.displayUsername,
+    date: existing.review?.createdAt ?? result?.postedAt,
+    quote: answers.reviewText?.trim() || undefined,
+  };
 
   return (
     <QuestStage art={background}>
@@ -484,24 +496,14 @@ const Quest = ({ id }) => {
               <p className="text-slate-400 text-sm mb-6">It's live on {game.title}'s page. Thanks for helping other players!</p>
               {result.inBacklog && <BacklogPrompt gameId={game.id} title={game.title} />}
 
-              {/* The quest's reward: the review as a trading card, like the home page's (and,
-                  turned over, its checklist) */}
+              {/* The quest's reward: the review as a trading card in its share edition (their
+                  words and the IMGM mark on it), like the home page's, ready to share as a
+                  picture. Turned over: its checklist */}
               <CardStage
                 tier={rarity.key}
                 flipped={flipped}
                 className="w-[min(340px,100%)] mx-auto"
-                front={
-                  <CollectibleCard
-                    title={game.title}
-                    score={answers.rating}
-                    coverUrl={game.coverUrl}
-                    meta={gameMeta(game)}
-                    credit={game.developer ? `Cover · ${game.developer}` : undefined}
-                    reviewer={session.user.displayUsername}
-                    date={existing.review?.createdAt ?? new Date()}
-                    badges={result.badges ?? []}
-                  />
-                }
+                front={<CollectibleCard {...rewardCard} edition="share" />}
                 // Turned over: the checklist they just filled in (or the shared back if they skipped it)
                 back={
                   cardTicks.length > 0
@@ -509,13 +511,12 @@ const Quest = ({ id }) => {
                     : <CardBack />
                 }
               />
-              {/* Their words, beside (under) the card: the card itself carries none */}
-              <CardQuote text={answers.reviewText?.trim()} lines={6} className="mt-6 mx-auto max-w-[480px] text-left" />
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6">
                 <ShareCardButton
                   url={reviewLink}
                   title={`${session.user.displayUsername ?? 'My'}’s card for ${game.title}`}
                   text={`${answers.rating}/10, ${rarity.label} on IMGM`}
+                  card={rewardCard}
                 />
                 <button
                   type="button"
