@@ -22,9 +22,13 @@
  */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Crown } from 'lucide-react';
 import { getGotw } from '../../lib/api';
-import { coverSrcSet } from '../../lib/igdbImage';
-import { WRAP, TEXT_LINK, SECTION_TITLE } from '../../lib/ui';
+import { artSrcSet, coverSrcSet } from '../../lib/igdbImage';
+import { WRAP, TEXT_LINK, SECTION_TITLE, GHOST_BUTTON } from '../../lib/ui';
+
+// The gilt's gold as a flat colour, for the crown and the kicker over the dark stage
+const GOLD = '#d9a94e';
 
 // The Legendary gilt, as the 2px edge around the winner's cover (the same as the Game
 // of the Week page's edge around the winner's art)
@@ -32,8 +36,8 @@ const GILT = { backgroundImage: 'var(--gradient-gilt)', backgroundSize: '260% 26
 
 const DAY = 24 * 60 * 60 * 1000;
 
-// The winner's cover: 112px on phones, 144px from tablets up (the gilt edge included)
-const WINNER_COVER = 'w-28 sm:w-36';
+// The winner's cover: 128px on phones, 192px from tablets up (the gilt edge included)
+const WINNER_COVER = 'w-32 sm:w-48';
 // The ballot's covers: six in a row at every size, never wider than 440px in all
 const BALLOT_ROW = 'grid grid-cols-6 gap-2 max-w-[440px]';
 
@@ -92,7 +96,12 @@ const Winner = ({ gotw, timeZone }) => {
         <h3 className="mt-2 font-display text-[30px] sm:text-[44px] uppercase leading-[.92] tracking-[.005em] text-white text-balance break-words">
           {game.title}
         </h3>
-        <p className="mt-3 text-base text-white">Chosen by IMGM players</p>
+        <p className="mt-3 text-base text-white">
+          Chosen by IMGM players
+          {gotw.totalVotes > 0 && (
+            <span className="text-slate-400 tabular-nums"> · {gotw.votes} of {gotw.totalVotes} vote{gotw.totalVotes === 1 ? '' : 's'}</span>
+          )}
+        </p>
         <Link to={`/game/${game.id}`} className={HALF_LINK}>
           See the game<span className="sr-only">: {game.title}</span>
         </Link>
@@ -118,7 +127,7 @@ const Ballot = ({ week, candidates, voted }) => {
                     alt={game.title}
                     loading="lazy"
                     decoding="async"
-                    className="block w-full aspect-[3/4] object-cover rounded-sm bg-slate-900"
+                    className="block w-full aspect-[3/4] object-cover rounded-sm bg-slate-900 shadow-lg shadow-black/40 transition-transform duration-200 hover:-translate-y-1"
                   />
                 ) : (
                   <div role="img" aria-label={game.title} className="w-full aspect-[3/4] rounded-sm bg-slate-900" />
@@ -126,8 +135,13 @@ const Ballot = ({ week, candidates, voted }) => {
               </li>
             ))}
           </ul>
-          {timeLeft && <p className="mt-4 text-sm tabular-nums text-slate-400">Voting closes in {timeLeft}</p>}
-          <Link to="/game-of-the-week" className={HALF_LINK}>
+          {timeLeft && (
+            <p className="mt-6 flex items-baseline gap-3">
+              <span className="font-display text-[44px] leading-none tabular-nums text-white">{timeLeft}</span>
+              <span className="text-sm text-slate-400">left to vote</span>
+            </p>
+          )}
+          <Link to="/game-of-the-week" className={`${GHOST_BUTTON} mt-5 relative z-1`}>
             {voted ? 'See the ballot' : 'Vote for next week'}
           </Link>
         </>
@@ -195,29 +209,58 @@ const GotwStrip = () => {
   // Two halves side by side (on laptops), split by a hairline; the ballot alone when
   // there's no winner yet
   const halves = loading || Boolean(winner);
+  // The stage's backdrop: the winner's key art (else the first candidate's)
+  const stageArt = winner?.game.artworks?.[0] ?? candidates.find((c) => c.game.artworks?.length)?.game.artworks[0] ?? null;
 
   return (
     <section aria-labelledby="gotw-title" aria-busy={loading} className="mt-30 sm:mt-50">
       <div className={WRAP}>
-        <h2 id="gotw-title" className={SECTION_TITLE}>
-          Game of the Week
-        </h2>
-        <p className="mt-5 max-w-[520px] text-base leading-[1.6] text-white">
-          Every week IMGM players vote for one game. The winner is the Game of the Week for the seven days after.
-        </p>
-
-        <div
-          className={`mt-10 sm:mt-12 ${
-            halves ? 'grid gap-y-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-x-12 xl:gap-x-16' : ''
-          }`}
-        >
-          {loading ? <WinnerPlaceholder /> : winner && <Winner gotw={winner} timeZone={data.week.timeZone} />}
-          <div className={halves ? 'min-w-0 border-t border-slate-700 pt-8 lg:border-t-0 lg:pt-0 lg:border-l lg:pl-12 xl:pl-16' : ''}>
-            {loading ? (
-              <BallotPlaceholder />
-            ) : (
-              <Ballot week={data.week} candidates={candidates} voted={data.myVote != null} />
+        {/* The stage: a hairline of the Legendary gilt around it, the winner's key art
+            behind a dark fade (the words stay on the dark side) */}
+        <div className="rounded-sm p-px" style={GILT}>
+          <div className="relative overflow-hidden rounded-[1px] bg-slate-950 px-5 py-8 sm:px-10 sm:py-12">
+            {stageArt && (
+              <>
+                <img
+                  src={stageArt}
+                  srcSet={artSrcSet(stageArt)}
+                  sizes="100vw"
+                  alt=""
+                  loading="lazy"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover object-[70%_30%] opacity-45"
+                />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-slate-950 via-slate-950/85 to-slate-950/30" />
+                <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-slate-950/40" />
+              </>
             )}
+
+            <div className="relative">
+              <p className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[.2em]" style={{ color: GOLD }}>
+                <Crown className="w-4 h-4" aria-hidden="true" /> Crowned by players, every week
+              </p>
+              <h2 id="gotw-title" className={`mt-3 ${SECTION_TITLE}`}>
+                Game of the Week
+              </h2>
+              <p className="mt-4 max-w-[520px] text-base leading-[1.6] text-white">
+                Every week IMGM players vote for one game. The winner is the Game of the Week for the seven days after.
+              </p>
+
+              <div
+                className={`mt-10 sm:mt-12 ${
+                  halves ? 'grid gap-y-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-x-12 xl:gap-x-16' : ''
+                }`}
+              >
+                {loading ? <WinnerPlaceholder /> : winner && <Winner gotw={winner} timeZone={data.week.timeZone} />}
+                <div className={halves ? 'min-w-0 border-t border-slate-700 pt-8 lg:border-t-0 lg:pt-0 lg:border-l lg:pl-12 xl:pl-16' : ''}>
+                  {loading ? (
+                    <BallotPlaceholder />
+                  ) : (
+                    <Ballot week={data.week} candidates={candidates} voted={data.myVote != null} />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>

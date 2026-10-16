@@ -56,7 +56,8 @@ const BASE_LINKS = [
   { to: '/hall-of-fame', label: 'Hall of Fame' },
   // Trending is hidden until it has real content (pages/Trending.jsx)
 ];
-const PLAY_NEXT_LINK = { to: '/play-next', label: 'Play Next' };
+// Play Next keeps its lime star, IMGM's mark for its AI guide
+const PLAY_NEXT_LINK = { to: '/play-next', label: <><span className="text-brand" aria-hidden="true">✦</span> Play Next</> };
 
 function Navbar() {
   const { data: session, isPending } = useSession();
