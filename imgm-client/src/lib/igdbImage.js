@@ -19,3 +19,10 @@ export const artSrcSet = (url) =>
 // How wide a cover is in the game grids (Home's shelf, Search): two columns on phones,
 // up to about 230px each on desktop. The `sizes` for those covers' srcSet.
 export const COVER_SIZES = '(min-width: 1024px) 230px, (min-width: 768px) 25vw, (min-width: 640px) 33vw, 50vw';
+
+// Is this address a game's cover (the other art is artworks and screenshots)?
+export const isCover = (url) => Boolean(url?.includes('/t_cover_big'));
+
+// A review's card art at the size a card needs: an artwork or screenshot as IGDB's 889px
+// copy (t_screenshot_big; the 1920px original is far too heavy for a card), a cover as it is
+export const cardArtUrl = (url, size = 't_screenshot_big') => (!url || isCover(url) ? url : igdbImage(url, size));

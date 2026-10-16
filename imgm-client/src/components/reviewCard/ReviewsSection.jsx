@@ -22,6 +22,9 @@
  */
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { cardArtUrl } from '../../lib/igdbImage';
+import { reviewCardProps } from '../../lib/reviewCard';
+import ShareCardButton from '../ShareCardButton';
 import { Medal, MessageSquareWarning, X } from 'lucide-react';
 import { getGameReviews } from '../../lib/api';
 import { isUnreleased } from '../../lib/release';
@@ -241,10 +244,29 @@ const ReviewsSection = ({ game, gameId, filter, onFilterChange }) => {
                 // between reviews instead of boxes.
                 <div key={review.id} id={`review-${review.id}`} className="scroll-mt-24 py-10 first:pt-0 not-first:border-t not-first:border-slate-700">
                   {review === pinned && (
-                    <p className="mb-3 text-sm text-slate-400">Your review</p>
+                    // Your review, and sharing its card (any time, not just right after posting)
+                    <div className="mb-3 flex items-center justify-between gap-4">
+                      <p className="text-sm text-slate-400">Your review</p>
+                      <ShareCardButton
+                        small
+                        url={`/game/${gameId}?review=${review.id}#review-${review.id}`}
+                        title={`${review.user?.displayUsername ?? 'My'}’s card for ${game.title}`}
+                        text={`${review.rating}/10, ${getRarity(review.rating).label} on IMGM`}
+                        card={reviewCardProps({
+                          game,
+                          art: review.art,
+                          rating: review.rating,
+                          reviewer: review.user?.displayUsername,
+                          date: review.createdAt,
+                          quote: review.reviewText?.trim(),
+                          badges: review.badges,
+                        })}
+                      />
+                    </div>
                   )}
-                  {/* A different artwork/screenshot per review, so the cards don't all look the same */}
-                  <ReviewEntry review={review} game={game} artUrl={cardArt(game, i)} />
+                  {/* Each review's own artwork or screenshot (chosen by the server from the
+                      review's id), so the cards don't all look the same */}
+                  <ReviewEntry review={review} game={game} artUrl={review.art ? cardArtUrl(review.art) : cardArt(game, i)} />
                 </div>
               ))}
             </div>

@@ -26,10 +26,10 @@
  * same list, marked `pinned`. The Game of the Week section needs nothing from either,
  * so it loads its own (the same answer the Game of the Week page gets).
  */
+import { reviewCardProps } from '../lib/reviewCard';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { getFeaturedGames, getRecentReviews } from '../lib/api';
-import { shortGenre } from '../lib/gameLabels';
 import { WRAP, TEXT_BUTTON, TEXT_BUTTON_SM, SECTION_TITLE } from '../lib/ui';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import { getRarity } from '../components/reviewQuest/questOptions';
@@ -76,19 +76,16 @@ const pickSecondReview = (reviews, hero) => {
 // A review as its card's props: the game's genre, year and studio in the small print,
 // its badges, and the player's words as the quote (shown beside the card, CardQuote).
 // The year is read in UTC, like IGDB's dates.
-const reviewCard = ({ game, ...review }) => ({
-  title: game.title,
-  score: review.rating,
-  coverUrl: game.coverUrl,
-  meta: [game.genres?.[0] && shortGenre(game.genres[0]), game.releaseDate && new Date(game.releaseDate).getUTCFullYear()]
-    .filter(Boolean)
-    .join(' · ') || undefined,
-  credit: game.developer ? `Cover · ${game.developer}` : undefined,
-  reviewer: review.author ?? 'A player',
-  date: review.createdAt,
-  quote: review.excerpt ?? review.snippet ?? undefined,
-  badges: review.badges ?? [],
-});
+const reviewCard = ({ game, ...review }) =>
+  reviewCardProps({
+    game,
+    art: review.art,
+    rating: review.rating,
+    reviewer: review.author ?? 'A player',
+    date: review.createdAt,
+    quote: review.excerpt ?? review.snippet,
+    badges: review.badges ?? [],
+  });
 
 const Home = () => {
   // Featured games from IGDB (via our backend). null = still loading.

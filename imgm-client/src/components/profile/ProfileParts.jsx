@@ -31,6 +31,8 @@ const GROUP_LABEL = 'text-sm text-slate-400';
 import { Histogram } from '../game/PlayerVerdict';
 import { chooseAvatarPreset, deleteAvatar, uploadAvatar } from '../../lib/api';
 import AvatarPicker from './AvatarPicker';
+import ShareCardButton from '../ShareCardButton';
+import { reviewCardProps } from '../../lib/reviewCard';
 import { resizeToAvatar } from '../../lib/resizeImage';
 import { timeAgo } from '../../lib/timeAgo';
 
@@ -270,7 +272,7 @@ export const StatsGrid = ({ stats, own = false }) => {
 // edge (standing still, the game's name on it), the player's words under it, how long
 // ago and how many found it helpful. The whole card opens the game page right at this
 // review.
-const ReviewCard = ({ review }) => {
+const ReviewCard = ({ review, sharedBy }) => {
   const rarity = getRarity(review.rating);
   return (
     // The keyboard outline goes around the whole card, like the home page's cards
@@ -301,6 +303,25 @@ const ReviewCard = ({ review }) => {
           <time dateTime={review.createdAt}>{timeAgo(review.createdAt)}</time>
         </Link>
         {review.helpfulCount > 0 && <span>{review.helpfulCount} found it helpful</span>}
+        {/* Your own profile: share the card as a picture. Above the card's link layer */}
+        {sharedBy && (
+          <ShareCardButton
+            small
+            className="relative z-1"
+            url={`/game/${review.game.id}?review=${review.id}#review-${review.id}`}
+            title={`${sharedBy}’s card for ${review.game.title}`}
+            text={`${review.rating}/10, ${getRarity(review.rating).label} on IMGM`}
+            card={reviewCardProps({
+              game: review.game,
+              art: review.art,
+              rating: review.rating,
+              reviewer: sharedBy,
+              date: review.createdAt,
+              quote: review.quote,
+              badges: review.badges,
+            })}
+          />
+        )}
       </figcaption>
     </figure>
   );
@@ -311,7 +332,8 @@ const ReviewCard = ({ review }) => {
 //   total     how many reviews the player has
 //   loadMore  (offset) => the next page: { reviews }
 //   empty     what to say when there are none
-export const PlayerReviews = ({ first, total, loadMore, empty }) => {
+//   sharedBy  your gamer tag, on your own profile: each card gets a Share card button
+export const PlayerReviews = ({ first, total, loadMore, empty, sharedBy }) => {
   const [reviews, setReviews] = useState(first);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -333,7 +355,7 @@ export const PlayerReviews = ({ first, total, loadMore, empty }) => {
       {/* The home page's grid: two columns on phones, then as many 240px columns as fit.
           auto-fill keeps the empty columns, so one or two cards stay card-sized. */}
       <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-x-8 sm:gap-y-14">
-        {reviews.map((review) => <ReviewCard key={review.id} review={review} />)}
+        {reviews.map((review) => <ReviewCard key={review.id} review={review} sharedBy={sharedBy} />)}
       </div>
       {reviews.length < total && (
         <div className="flex flex-col items-center gap-2">

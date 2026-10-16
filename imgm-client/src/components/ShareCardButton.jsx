@@ -14,15 +14,16 @@
  *   text       a line to go with the link, e.g. "10/10, Legendary on IMGM"
  *   label      the button's words (default "Share card"), e.g. "Share profile"
  *   card       CollectibleCard props: share the card as a picture (see above)
+ *   small      the small text size (under cards in a grid)
  *   className  placement
  */
 import { useEffect, useState } from 'react';
-import { TEXT_BUTTON } from '../lib/ui';
+import { TEXT_BUTTON, TEXT_BUTTON_SM } from '../lib/ui';
 import ShareCardDialog from './share/ShareCardDialog';
 
 const COPIED_FOR = 2000; // ms "Link copied" stays up
 
-const ShareCardButton = ({ url, title, text, label = 'Share card', card, className = '' }) => {
+const ShareCardButton = ({ url, title, text, label = 'Share card', card, small = false, className = '' }) => {
   // 'idle', 'copied', or 'failed' (the clipboard said no)
   const [status, setStatus] = useState('idle');
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -66,7 +67,7 @@ const ShareCardButton = ({ url, title, text, label = 'Share card', card, classNa
       <button
         type="button"
         onClick={share}
-        className={`${TEXT_BUTTON} ${className}`}
+        className={`${small ? TEXT_BUTTON_SM : TEXT_BUTTON} ${className}`}
       >
         {message || label}
       </button>

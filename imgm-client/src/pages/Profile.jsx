@@ -96,6 +96,7 @@ function Profile() {
             first={profile.reviews}
             total={profile.stats.reviews}
             loadMore={getMyReviews}
+            sharedBy={current}
             empty={<>No reviews yet. Find a game you've played and start your first <span className="text-white font-medium">Review Quest</span>.</>}
           />
         </section>

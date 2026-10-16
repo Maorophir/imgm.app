@@ -16,9 +16,10 @@ import CollectibleCard from '../CollectibleCard';
 import { PowerIcon } from '../Logo';
 import { getRarity } from '../reviewQuest/questOptions';
 import { SHARE_IMAGE_SIZE } from '../../lib/cardImage';
+import { igdbImage, isCover } from '../../lib/igdbImage';
 
-// IGDB covers: the 528px copy of a 264px one; other art is used as it is
-const sharpCover = (url) => url?.replace('/t_cover_big/', '/t_cover_big_2x/');
+// The sharpest copy for a 1080px picture: a cover's 528px copy, other art's 1920px one
+const sharpCover = (url) => (isCover(url) ? igdbImage(url, 't_cover_big_2x') : igdbImage(url, 't_1080p'));
 
 const ShareImage = forwardRef(({ card }, ref) => {
   const rarity = getRarity(card.score);

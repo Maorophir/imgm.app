@@ -18,6 +18,7 @@ import { getPlayerXp } from '../lib/playerXp.js';
 import { withMaskedText } from '../lib/reviewText.js';
 import { voterStats, weekOf } from '../lib/gotw.js';
 import { AVATAR_PRESETS, presetByKey, presetFile } from '../lib/avatarPresets.js';
+import { reviewArt } from '../lib/reviewArt.js';
 import { normalizeUsername, USERNAME_MAX } from '../lib/usernameRules.js';
 
 const MAX_PICTURE = 300_000; // bytes
@@ -138,12 +139,20 @@ export const getAvatar = async (req, res) => {
 // A review as the profile lists it: the game, the score, a short masked snippet
 const REVIEW_SELECT = {
   id: true, rating: true, reviewText: true, createdAt: true, badges: true, helpfulCount: true,
-  game: { select: { id: true, title: true, coverUrl: true } },
+  game: { select: { id: true, title: true, coverUrl: true, genres: true, releaseDate: true, developer: true, artworks: true, screenshots: true } },
 };
 const asListItem = (review) => {
   const { masked, reviewText, ...rest } = withMaskedText(review);
   const text = (masked?.reviewText ?? reviewText)?.trim() || null;
-  return { ...rest, snippet: text && (text.length > 180 ? `${text.slice(0, 180).trimEnd()}…` : text) };
+  const { artworks, screenshots, ...game } = review.game;
+  return {
+    ...rest,
+    game,
+    art: reviewArt(review.game, review.id), // its card's own picture (for sharing it)
+    snippet: text && (text.length > 180 ? `${text.slice(0, 180).trimEnd()}…` : text),
+    // The words for a shared card (the card shows a few lines of them)
+    quote: text && (text.length > 420 ? `${text.slice(0, 420).trimEnd()}…` : text),
+  };
 };
 
 // One page of a player's reviews, newest first (ties by id, so pages never overlap)

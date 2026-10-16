@@ -10,6 +10,7 @@ import { notifyReviewChanged } from '../lib/aiIndex.js';
 import { castVote } from '../lib/reviewVotes.js';
 import { refreshGameSummary } from '../lib/aiSummary.js';
 import { cacheAtEdge } from '../lib/cdnCache.js';
+import { ART_SELECT, reviewArt } from '../lib/reviewArt.js';
 import { CHECKLIST } from '../lib/reviewOptions.js';
 
 // Until a player confirms their email they can post only this many reviews: enough to
@@ -79,7 +80,7 @@ export const getReviewsByGameId = async (req, res) => {
       ...(rating ? { rating } : tier && { rating: { gte: TIER_RATINGS[tier][0], lte: TIER_RATINGS[tier][1] } }),
       ...(user && { NOT: { userId: user.id } }),
     };
-    const [page, total, mine, focused] = await Promise.all([
+    const [page, total, mine, focused, art] = await Promise.all([
       prisma.review.findMany({ where, include: withViewerVote(user?.id), orderBy: REVIEW_SORTS[sort], skip: offset, take: limit }),
       prisma.review.count({ where }),
       user && offset === 0
@@ -89,11 +90,13 @@ export const getReviewsByGameId = async (req, res) => {
       focus && offset === 0
         ? prisma.review.findFirst({ where: { id: focus, gameId, ...(user && { NOT: { userId: user.id } }) }, include: withViewerVote(user?.id) })
         : null,
+      prisma.game.findUnique({ where: { id: gameId }, select: ART_SELECT }), // each review's own art
     ]);
+    const withArt = (list) => list.map((review) => ({ ...review, art: reviewArt(art, review.id) }));
     const [reviews, [mineForClient = null], [focusedForClient = null]] = await Promise.all([
-      forClient(page),
-      forClient(mine ? [mine] : []),
-      forClient(focused ? [focused] : []),
+      forClient(page).then(withArt),
+      forClient(mine ? [mine] : []).then(withArt),
+      forClient(focused ? [focused] : []).then(withArt),
     ]);
     res.json({ reviews, mine: mineForClient, focused: focusedForClient, total, hasMore: offset + page.length < total });
   } catch (error) {
@@ -227,7 +230,7 @@ export const saveReview = async (req, res) => {
     const { xp: after } = await getPlayerXp(user.id);
     const playerXp = { before: after - xp + (existing?.xp ?? 0), after };
 
-    res.status(existing ? 200 : 201).json({ ...review, playerXp, inBacklog });
+    res.status(existing ? 200 : 201).json({ ...review, playerXp, inBacklog, art: reviewArt(game, review.id) });
   } catch (error) {
     console.error('Error saving review:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -324,7 +327,7 @@ const RECENT_SELECT = {
   ...Object.fromEntries(CHECKLIST_FIELDS.map((field) => [field, true])),
   user: { select: { displayUsername: true } },
   game: {
-    select: { id: true, title: true, coverUrl: true, genres: true, releaseDate: true, developer: true, artworks: true },
+    select: { id: true, title: true, coverUrl: true, genres: true, releaseDate: true, developer: true, artworks: true, screenshots: true },
   },
 };
 export const getRecentReviews = async (req, res) => {
@@ -372,7 +375,7 @@ export const getRecentReviews = async (req, res) => {
       reviews.map((review) => {
         const { masked, reviewText } = withMaskedText(review);
         const text = (masked?.reviewText ?? reviewText)?.trim() || null;
-        const { artworks, ...game } = review.game;
+        const { artworks, screenshots, ...game } = review.game;
         const stat = statsByGame.get(game.id);
         return {
           id: review.id,
@@ -380,6 +383,7 @@ export const getRecentReviews = async (req, res) => {
           snippet: excerpt(text, 160), // the small tiles
           excerpt: excerpt(text, EXCERPT_LENGTH), // beside the big cards
           badges: review.badges,
+          art: reviewArt(review.game, review.id), // its card's own picture
           createdAt: review.createdAt,
           author: review.user?.displayUsername ?? null,
           // { graphics: 'pretty', story: 'tears', … }, the answers it gave (empty if none)

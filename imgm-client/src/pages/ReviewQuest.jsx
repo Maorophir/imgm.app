@@ -27,6 +27,7 @@
  * Noir: one flat panel of card stock over the game's art (no blur, no glow), the big
  * condensed headings, and lime only on the screen's one main action.
  */
+import { reviewCardProps } from '../lib/reviewCard';
 import { ArrowBigUp, ArrowLeft, ArrowRight, BookmarkCheck, Check, Clapperboard, Combine, Drama, Gamepad2, ListChecks, Monitor, PenLine, Pencil, Scale, Star, Timer, Trash2, Zap } from 'lucide-react';
 import ArtIcon from '../components/ArtIcon';
 import { useState, useEffect } from 'react';
@@ -35,7 +36,6 @@ import { getGame, getMyReview, saveReview, deleteMyReview, setBacklogFinished } 
 import { isUnreleased, releaseLabel } from '../lib/release';
 import { refreshMyProgress } from '../hooks/useMyProgress';
 import { getProgress } from '../lib/levels';
-import { shortGenre } from '../lib/gameLabels';
 import { PRIMARY_BUTTON, GHOST_BUTTON_SM, GHOST_BUTTON_TALL, TEXT_BUTTON, TEXT_BUTTON_SM, TEXT_LINK, SECTION_TITLE } from '../lib/ui';
 import { XpBar } from '../components/LevelBadge';
 import { authClient, useSession } from '../lib/authClient';
@@ -103,12 +103,6 @@ const LevelProgress = ({ before, after }) => {
 };
 
 
-// The small print on the card: "RPG · 2015" (IGDB dates are midnight UTC, so the year
-// is read in UTC: a 1 January release would show the year before in the Americas)
-const gameMeta = (game) =>
-  [game.genres?.[0] && shortGenre(game.genres[0]), game.releaseDate && new Date(game.releaseDate).getUTCFullYear()]
-    .filter(Boolean)
-    .join(' · ') || undefined;
 
 // Special screens that aren't part of the numbered quest
 const QUICK = 'quick';
@@ -335,6 +329,7 @@ const Quest = ({ id }) => {
         newBadges: saved.badges.filter((b) => !previousBadges.includes(b)),
         badges: saved.badges, // every badge the review has (shown on its card)
         postedAt: new Date().toISOString(), // the card's date
+        art: saved.art, // the card's own picture
         playerXp: saved.playerXp, // { before, after }
         inBacklog: saved.inBacklog, // in their Backlog: offer to remove it (never automatic)
       });
@@ -409,16 +404,14 @@ const Quest = ({ id }) => {
   const reviewLink = savedId ? `/game/${game.id}?review=${savedId}#review-${savedId}` : `/game/${game.id}`;
   // The card earned by posting: what the done screen shows and what "Share card" turns
   // into a picture (the share edition: their words and the IMGM mark on it)
-  const rewardCard = {
-    title: game.title,
-    score: answers.rating,
-    coverUrl: game.coverUrl,
-    meta: gameMeta(game),
-    credit: game.developer ? `Cover · ${game.developer}` : undefined,
+  const rewardCard = reviewCardProps({
+    game,
+    art: result?.art,
+    rating: answers.rating,
     reviewer: session?.user?.displayUsername,
     date: existing.review?.createdAt ?? result?.postedAt,
-    quote: answers.reviewText?.trim() || undefined,
-  };
+    quote: answers.reviewText?.trim(),
+  });
 
   return (
     <QuestStage art={background}>
