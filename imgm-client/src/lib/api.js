@@ -40,6 +40,9 @@ export const searchGames = (query, signal) =>
   fetchJson(`/api/games/search?q=${encodeURIComponent(query)}`, { signal });
 
 export const getFeaturedGames = (signal) => fetchJson('/api/games/featured', { signal });
+// Games to get the player reviewing: popular ones in their favourite genres they haven't
+// rated (logged in), else the most played games of all time. { personal, genres, games }
+export const getReviewPicks = (signal) => fetchJson('/api/games/review-picks', { signal });
 
 // Games whose page this player changed in this tab (they posted, edited or deleted a
 // review). Vercel's CDN may still hold a copy of the page from before (the server lets

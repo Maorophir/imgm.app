@@ -11,7 +11,7 @@
  * Props:
  *   ticks   the ticked answers, from tickedChecklist(review) (reviewDisplay.js)
  *   name    the reviewer's gamer tag
- *   footer  optional, printed at the bottom (a game page's card says "Turn back")
+ *   footer  optional, printed at the bottom (a game page's card says "Flip back")
  */
 import { Check, ListChecks, Minus } from 'lucide-react';
 import { checklistColor } from '../reviewQuest/questOptions';

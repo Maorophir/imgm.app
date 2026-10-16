@@ -286,7 +286,7 @@ const Quest = ({ id }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
-  // The done screen's card: showing its back ("Turn over"), the checklist answers it
+  // The done screen's card: showing its back ("Flip"), the checklist answers it
   // turns over to (none: the shared IMGM back)
   const [flipped, setFlipped] = useState(false);
   const cardTicks = tickedChecklist(answers);
@@ -524,10 +524,10 @@ const Quest = ({ id }) => {
                 <button
                   type="button"
                   onClick={() => setFlipped((turned) => !turned)}
-                  aria-label={flipped ? 'Turn back to the front' : cardTicks.length > 0 ? 'Turn over to see the checklist' : 'Turn over'}
+                  aria-label={flipped ? 'Flip back to the front' : cardTicks.length > 0 ? 'Flip to see the checklist' : 'Flip'}
                   className={TEXT_BUTTON}
                 >
-                  {flipped ? 'Turn back' : 'Turn over'}
+                  {flipped ? 'Flip back' : 'Flip'}
                 </button>
               </div>
 

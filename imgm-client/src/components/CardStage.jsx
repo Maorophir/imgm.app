@@ -1,6 +1,6 @@
 /**
  * CardStage — holds a card up so it can be picked up: it tilts toward the pointer,
- * can turn over to its back, and sits on a painted edge in its rarity colour.
+ * can flip to its back, and sits on a painted edge in its rarity colour.
  *
  *   The edge     a slab in the tier's edge colour behind the card, a few pixels down
  *                and to the side, like the card's printed side. As the card tilts the
@@ -17,7 +17,7 @@
  * Props:
  *   front      the card's face, e.g. <CollectibleCard … />
  *   back       optional: its back, e.g. <CardBack />. Without it the card never turns
- *   flipped    true shows the back (the page owns the "Turn over" button)
+ *   flipped    true shows the back (the page owns the "Flip" button)
  *   tier       the card's RARITIES key ('junk' … 'legendary'): the edge colour, and
  *              the glare and moving gilt for 'legendary'
  *   rest       the card's resting angle in degrees (default -2.5; 0 for straight)

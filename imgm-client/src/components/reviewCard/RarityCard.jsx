@@ -5,7 +5,7 @@
  *
  * Front: the game's title and the score numeral in the tier's ink, who reviewed it
  * (and the badges it earned), an art window, the tier, "X meets Y", vibes, setup.
- * Back (tap to turn over): the Steam-style checklist (CardChecklist, the same back the
+ * Back (tap to flip): the Steam-style checklist (CardChecklist, the same back the
  * home page's card has). Reviews without a checklist don't turn; quick reviews get a
  * "Quick review" stamp instead.
  *
@@ -108,7 +108,7 @@ const RarityCard = ({ review, game, artUrl }) => {
       // --deep for an art window with no art
       className={`card-flip @container w-[280px] max-w-full aspect-[63/88] shrink-0 rounded-[4.76%/3.41%] ${flipped ? 'is-flipped' : ''} ${canFlip ? 'cursor-pointer' : ''}`}
       style={{ '--ink': rarity.color, '--deep': rarity.deep }}
-      // Only cards that turn over act as a button (the global ivory focus ring shows)
+      // Only cards that flip act as a button (the global ivory focus ring shows)
       role={canFlip ? 'button' : undefined}
       tabIndex={canFlip ? 0 : undefined}
       aria-label={canFlip ? `${name}'s card. ${flipped ? 'Showing the checklist' : 'Tap to see the checklist'}` : undefined}
@@ -225,7 +225,7 @@ const RarityCard = ({ review, game, artUrl }) => {
               </span>
               {/* The whole card is the button; this just says what tapping it does */}
               {canFlip && (
-                <span className="font-medium text-white whitespace-nowrap underline decoration-1 underline-offset-[3px] decoration-slate-500/80">Turn over</span>
+                <span className="font-medium text-white whitespace-nowrap underline decoration-1 underline-offset-[3px] decoration-slate-500/80">Flip</span>
               )}
               {!canFlip && quick && (
                 <span className="px-[1.6cqi] py-[.4cqi] rounded-xs border border-slate-600 whitespace-nowrap">Quick review</span>
@@ -242,7 +242,7 @@ const RarityCard = ({ review, game, artUrl }) => {
               name={name}
               footer={
                 <span className="mt-auto text-center text-[length:max(11px,3.6cqi)] font-medium text-white underline decoration-1 underline-offset-[3px] decoration-slate-500/80">
-                  Turn back
+                  Flip back
                 </span>
               }
             />

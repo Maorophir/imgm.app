@@ -4,8 +4,8 @@
  *
  *   The title    "I am gaming." in condensed capitals with the lime full stop, on one
  *                line at every size (the page's h1)
- *   The promise  one plain sentence under it: players rate games, every rating becomes
- *                a collectible card
+ *   The promise  "Play it. Rate it. Collect it." under it, and a quieter line that
+ *                says what that means: every rating becomes a collectible card
  *   The way in   the one lime button, "Rate a game you played" (it asks which game you
  *                played last), with a small line under it: about two minutes, and the
  *                score sets the card's rarity. "Browse games" scrolls down to the
@@ -65,7 +65,7 @@ const BAND =
 const BROWSE = `items-center justify-center min-h-11 text-base font-medium text-white ${TEXT_LINK}`;
 
 const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
-  // Showing the card's back ("Turn over"): the reviewer's checklist if they filled
+  // Showing the card's back ("Flip"): the reviewer's checklist if they filled
   // one in, otherwise the back every IMGM card shares
   const [flipped, setFlipped] = useState(false);
   const ticks = review?.checklist ? tickedChecklist(review.checklist) : [];
@@ -105,10 +105,10 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       <div className="col-start-2 row-start-2 relative z-5 min-w-0 pt-4 sm:pt-6 lg:pr-12 xl:pr-16">
         {/* The promise, plainly. From tablets up each sentence gets its own line; phones
             let the two run together, balanced over three lines. */}
-        <p className="text-[22px] leading-[1.25] font-medium text-white text-balance sm:text-[24px] xl:text-[26px]">
-          <span className="sm:block">Players rate the games they play.</span>{' '}
-          <span className="sm:block">Every rating becomes a collectible card.</span>
+        <p className="text-[24px] leading-[1.2] font-semibold text-white text-balance sm:text-[28px] xl:text-[32px]">
+          Play it. Rate it. Collect it.
         </p>
+        <p className="mt-2 text-base text-slate-300 sm:text-lg">Every rating becomes a collectible card.</p>
 
         <div className="mt-6 flex flex-col items-stretch sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 sm:gap-y-3 lg:mt-8">
           {/* The page's one primary action, so it's the one lime button. It asks which
@@ -173,10 +173,10 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
               type="button"
               onClick={() => setFlipped((turned) => !turned)}
               // Screen readers hear what's on the other side (the card itself is a picture to them)
-              aria-label={flipped ? 'Turn back to the front' : ticks.length > 0 ? 'Turn over to see the checklist' : 'Turn over'}
+              aria-label={flipped ? 'Flip back to the front' : ticks.length > 0 ? 'Flip to see the checklist' : 'Flip'}
               className={TEXT_BUTTON}
             >
-              {flipped ? 'Turn back' : 'Turn over'}
+              {flipped ? 'Flip back' : 'Flip'}
             </button>
             {/* A showcase card only turns over (the caption links to its game) */}
             {!sample && (

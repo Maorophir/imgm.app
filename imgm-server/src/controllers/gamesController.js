@@ -3,6 +3,7 @@ import { prisma } from '../lib/db.js';
 import { cacheAtEdge } from '../lib/cdnCache.js';
 import * as igdb from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
+import { getSessionUser } from '../lib/session.js';
 
 // Re-fetch a cached game from IGDB once it's older than this
 const GAME_STALE_AFTER = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -186,6 +187,50 @@ export const getGameById = async (req, res) => {
     res.json({ ...toClientGame(game), gameOfTheWeek });
   } catch (error) {
     console.error(`Error fetching game ${req.params.id}:`, error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// GET /api/games/review-picks — games to get a player reviewing, for the home page.
+//   Logged in: popular games in the genres they review most, minus the ones they've
+//   reviewed (filled up with the all-time greats when there aren't enough).
+//   Guests (and new players): the most played games of all time.
+// { personal, genres: ['Role-playing (RPG)', …] (what "for you" is based on), games }
+// Per visitor, so never kept at the CDN.
+const PICKS = 8;
+export const getReviewPicks = async (req, res) => {
+  try {
+    const user = await getSessionUser(req).catch(() => null);
+    let picks = [];
+    let basis = [];
+    let reviewed = new Set();
+    if (user) {
+      const mine = await prisma.review.findMany({ where: { userId: user.id }, select: { gameId: true, game: { select: { genres: true } } } });
+      reviewed = new Set(mine.map((r) => r.gameId));
+      const counts = new Map();
+      for (const r of mine) for (const g of r.game?.genres ?? []) counts.set(g, (counts.get(g) ?? 0) + 1);
+      basis = [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, 2).map(([g]) => g);
+      if (basis.length) {
+        const ids = await igdb.getGenreIds();
+        const genres = basis.map((name) => ids.get(name)).filter(Boolean);
+        // Their top genres together first, then their favourite alone (any genre is too
+        // loose: nearly every game is also an "Adventure")
+        for (const query of [{ genres, all: true }, { genres: genres.slice(0, 1) }]) {
+          if (picks.length >= PICKS || (query.all && genres.length < 2)) continue;
+          const found = (await igdb.getAllTimeGreats(query)).filter((g) => !reviewed.has(g.id) && !picks.some((p) => p.id === g.id));
+          picks = [...picks, ...found];
+        }
+      }
+    }
+    if (picks.length < PICKS) {
+      const more = (await igdb.getAllTimeGreats()).filter((g) => !reviewed.has(g.id) && !picks.some((p) => p.id === g.id));
+      picks = [...picks, ...more];
+    }
+    const games = await withImgmRatings(picks.slice(0, PICKS));
+    res.set('Cache-Control', 'private, no-store');
+    res.json({ personal: Boolean(user && basis.length), genres: basis, games });
+  } catch (error) {
+    console.error('Error picking games to review:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

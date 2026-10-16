@@ -5,24 +5,28 @@
  *                  reviewer's words under it, who wrote it and how long ago. The whole
  *                  card opens the game page at that review; the reviewer's name opens
  *                  their public profile (/u/<gamer tag>).
- *   NeedsReview    popular games (from the featured list) nobody has reviewed yet: one's
- *                  key art with a card still lying face down on it, then a row per game,
- *                  each a shortcut into its review quest and the First Reviewer badge
+ *   ReviewPicks    games the player has most likely played, to get them reviewing:
+ *                  popular ones in their favourite genres they haven't rated (logged
+ *                  in), or the most played games of all time (guests). A carousel of
+ *                  key art with the card each would become, then a row per game, each a
+ *                  shortcut into its review quest
  */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { cardMeta } from '../../lib/reviewCard';
+import { getReviewPicks } from '../../lib/api';
+import { useSession } from '../../lib/authClient';
 import CardStage from '../CardStage';
 import CollectibleCard from '../CollectibleCard';
 import { timeAgo } from '../../lib/timeAgo';
-import { gameMetaParts } from '../../lib/gameLabels';
+import { gameMetaParts, shortGenre } from '../../lib/gameLabels';
 import { getRarity } from '../reviewQuest/questOptions';
 import { WRAP, TEXT_LINK, SECTION_TITLE } from '../../lib/ui';
 
 const FRESH_COUNT = 4; // newest reviews shown
-const FIRSTS_COUNT = 6; // unreviewed games listed
+const FIRSTS_COUNT = 6; // games in Played these? Rate them.
 
 // One review: its mini card (on its painted edge, standing still), the words, who and when
 const FreshCard = ({ review }) => {
@@ -128,7 +132,7 @@ const FirstsCarousel = ({ games }) => {
     <div
       role="region"
       aria-roledescription="carousel"
-      aria-label="Games waiting for their first review"
+      aria-label="Games to rate"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onFocus={() => setPaused(true)}
@@ -198,48 +202,55 @@ const FirstsCarousel = ({ games }) => {
   );
 };
 
-// games: the featured list (null while loading). avoidArt: the id of the game whose
-// key art is already in the hero, so the page doesn't show the same picture twice.
-export const NeedsReview = ({ games, avoidArt }) => {
-  const unreviewed = (games ?? []).filter((game) => !game.reviewCount);
-  const waiting = unreviewed.slice(0, FIRSTS_COUNT);
-  if (waiting.length === 0) return null;
-  const rank = (game) => (game.id === avoidArt ? 2 : game.artworks?.length ? 0 : 1);
+// "Played these? Rate them.": the section that gets visitors reviewing. Games they have
+// most likely played, with the card each one would become:
+//   logged in  popular games in the genres they review most, minus the ones they've rated
+//   guests     the most played games of all time
+// avoidArt: the id of the game whose key art is already in the hero (it goes last in the
+// carousel, so the page doesn't show the same picture twice in a row).
+export const ReviewPicks = ({ avoidArt }) => {
+  const { data: session } = useSession();
+  const userId = session?.user?.id ?? null;
+  const [picks, setPicks] = useState(null); // { personal, genres, games }; false = failed
+  useEffect(() => {
+    const controller = new AbortController();
+    getReviewPicks(controller.signal)
+      .then(setPicks)
+      .catch((err) => err.name !== 'AbortError' && setPicks(false));
+    return () => controller.abort();
+  }, [userId]); // logging in or out changes the picks
 
+  const games = (picks?.games ?? []).slice(0, FIRSTS_COUNT);
+  if (!picks || games.length === 0) return null;
+  const rank = (game) => (game.id === avoidArt ? 2 : game.artworks?.length ? 0 : 1);
+  const genres = (picks.genres ?? []).map(shortGenre);
 
   return (
-    <section aria-labelledby="first-title" className="mt-30 sm:mt-50">
+    <section aria-labelledby="picks-title" className="mt-30 sm:mt-50">
       <div className={WRAP}>
-        {/* One waiting game at a time, with its card: games with key art first, and the
-            game whose art is already in the hero last (no picture twice in a row) */}
-        <FirstsCarousel games={[...waiting].sort((a, b) => rank(a) - rank(b))} />
+        {/* One game at a time, with the card it would become: games with key art first */}
+        <FirstsCarousel games={[...games].sort((a, b) => rank(a) - rank(b))} />
 
-        <h2 id="first-title" className={`mt-6 sm:mt-8 font-display text-[34px] leading-none tracking-[.005em] text-white`}>
-          Be the first reviewer
+        {picks.personal && <p className="mt-6 sm:mt-8 text-xs font-semibold uppercase tracking-[.2em] text-slate-400">Picked for you</p>}
+        <h2 id="picks-title" className={`${picks.personal ? 'mt-2' : 'mt-6 sm:mt-8'} font-display text-[34px] leading-none tracking-[.005em] text-white`}>
+          {picks.personal ? 'Played one of these? Rate it.' : 'Played these? Rate them.'}
         </h2>
-        <p className="mt-3 max-w-[520px] text-base leading-[1.6] text-white">
-          Popular games nobody on IMGM has reviewed yet. Go first and earn the First Reviewer badge.
+        <p className="mt-3 max-w-[560px] text-base leading-[1.6] text-white">
+          {picks.personal
+            ? `Big ${genres.join(' and ')} games you haven't rated yet. Two minutes each, and every one becomes a card.`
+            : "The most played games of all time. You've probably played a few: rate one and it becomes your first card."}
         </p>
 
         <div className="mt-10 grid grid-cols-[repeat(auto-fill,minmax(min(380px,100%),1fr))] gap-x-12">
-          {waiting.map((game) => (
-            // One row, one link: straight into the game's review quest. On phones "Write
-            // the first review" moves under the title, clear of the screen's right edge.
+          {games.map((game) => (
+            // One row, one link: straight into the game's review quest
             <Link
               key={game.id}
               to={`/game/${game.id}/review`}
               className="group grid grid-cols-[48px_minmax(0,1fr)] sm:grid-cols-[48px_minmax(0,1fr)_auto] items-center gap-x-4 min-h-[92px] py-3.5 border-t border-slate-700 text-white animate-fade-in"
             >
               {game.coverUrl ? (
-                <img
-                  src={game.coverUrl}
-                  alt=""
-                  width="48"
-                  height="64"
-                  loading="lazy"
-                  decoding="async"
-                  className="row-span-2 sm:row-span-1 block w-12 h-16 object-cover rounded-sm bg-slate-900"
-                />
+                <img src={game.coverUrl} alt="" width="48" height="64" loading="lazy" decoding="async" className="row-span-2 sm:row-span-1 block w-12 h-16 object-cover rounded-sm bg-slate-900" />
               ) : (
                 <span className="row-span-2 sm:row-span-1 block w-12 h-16 rounded-sm bg-slate-900" />
               )}
@@ -247,10 +258,12 @@ export const NeedsReview = ({ games, avoidArt }) => {
                 <span className="text-base leading-[1.3] font-medium underline decoration-1 underline-offset-4 decoration-transparent group-hover:decoration-white transition-[text-decoration-color] duration-120">
                   {game.title}
                 </span>
-                <span className="mt-0.5 text-sm text-slate-400">{gameMetaParts({ releaseDate: game.releaseDate, genres: game.genres }).join(' · ')}</span>
+                <span className="mt-0.5 text-sm text-slate-400">
+                  {[...gameMetaParts({ releaseDate: game.releaseDate, genres: game.genres }), game.reviewCount ? null : 'no reviews yet'].filter(Boolean).join(' · ')}
+                </span>
               </span>
               <span className="col-start-2 sm:col-start-auto justify-self-start sm:justify-self-auto mt-0.5 sm:mt-0 text-sm leading-[1.45] font-medium whitespace-nowrap underline decoration-1 underline-offset-5 decoration-slate-500/80 group-hover:decoration-current group-hover:text-slate-50 transition-colors duration-120">
-                Write the first review
+                {game.reviewCount ? 'Rate it' : 'Rate it first'}
               </span>
             </Link>
           ))}

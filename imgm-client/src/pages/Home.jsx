@@ -37,7 +37,7 @@ import GameCardSkeleton from '../components/GameCardSkeleton';
 import LoadError from '../components/LoadError';
 import HomeHero from '../components/home/HomeHero';
 import RaritySection from '../components/home/RaritySection';
-import { FreshReviews, NeedsReview } from '../components/home/FreshReviews';
+import { FreshReviews, ReviewPicks } from '../components/home/FreshReviews';
 import GotwStrip from '../components/home/GotwStrip';
 
 const PAGE_SIZE = 10; // games per carousel page (2 rows on desktop)
@@ -238,7 +238,7 @@ const Home = () => {
           for next week's), and games waiting for their first review ── */}
       <FreshReviews reviews={freshReviews} />
       <GotwStrip />
-      <NeedsReview games={games} avoidArt={HOME_SHOWCASE.hero.band.id} />
+      <ReviewPicks avoidArt={HOME_SHOWCASE.hero.band.id} />
     </main>
   );
 };
