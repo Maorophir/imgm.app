@@ -74,7 +74,8 @@ const pickSecondReview = (reviews, hero) => {
 };
 
 // A review as its card's props: the game's genre, year and studio in the small print,
-// and the player's words as the quote. The year is read in UTC, like IGDB's dates.
+// its badges, and the player's words as the quote (shown beside the card, CardQuote).
+// The year is read in UTC, like IGDB's dates.
 const reviewCard = ({ game, ...review }) => ({
   title: game.title,
   score: review.rating,
@@ -85,7 +86,8 @@ const reviewCard = ({ game, ...review }) => ({
   credit: game.developer ? `Cover · ${game.developer}` : undefined,
   reviewer: review.author ?? 'A player',
   date: review.createdAt,
-  quote: review.snippet ?? undefined,
+  quote: review.excerpt ?? review.snippet ?? undefined,
+  badges: review.badges ?? [],
 });
 
 const Home = () => {

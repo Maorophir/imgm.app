@@ -10,8 +10,15 @@
  * the tier's colour with a large rarity mark instead, so it still looks intended.
  *
  * Two sizes of the same design:
- *   full  everything above, plus the meta line, an art credit, a quote and the footer
+ *   full  everything above, plus the meta line, an art credit and the footer
  *   mini  for small cards in a grid: title, score, art and the tier only
+ *
+ * Two editions of the full card:
+ *   site   (the default) the card as the site shows it: the review's badges (Deep Diver,
+ *          First Reviewer…) in the corner, and no words on the card. Pages show the
+ *          review's words BESIDE it (CardQuote), where there's room for all of them.
+ *   share  the card on its own, to be shared as a picture: the review's line printed on
+ *          the card, and the IMGM power mark in the corner (the brand travels with it).
  *
  * Props (all but title and score are optional):
  *   title      the game's name
@@ -24,7 +31,9 @@
  *   date       when it was reviewed (an ISO string or a Date), shown as "12 Oct 2026"
  *              (full only)
  *   quote      a line from the review, in italic serif; the card adds the quote marks
- *              (full only)
+ *              (share edition only)
+ *   badges     the review's badge keys, e.g. ['deep_diver'] (site edition only)
+ *   edition    'site' (the default) or 'share', see above
  *   variant    'full' (the default) or 'mini'
  *   className  the card's width and placement, e.g. "w-[min(380px,100%)]"
  *
@@ -40,7 +49,7 @@
 import { useState } from 'react';
 import RarityMark from './RarityMark';
 import { PowerIcon } from './Logo';
-import { getRarity } from './reviewQuest/questOptions';
+import { BADGES, getRarity } from './reviewQuest/questOptions';
 import { coverSrcSet } from '../lib/igdbImage';
 import CardChecklist from './reviewCard/CardChecklist';
 
@@ -103,9 +112,13 @@ const CollectibleCard = ({
   reviewer,
   date,
   quote,
+  badges = [],
+  edition = 'site',
   variant = 'full',
   className = '',
 }) => {
+  const share = edition === 'share';
+  const earned = badges.filter((key) => BADGES[key]);
   // The address of art that failed to load. Remembering the address (not just "broken")
   // means new art passed in later gets its own chance to load.
   const [brokenUrl, setBrokenUrl] = useState(null);
@@ -125,6 +138,7 @@ const CollectibleCard = ({
   const label = [
     `Review card: ${title}, ${shown} out of 10, ${rarity.label}.`,
     reviewer && `Reviewed by ${reviewer}${hasDate ? ` on ${longDate(when)}` : ''}.`,
+    !share && earned.length > 0 && `Badges: ${earned.map((key) => BADGES[key].label).join(', ')}.`,
   ].filter(Boolean).join(' ');
 
   return (
@@ -153,11 +167,27 @@ const CollectibleCard = ({
               </p>
             </div>
 
-            {/* One quiet line (genre · year) and the power mark in the tier's ink */}
+            {/* One quiet line (genre · year), and in the tier's ink: the review's badges
+                (site edition) or the power mark (share edition, the brand on a shared card) */}
             {!mini && (
               <div className={`flex items-center justify-between gap-[2cqi] mt-[2cqi] pb-[1.8cqi] border-b-[length:max(1px,.22cqi)] ${HAIRLINE}`}>
                 <span className="min-w-0 truncate text-[length:max(10px,3cqi)] leading-[1.2] tabular-nums text-slate-400">{meta}</span>
-                <PowerIcon className="w-[4cqi] h-[4cqi] shrink-0 text-(--ink)" />
+                {share ? (
+                  <PowerIcon className="w-[4cqi] h-[4cqi] shrink-0 text-(--ink)" />
+                ) : (
+                  earned.length > 0 && (
+                    <span className="flex items-center gap-[1.6cqi] shrink-0" aria-hidden="true">
+                      {earned.map((key) => {
+                        const { art: Icon, label } = BADGES[key];
+                        return (
+                          <span key={key} title={label} className="inline-flex">
+                            <Icon className="w-[4cqi] h-[4cqi] min-w-3 min-h-3 text-(--ink)" strokeWidth={2} />
+                          </span>
+                        );
+                      })}
+                    </span>
+                  )
+                )}
               </div>
             )}
 
@@ -216,7 +246,7 @@ const CollectibleCard = ({
               )}
             </div>
 
-            {!mini && quote && (
+            {!mini && share && quote && (
               // The opening quote mark hangs into the margin, so the words line up. The
               // clamp hides whatever spills out of the box, so the box reaches out to
               // the left (-ml, then pl back) to keep the hanging mark inside it.

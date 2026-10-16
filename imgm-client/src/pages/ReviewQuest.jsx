@@ -45,6 +45,7 @@ import CardStage from '../components/CardStage';
 import CollectibleCard, { CardBack, ChecklistBack } from '../components/CollectibleCard';
 import { tickedChecklist } from '../components/reviewCard/reviewDisplay';
 import ShareCardButton from '../components/ShareCardButton';
+import CardQuote from '../components/CardQuote';
 import FaceDownCard from '../components/home/FaceDownCard';
 import RateAnother from '../components/reviewQuest/RateAnother';
 import {
@@ -102,9 +103,6 @@ const LevelProgress = ({ before, after }) => {
   );
 };
 
-// The first line the player wrote, for the quote on their card (null when they wrote
-// nothing; the card clamps a long line itself)
-const firstLine = (text) => text?.split('\n').map((line) => line.trim()).find(Boolean) ?? null;
 
 // The small print on the card: "RPG · 2015" (IGDB dates are midnight UTC, so the year
 // is read in UTC: a 1 January release would show the year before in the Americas)
@@ -288,7 +286,7 @@ const Quest = ({ id }) => {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
   const [saveErrorCode, setSaveErrorCode] = useState(null); // e.g. EMAIL_NOT_CONFIRMED: offer to resend
-  const [result, setResult] = useState(null); // { isNew, newBadges, playerXp } after a successful post
+  const [result, setResult] = useState(null); // { isNew, newBadges, badges, playerXp } after a successful post
 
   // Deleting (two taps: "Delete my review", then "Yes, delete it")
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -336,6 +334,7 @@ const Quest = ({ id }) => {
       setResult({
         isNew: !isEditing,
         newBadges: saved.badges.filter((b) => !previousBadges.includes(b)),
+        badges: saved.badges, // every badge the review has (shown on its card)
         playerXp: saved.playerXp, // { before, after }
         inBacklog: saved.inBacklog, // in their Backlog: offer to remove it (never automatic)
       });
@@ -500,7 +499,7 @@ const Quest = ({ id }) => {
                     credit={game.developer ? `Cover · ${game.developer}` : undefined}
                     reviewer={session.user.displayUsername}
                     date={existing.review?.createdAt ?? new Date()}
-                    quote={firstLine(answers.reviewText)}
+                    badges={result.badges ?? []}
                   />
                 }
                 // Turned over: the checklist they just filled in (or the shared back if they skipped it)
@@ -510,6 +509,8 @@ const Quest = ({ id }) => {
                     : <CardBack />
                 }
               />
+              {/* Their words, beside (under) the card: the card itself carries none */}
+              <CardQuote text={answers.reviewText?.trim()} lines={6} className="mt-6 mx-auto max-w-[480px] text-left" />
               <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6">
                 <ShareCardButton
                   url={reviewLink}

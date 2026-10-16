@@ -286,7 +286,9 @@ export const voteOnReview = async (req, res) => {
 };
 
 // GET /api/reviews/recent?limit=8 — the newest reviews on any game, for the home page.
-// Light on purpose: who, which game, the score and a short snippet (swearing masked).
+// Light on purpose: who, which game, the score and a short snippet (swearing masked), plus
+// a longer excerpt and the review's badges for the home page's big cards (the excerpt is
+// shown beside the card, the badges on it).
 // At most 2 per game, so one busy game can't fill the whole row.
 //
 // Each game comes with what the home page's two big cards and its key-art band show,
@@ -303,11 +305,22 @@ export const voteOnReview = async (req, res) => {
 const PER_GAME = 2;
 const recentQuery = z.object({ limit: z.coerce.number().int().min(1).max(12).default(8) });
 const CHECKLIST_FIELDS = Object.keys(CHECKLIST);
+// A review's words cut to `length` characters (at a word where possible), or null
+const EXCERPT_LENGTH = 420;
+const excerpt = (text, length) => {
+  if (!text) return null;
+  if (text.length <= length) return text;
+  const cut = text.slice(0, length);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > length * 0.7 ? cut.slice(0, space) : cut).trimEnd()}…`;
+};
+
 const RECENT_SELECT = {
   id: true,
   rating: true,
   reviewText: true,
   createdAt: true,
+  badges: true,
   ...Object.fromEntries(CHECKLIST_FIELDS.map((field) => [field, true])),
   user: { select: { displayUsername: true } },
   game: {
@@ -364,7 +377,9 @@ export const getRecentReviews = async (req, res) => {
         return {
           id: review.id,
           rating: review.rating,
-          snippet: text && (text.length > 160 ? `${text.slice(0, 160).trimEnd()}…` : text),
+          snippet: excerpt(text, 160), // the small tiles
+          excerpt: excerpt(text, EXCERPT_LENGTH), // beside the big cards
+          badges: review.badges,
           createdAt: review.createdAt,
           author: review.user?.displayUsername ?? null,
           // { graphics: 'pretty', story: 'tears', … }, the answers it gave (empty if none)
