@@ -114,21 +114,26 @@ const GameCard = ({
         ))}
       </p>
 
-      {/* The IMGM verdict in the tier's ink, or an empty line of the same height */}
+      {/* The IMGM verdict in the tier's ink, or an empty line of the same height.
+          The review count sits on the same line when the tile is wide enough, and wraps
+          onto its own line when it isn't ("Legendary" is the longest word), never hidden.
+          Its "·" lives in its own left padding: the line is pulled 12px left and clipped,
+          so a "·" that would start the second line is cut off with that padding. */}
       {reviewed ? (
-        // The review count drops out whole the same way when the tile is too narrow
-        <p className="flex flex-wrap items-center gap-x-1 h-5 mt-2 overflow-hidden text-sm leading-5 text-(--ink)">
-          <span className="flex items-center gap-2 h-5 whitespace-nowrap">
-            <RarityMark tier={rarity.key} />
-            <span>
-              <span className="text-xs tabular-nums">{score.toFixed(1)}</span> {rarity.label}
+        <p className="mt-2 overflow-hidden text-sm leading-5 text-(--ink)">
+          <span className="flex flex-wrap items-center -ml-3">
+            <span className="flex items-center gap-2 h-5 pl-3 whitespace-nowrap">
+              <RarityMark tier={rarity.key} />
+              <span>
+                <span className="text-xs tabular-nums">{score.toFixed(1)}</span> {rarity.label}
+              </span>
             </span>
+            {reviewCount > 0 && (
+              <span className="relative pl-3 whitespace-nowrap text-slate-400 before:absolute before:left-1 before:content-['·']">
+                {reviewCount} review{reviewCount === 1 ? '' : 's'}
+              </span>
+            )}
           </span>
-          {reviewCount > 0 && (
-            <span className="whitespace-nowrap text-slate-400">
-              · {reviewCount} review{reviewCount === 1 ? '' : 's'}
-            </span>
-          )}
         </p>
       ) : (
         <div className="h-5 mt-2" aria-hidden="true" />
