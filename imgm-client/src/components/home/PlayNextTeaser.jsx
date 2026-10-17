@@ -48,7 +48,7 @@ const PlayNextTeaser = () => {
         className="sm:hidden mt-5 inline-flex items-center gap-2 min-h-11 text-base font-medium text-white underline decoration-1 underline-offset-4 decoration-slate-500 hover:decoration-white"
       >
         <span className="text-brand" aria-hidden="true">✦</span>
-        Stuck? Find my next game
+        Not sure what to play? Ask Play Next
       </Link>
 
       {/* Tablets and up: the panel with a request and its picks, rotating */}
