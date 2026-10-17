@@ -11,7 +11,7 @@
  */
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Clock, Crown, Flame, Star, ThumbsUp, Trash2, Trophy, Users, X } from 'lucide-react';
+import { Camera, Clock, Crown, Flame, Star, ThumbsUp, Trash2, Trophy, X } from 'lucide-react';
 import { Avatar } from '../reviewCard/RarityCard';
 import { BADGES, getRarity } from '../reviewQuest/questOptions';
 import ArtIcon from '../ArtIcon';
@@ -36,12 +36,14 @@ import { reviewCardProps } from '../../lib/reviewCard';
 import { resizeToAvatar } from '../../lib/resizeImage';
 import { timeAgo } from '../../lib/timeAgo';
 
-// The picture: pick a file → shrunk to 256px → checked by the server → saved
+// The picture: one button opens one window with both ways to set it, your own photo
+// (pick a file → shrunk to 256px → checked by the server → saved) or one of IMGM's
+// characters. The bin beside the button takes it off.
 export const ProfilePicture = ({ player, onChanged }) => {
   const input = useRef(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null); // { ok, text }
-  const [picking, setPicking] = useState(false); // the character grid is open
+  const [picking, setPicking] = useState(false); // the picture window is open
 
   const choose = async (file) => {
     if (!file) return;
@@ -49,6 +51,7 @@ export const ProfilePicture = ({ player, onChanged }) => {
     setMessage(null);
     try {
       await uploadAvatar(await resizeToAvatar(file));
+      setPicking(false);
       setMessage({ ok: true, text: 'Looking good! Your new picture is live.' });
       await onChanged();
     } catch (error) {
@@ -96,19 +99,14 @@ export const ProfilePicture = ({ player, onChanged }) => {
       <div className="flex gap-2">
         <button
           type="button"
-          onClick={() => input.current?.click()}
+          onClick={() => {
+            setMessage(null);
+            setPicking(true);
+          }}
           disabled={busy}
           className={SMALL_BUTTON}
         >
           <Camera className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> {player.avatarUpdatedAt ? 'Change picture' : 'Add a picture'}
-        </button>
-        <button
-          type="button"
-          onClick={() => setPicking(true)}
-          disabled={busy}
-          className={SMALL_BUTTON}
-        >
-          <Users className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Pick a character
         </button>
         {player.avatarUpdatedAt && (
           <button
@@ -123,22 +121,29 @@ export const ProfilePicture = ({ player, onChanged }) => {
         )}
       </div>
       <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => choose(e.target.files?.[0])} />
-      {message && (
+      {message && !picking && (
         <p role="status" className={`text-sm max-w-[16rem] ${message.ok ? 'text-rarity-uncommon' : 'text-red-300'}`}>{message.text}</p>
       )}
       {picking && (
         <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-slate-950/80 animate-fade-in" onClick={() => setPicking(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Pick a character" onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-sm border border-slate-600 bg-slate-900 p-6 shadow-[0_32px_64px_-24px_rgba(0,0,0,.85)]">
+          <div role="dialog" aria-modal="true" aria-label="Your picture" onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-sm border border-slate-600 bg-slate-900 p-6 shadow-[0_32px_64px_-24px_rgba(0,0,0,.85)]">
             <div className="flex items-start justify-between gap-4 mb-5">
               <div>
-                <h2 className="font-display text-[34px] leading-none tracking-[.005em] text-white">Pick a character</h2>
-                <p className="text-sm text-slate-400 mt-1">Be your favorite hero. You can change it any time.</p>
+                <h2 className="font-display text-[34px] leading-none tracking-[.005em] text-white">Your picture</h2>
+                <p className="text-sm text-slate-400 mt-1">Upload a photo, or be one of our characters. You can change it any time.</p>
               </div>
               <button type="button" onClick={() => setPicking(false)} aria-label="Close" className="w-11 h-11 -mt-2 -mr-3 shrink-0 grid place-items-center rounded-sm text-slate-400 hover:text-white transition-colors duration-120">
                 <X className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
               </button>
             </div>
-            <AvatarPicker onPick={pickCharacter} />
+            <AvatarPicker onPick={pickCharacter} onUpload={() => input.current?.click()} busy={busy} />
+            {/* While a photo is checked, and anything that went wrong (a photo the server
+                turned down keeps the window open, to try another) */}
+            {(busy || message) && (
+              <p role="status" className={`mt-4 text-sm ${busy ? 'text-slate-300' : message.ok ? 'text-rarity-uncommon' : 'text-red-300'}`}>
+                {busy ? 'Checking your picture…' : message.text}
+              </p>
+            )}
           </div>
         </div>
       )}
