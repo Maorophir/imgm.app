@@ -155,6 +155,8 @@ export const getPublicReviews = (username, offset, signal) =>
   fetchJson(`/api/users/${encodeURIComponent(username)}/reviews?offset=${offset}&limit=12`, { signal });
 // Profile picture: a data URL from resizeToAvatar (checked by the server before it's saved)
 export const uploadAvatar = (image) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { image } });
+// The avatar window opened: wake the photo check's AI service now (never waited on)
+export const wakePictureCheck = () => fetchJson('/api/users/me/avatar/wake', { method: 'POST' }).catch(() => {});
 export const deleteAvatar = () => fetchJson('/api/users/me/avatar', { method: 'DELETE' });
 // Your account: { hasPassword, providers }, and deleting it ({ password?, reason, details? })
 export const getMyAccount = (signal) => fetchJson('/api/users/me/account', { signal });

@@ -6,7 +6,8 @@ import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { checkUsername, setUsername, getMyProgress } from '../controllers/usersController.js';
 import {
-  uploadAvatar, deleteAvatar, getAvatar, getAvatarPresets, getAvatarPresetImage, getMyProfile, getMyReviews, getMyAccount, deleteMyAccount,
+  uploadAvatar,
+  wakePictureCheck, deleteAvatar, getAvatar, getAvatarPresets, getAvatarPresetImage, getMyProfile, getMyReviews, getMyAccount, deleteMyAccount,
   getPublicProfile, getPublicReviews,
 } from '../controllers/profileController.js';
 
@@ -48,6 +49,7 @@ const pictureLimiter = rateLimit({
 });
 router.get('/avatars/presets', getAvatarPresets);
 router.get('/avatars/presets/:file', getAvatarPresetImage);
+router.post('/me/avatar/wake', wakePictureCheck);
 router.put('/me/avatar', pictureLimiter, uploadAvatar);
 router.delete('/me/avatar', deleteAvatar);
 router.get('/:id/avatar', getAvatar);

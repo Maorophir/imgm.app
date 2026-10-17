@@ -10,6 +10,8 @@
  *                played last), with a small line under it: about two minutes, and the
  *                score sets the card's rarity. "Browse games" scrolls down to the
  *                featured games.
+ *   Play Next    under that, a small panel with a sample request and its 5 picks, so a
+ *                visitor knows at once what Play Next is (one line on phones)
  *   The card     a recent review with the player's words (the Home page picks it: the
  *                owner's pinned one, else the best one with words to quote) as a trading
  *                card in its share edition (the words and the IMGM mark on the card), standing on a game's key art. It tilts
@@ -55,6 +57,7 @@ import FaceDownCard from './FaceDownCard';
 import { getRarity } from '../reviewQuest/questOptions';
 import { artSrcSet } from '../../lib/igdbImage';
 import { TEXT_LINK, TEXT_BUTTON, PRIMARY_BUTTON } from '../../lib/ui';
+import PlayNextTeaser from './PlayNextTeaser';
 import FlipIcon from '../reviewCard/FlipIcon';
 
 // The key art behind the hero ("the band"): from the promise (row 2) down to the row
@@ -133,6 +136,9 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
           </a>
         </div>
         <p className="mt-3 text-sm text-slate-400">About two minutes. Your score sets the card’s rarity.</p>
+
+        {/* What Play Next is, at a glance (only for visitors who may use it) */}
+        <PlayNextTeaser />
       </div>
 
       {/* ── The card, standing over the band and hanging past its bottom edge ── */}

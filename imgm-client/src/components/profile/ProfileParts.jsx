@@ -11,7 +11,7 @@
  */
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Camera, Clock, Crown, Flame, Star, ThumbsUp, Trash2, Trophy, X } from 'lucide-react';
+import { Camera, Clock, Crown, Flame, Loader2, Star, ThumbsUp, Trash2, Trophy, X } from 'lucide-react';
 import { Avatar } from '../reviewCard/RarityCard';
 import { BADGES, getRarity } from '../reviewQuest/questOptions';
 import ArtIcon from '../ArtIcon';
@@ -29,7 +29,7 @@ const SMALL_BUTTON =
 const GROUP = 'border-t border-slate-700 pt-4 flex flex-col gap-3';
 const GROUP_LABEL = 'text-sm text-slate-400';
 import { Histogram } from '../game/PlayerVerdict';
-import { chooseAvatarPreset, deleteAvatar, uploadAvatar } from '../../lib/api';
+import { chooseAvatarPreset, deleteAvatar, uploadAvatar, wakePictureCheck } from '../../lib/api';
 import AvatarPicker from './AvatarPicker';
 import ShareCardButton from '../ShareCardButton';
 import { reviewCardProps } from '../../lib/reviewCard';
@@ -42,12 +42,14 @@ import { timeAgo } from '../../lib/timeAgo';
 export const ProfilePicture = ({ player, onChanged }) => {
   const input = useRef(null);
   const [busy, setBusy] = useState(false);
+  const [uploading, setUploading] = useState(false); // a photo is on its way (and being checked)
   const [message, setMessage] = useState(null); // { ok, text }
   const [picking, setPicking] = useState(false); // the avatar window is open
 
   const choose = async (file) => {
     if (!file) return;
     setBusy(true);
+    setUploading(true);
     setMessage(null);
     try {
       await uploadAvatar(await resizeToAvatar(file));
@@ -58,6 +60,7 @@ export const ProfilePicture = ({ player, onChanged }) => {
       setMessage({ ok: false, text: error.message || "Couldn't save that avatar." });
     } finally {
       setBusy(false);
+      setUploading(false);
       if (input.current) input.current.value = '';
     }
   };
@@ -94,7 +97,11 @@ export const ProfilePicture = ({ player, onChanged }) => {
     <div className="flex flex-col items-center sm:items-start gap-3">
       <div className="relative">
         <Avatar name={player.name ?? '?'} user={player} size="w-28 h-28 text-5xl" />
-        {busy && <span className="absolute inset-0 rounded-full bg-slate-950/60 grid place-items-center text-xs font-medium text-white">Checking…</span>}
+        {busy && (
+          <span className="absolute inset-0 rounded-full bg-slate-950/60 grid place-items-center" role="status" aria-label="Saving your avatar">
+            <Loader2 className="w-6 h-6 text-white motion-safe:animate-spin" strokeWidth={1.8} aria-hidden="true" />
+          </span>
+        )}
       </div>
       <div className="flex gap-2">
         <button
@@ -102,6 +109,9 @@ export const ProfilePicture = ({ player, onChanged }) => {
           onClick={() => {
             setMessage(null);
             setPicking(true);
+            // An uploaded photo is checked by the AI service, which sleeps when unused:
+            // wake it now, while they pick, so the check doesn't wait for it to start
+            wakePictureCheck();
           }}
           disabled={busy}
           className={SMALL_BUTTON}
@@ -136,12 +146,12 @@ export const ProfilePicture = ({ player, onChanged }) => {
                 <X className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
               </button>
             </div>
-            <AvatarPicker onPick={pickCharacter} onUpload={() => input.current?.click()} busy={busy} />
-            {/* While a photo is checked, and anything that went wrong (a photo the server
-                turned down keeps the window open, to try another) */}
-            {(busy || message) && (
-              <p role="status" className={`mt-4 text-sm ${busy ? 'text-slate-300' : message.ok ? 'text-rarity-uncommon' : 'text-red-300'}`}>
-                {busy ? 'Checking your photo…' : message.text}
+            <AvatarPicker onPick={pickCharacter} onUpload={() => input.current?.click()} busy={busy} uploading={uploading} />
+            {/* Anything that went wrong (a photo the server turned down keeps the window
+                open, to try another). While a photo is checked, the Upload circle spins. */}
+            {message && !busy && (
+              <p role="status" className={`mt-4 text-sm ${message.ok ? 'text-rarity-uncommon' : 'text-red-300'}`}>
+                {message.text}
               </p>
             )}
           </div>

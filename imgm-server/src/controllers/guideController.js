@@ -6,6 +6,7 @@
 import { Readable } from 'node:stream';
 import { z } from 'zod';
 import { aiServiceUrl, internalApiKey } from '../lib/config.js';
+import { wakeAiService } from '../lib/aiWake.js';
 
 const guideSchema = z
   .object({
@@ -75,16 +76,9 @@ export const streamGuide = async (req, res) => {
     .pipe(res);
 };
 
-// POST /api/guide/wake — the Play Next page opened: start the AI service now.
-// Google puts it to sleep after ~15 quiet minutes, and waking takes ~15 seconds;
-// done while the player is still typing, their first question doesn't wait for it.
-const WAKE_EVERY = 60 * 1000; // one wake-up call a minute is plenty, however many players
-let lastWake = 0;
-
+// POST /api/guide/wake — the Play Next page opened: start the AI service now, so the
+// player's first question doesn't wait for it to wake up (lib/aiWake.js)
 export const wakeGuide = (req, res) => {
-  if (Date.now() - lastWake > WAKE_EVERY) {
-    lastWake = Date.now();
-    fetch(`${aiServiceUrl}/health`, { signal: AbortSignal.timeout(60 * 1000) }).catch(() => {});
-  }
+  wakeAiService();
   res.status(204).end();
 };
