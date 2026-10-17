@@ -1,7 +1,7 @@
 /**
  * PlayNextTeaser — under the hero's buttons, what Play Next is, at a glance: a player's
- * request in their own words and the 5 games it would pick, Best Pick first in its
- * Legendary gold. It rotates through a few very different requests (lib/homeShowcase.js:
+ * request in their own words and the 5 games it would pick, framed like Play Next's
+ * own cards: the Best Pick in Legendary gold, then Epic and Rare. It rotates through a few very different requests (lib/homeShowcase.js:
  * big story games, cozy, co-op), so it's clear Play Next handles any mood. The whole
  * panel opens Play Next.
  *
@@ -23,6 +23,9 @@ import { HOME_SHOWCASE } from '../../lib/homeShowcase';
 import { igdbImage } from '../../lib/igdbImage';
 
 const SAMPLES = HOME_SHOWCASE.playNext;
+// The picks' frames, like Play Next's own cards: #1 Legendary (the Best Pick), #2 Epic,
+// #3 Rare, the last two plain
+const RING = ['ring-rarity-legendary', 'ring-rarity-epic', 'ring-rarity-rare'];
 const ROTATE_EVERY = 4500; // ms per sample: long enough to read the request and see the covers
 
 const PlayNextTeaser = () => {
@@ -79,7 +82,7 @@ const PlayNextTeaser = () => {
                   src={igdbImage(pick.cover, 't_cover_small')}
                   alt={pick.title}
                   title={pick.title}
-                  className={`w-10 aspect-[3/4] object-cover rounded-xs ring-2 ${i === 0 ? 'ring-rarity-legendary' : 'ring-slate-950'}`}
+                  className={`w-10 aspect-[3/4] object-cover rounded-xs ring-2 ${RING[i] ?? 'ring-slate-950'}`}
                 />
               </li>
             ))}
