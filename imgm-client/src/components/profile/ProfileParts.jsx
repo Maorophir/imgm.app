@@ -1,6 +1,13 @@
 /**
- * The pieces of the profile page: the picture (with change / remove), the stats, and
- * the player's reviews.
+ * The pieces of a profile page, shared by your own profile (/profile) and anyone's
+ * public one (/u/<gamer tag>): the picture (with change / remove, your own only), the
+ * level card, the stats, and the player's reviews as their cards.
+ *   `own` marks your own profile: it speaks to you ("Your rank"), explains how you
+ *   earn XP (a public profile says in one line what XP is), and shows your Game of the
+ *   Week record (stats.gotw, which only your own profile gets: votes are private).
+ * Noir: stats as big numerals on hairlines (no boxes), square chips and buttons, and
+ * each review shown as its mini card on its painted edge, like the home page's
+ * "Fresh from the community".
  */
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -8,9 +15,24 @@ import { Camera, Clock, Crown, Flame, Star, ThumbsUp, Trash2, Trophy, Users, X }
 import { Avatar } from '../reviewCard/RarityCard';
 import { BADGES, getRarity } from '../reviewQuest/questOptions';
 import ArtIcon from '../ArtIcon';
+import CardStage from '../CardStage';
+import CollectibleCard from '../CollectibleCard';
+import RarityMark from '../RarityMark';
+import { XpBar } from '../LevelBadge';
+import { TIERS, tierLevels } from '../../lib/levels';
+import { GHOST_BUTTON, TEXT_LINK } from '../../lib/ui';
+
+// The picture's small ghost buttons
+const SMALL_BUTTON =
+  'inline-flex items-center gap-1.5 h-9 px-3 rounded-sm text-sm font-medium border border-slate-500 text-white hover:border-white transition-colors duration-120 disabled:opacity-50';
+// A group of stats: a quiet label on a hairline
+const GROUP = 'border-t border-slate-700 pt-4 flex flex-col gap-3';
+const GROUP_LABEL = 'text-sm text-slate-400';
 import { Histogram } from '../game/PlayerVerdict';
-import { chooseAvatarPreset, deleteAvatar, getMyReviews, uploadAvatar } from '../../lib/api';
+import { chooseAvatarPreset, deleteAvatar, uploadAvatar } from '../../lib/api';
 import AvatarPicker from './AvatarPicker';
+import ShareCardButton from '../ShareCardButton';
+import { reviewCardProps } from '../../lib/reviewCard';
 import { resizeToAvatar } from '../../lib/resizeImage';
 import { timeAgo } from '../../lib/timeAgo';
 
@@ -69,24 +91,24 @@ export const ProfilePicture = ({ player, onChanged }) => {
     <div className="flex flex-col items-center sm:items-start gap-3">
       <div className="relative">
         <Avatar name={player.name ?? '?'} user={player} size="w-28 h-28 text-5xl" />
-        {busy && <span className="absolute inset-0 rounded-full bg-slate-950/60 grid place-items-center text-xs font-bold text-white">Checking…</span>}
+        {busy && <span className="absolute inset-0 rounded-full bg-slate-950/60 grid place-items-center text-xs font-medium text-white">Checking…</span>}
       </div>
       <div className="flex gap-2">
         <button
           type="button"
           onClick={() => input.current?.click()}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-700 text-slate-200 hover:text-white hover:border-slate-500 transition disabled:opacity-50"
+          className={SMALL_BUTTON}
         >
-          <Camera className="w-3.5 h-3.5" aria-hidden="true" /> {player.avatarUpdatedAt ? 'Change picture' : 'Add a picture'}
+          <Camera className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> {player.avatarUpdatedAt ? 'Change picture' : 'Add a picture'}
         </button>
         <button
           type="button"
           onClick={() => setPicking(true)}
           disabled={busy}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-700 text-slate-200 hover:text-white hover:border-slate-500 transition disabled:opacity-50"
+          className={SMALL_BUTTON}
         >
-          <Users className="w-3.5 h-3.5" aria-hidden="true" /> Pick a character
+          <Users className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Pick a character
         </button>
         {player.avatarUpdatedAt && (
           <button
@@ -94,26 +116,26 @@ export const ProfilePicture = ({ player, onChanged }) => {
             onClick={remove}
             disabled={busy}
             aria-label="Remove your picture"
-            className="px-2.5 py-1.5 rounded-lg text-xs font-bold border border-slate-700 text-slate-400 hover:text-red-300 hover:border-red-400/60 transition disabled:opacity-50"
+            className="inline-flex items-center h-9 px-2.5 rounded-sm border border-slate-500 text-slate-400 hover:text-red-300 hover:border-red-400/60 transition-colors duration-120 disabled:opacity-50"
           >
-            <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
+            <Trash2 className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" />
           </button>
         )}
       </div>
       <input ref={input} type="file" accept="image/*" className="hidden" onChange={(e) => choose(e.target.files?.[0])} />
       {message && (
-        <p role="status" className={`text-xs max-w-[16rem] ${message.ok ? 'text-emerald-300' : 'text-red-300'}`}>{message.text}</p>
+        <p role="status" className={`text-sm max-w-[16rem] ${message.ok ? 'text-rarity-uncommon' : 'text-red-300'}`}>{message.text}</p>
       )}
       {picking && (
-        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in" onClick={() => setPicking(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Pick a character" onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl">
-            <div className="flex items-start justify-between gap-4 mb-4">
+        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-slate-950/80 animate-fade-in" onClick={() => setPicking(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Pick a character" onClick={(e) => e.stopPropagation()} className="w-full max-w-lg rounded-sm border border-slate-600 bg-slate-900 p-6 shadow-[0_32px_64px_-24px_rgba(0,0,0,.85)]">
+            <div className="flex items-start justify-between gap-4 mb-5">
               <div>
-                <h2 className="text-xl font-black text-white">Pick a character</h2>
+                <h2 className="font-display text-[34px] leading-none tracking-[.005em] text-white">Pick a character</h2>
                 <p className="text-sm text-slate-400 mt-1">Be your favorite hero. You can change it any time.</p>
               </div>
-              <button type="button" onClick={() => setPicking(false)} aria-label="Close" className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" aria-hidden="true" />
+              <button type="button" onClick={() => setPicking(false)} aria-label="Close" className="w-11 h-11 -mt-2 -mr-3 shrink-0 grid place-items-center rounded-sm text-slate-400 hover:text-white transition-colors duration-120">
+                <X className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
               </button>
             </div>
             <AvatarPicker onPick={pickCharacter} />
@@ -124,17 +146,72 @@ export const ProfilePicture = ({ player, onChanged }) => {
   );
 };
 
-const Stat = ({ icon: Icon, label, value, color = 'text-brand', children }) => (
-  <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col gap-1">
-    <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-slate-500">
-      <Icon className={`w-3.5 h-3.5 ${color}`} aria-hidden="true" /> {label}
+// The player's tier and level, the bar to the next level, and every tier there is.
+// progress: getProgress(xp) plus the review count ({ reviews })
+export const LevelCard = ({ progress, own = false }) => (
+  // Card stock on a hairline in the tier's ink
+  <section
+    className="rounded-sm border bg-slate-900 p-6 flex flex-col gap-4"
+    style={{ borderColor: `${progress.tier.color}55` }}
+  >
+    <div className="flex items-end justify-between gap-4">
+      <div>
+        <p className="text-sm text-slate-400">{own ? 'Your rank' : 'Rank'}</p>
+        <p className="font-display text-[34px] leading-none tracking-[.005em] mt-1" style={{ color: progress.tier.color }}>{progress.tier.label}</p>
+      </div>
+      <p className="text-right">
+        <span className="block font-display text-[54px] text-white tabular-nums leading-[.8]">{progress.level}</span>
+        <span className="text-sm text-slate-400">Level</span>
+      </p>
+    </div>
+
+    <div>
+      <XpBar progress={progress} />
+      <p className="mt-2 flex justify-between gap-3 text-sm text-slate-400 tabular-nums">
+        <span>{progress.xp.toLocaleString()} XP · {progress.reviews} review{progress.reviews === 1 ? '' : 's'}</span>
+        <span>{progress.toNext.toLocaleString()} XP to Level {progress.level + 1}</span>
+      </p>
+    </div>
+
+    {/* The ladder, worst → best, the player's tier highlighted */}
+    <ol className="grid grid-cols-5 gap-1.5 text-center">
+      {TIERS.map((t) => {
+        const reached = progress.level >= t.minLevel;
+        const isCurrent = t === progress.tier;
+        return (
+          <li
+            key={t.key}
+            className={`rounded-sm border px-1 py-2 ${isCurrent ? 'bg-slate-950' : 'border-slate-700'} ${reached ? '' : 'opacity-40'}`}
+            style={isCurrent ? { borderColor: t.color } : undefined}
+          >
+            <span className="block text-xs font-semibold leading-tight" style={{ color: t.color }}>{t.label}</span>
+            <span className="block text-xs tabular-nums text-slate-400 mt-0.5">{tierLevels(t)}</span>
+          </li>
+        );
+      })}
+    </ol>
+    {/* What XP is: a visitor on someone's profile may not know yet */}
+    <p className="text-sm text-slate-400">
+      {own
+        ? 'Earn XP by reviewing: 10 XP per quest screen you answer, 50 XP for your final words (up to 130 per review).'
+        : 'Players level up by reviewing games: each review earns up to 130 XP.'}
+    </p>
+  </section>
+);
+
+// One stat: a quiet label on a hairline, the number big in the display face
+const Stat = ({ icon: Icon, label, value, children }) => (
+  <div className="border-t border-slate-700 pt-3 flex flex-col gap-1">
+    <span className="inline-flex items-center gap-1.5 text-sm text-slate-400">
+      <Icon className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> {label}
     </span>
-    <span className="text-2xl font-black text-white tabular-nums">{value}</span>
+    <span className="font-display text-[34px] leading-none text-white tabular-nums">{value}</span>
     {children}
   </div>
 );
 
-export const StatsGrid = ({ stats }) => {
+// stats.gotw is only there on your own profile; without it the badges take the row
+export const StatsGrid = ({ stats, own = false }) => {
   const average = stats.averageGiven;
   const rarity = average != null ? getRarity(Math.round(average)) : null;
   const badges = Object.entries(stats.badges ?? {}).filter(([key]) => BADGES[key]);
@@ -142,39 +219,48 @@ export const StatsGrid = ({ stats }) => {
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Stat icon={Star} label="Reviews" value={stats.reviews} />
-        <Stat icon={Star} label="Average score" value={average != null ? average.toFixed(1) : '—'} color="text-amber-300">
-          {rarity && <span className="text-xs font-bold uppercase tracking-wider" style={{ color: rarity.color }}>{rarity.label}</span>}
+        <Stat icon={Star} label="Average score" value={average != null ? average.toFixed(1) : '—'}>
+          {rarity && (
+            <span className="inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: rarity.color }}>
+              <RarityMark tier={rarity.key} />
+              {rarity.label}
+            </span>
+          )}
         </Stat>
         <Stat icon={Clock} label="Hours logged" value={stats.hoursLogged.toLocaleString()} />
         <Stat icon={ThumbsUp} label="Found helpful" value={stats.helpfulVotes} />
       </div>
-      <div className="grid md:grid-cols-2 gap-3">
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col gap-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Game of the Week</span>
-          <div className="flex flex-wrap gap-2 text-sm font-semibold text-slate-200">
-            <span className="inline-flex items-center gap-1.5"><Flame className="w-4 h-4 text-orange-400" aria-hidden="true" /> {stats.gotw.streak}-week streak</span>
-            <span className="inline-flex items-center gap-1.5"><Trophy className="w-4 h-4 text-amber-300" aria-hidden="true" /> {stats.gotw.winnersPicked} winners picked</span>
-            {stats.gotw.kingmaker && <span className="inline-flex items-center gap-1.5 text-amber-200"><Crown className="w-4 h-4" aria-hidden="true" /> Kingmaker</span>}
+      <div className={`grid gap-x-8 gap-y-4 ${stats.gotw ? 'md:grid-cols-2' : ''}`}>
+        {stats.gotw && (
+          <div className={GROUP}>
+            <span className={GROUP_LABEL}>Game of the Week</span>
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm font-medium text-white">
+              <span className="inline-flex items-center gap-1.5"><Flame className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" /> {stats.gotw.streak}-week streak</span>
+              <span className="inline-flex items-center gap-1.5"><Trophy className="w-4 h-4 text-rarity-legendary" strokeWidth={1.8} aria-hidden="true" /> {stats.gotw.winnersPicked} winners picked</span>
+              {stats.gotw.kingmaker && <span className="inline-flex items-center gap-1.5 text-rarity-legendary"><Crown className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Kingmaker</span>}
+            </div>
           </div>
-        </div>
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4 flex flex-col gap-3">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Badges &amp; favourite genres</span>
+        )}
+        <div className={GROUP}>
+          <span className={GROUP_LABEL}>Badges &amp; favourite genres</span>
           <div className="flex flex-wrap gap-2">
             {badges.map(([key, count]) => (
-              <span key={key} className="inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-400/35 text-amber-200">
-                <ArtIcon icon={BADGES[key].art} className="w-3.5 h-3.5" /> {BADGES[key].label} ×{count}
+              <span key={key} className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-xs border border-slate-600 text-sm font-medium text-white">
+                <ArtIcon icon={BADGES[key].art} className="w-3.5 h-3.5 text-rarity-legendary" /> {BADGES[key].label} <span className="text-slate-400 tabular-nums">×{count}</span>
               </span>
             ))}
             {stats.topGenres.map((genre) => (
-              <span key={genre} className="text-xs font-semibold px-2.5 py-1 rounded-full border border-slate-700 text-slate-300">{genre}</span>
+              <span key={genre} className="inline-flex items-center h-8 px-2.5 rounded-xs border border-slate-600 text-sm text-slate-300">{genre}</span>
             ))}
-            {badges.length === 0 && stats.topGenres.length === 0 && <span className="text-sm text-slate-500">Review games to earn badges.</span>}
+            {badges.length === 0 && stats.topGenres.length === 0 && (
+              <span className="text-sm text-slate-400">{own ? 'Review games to earn badges.' : 'No badges yet.'}</span>
+            )}
           </div>
         </div>
       </div>
       {stats.reviews > 0 && (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-4">The scores you give</p>
+        <div className={GROUP}>
+          <p className={`${GROUP_LABEL} mb-1`}>{own ? 'The scores you give' : 'The scores they give'}</p>
           <Histogram byRating={stats.byRating} />
         </div>
       )}
@@ -182,63 +268,113 @@ export const StatsGrid = ({ stats }) => {
   );
 };
 
-const ReviewTile = ({ review }) => {
+// One review as its card, like the home page's Fresh cards: the mini card on its painted
+// edge (standing still, the game's name on it), the player's words under it, how long
+// ago and how many found it helpful. The whole card opens the game page right at this
+// review.
+const ReviewCard = ({ review, sharedBy, onCardChange }) => {
   const rarity = getRarity(review.rating);
   return (
-    <Link
-      to={`/game/${review.game.id}`}
-      className="flex gap-3 p-3 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-600 transition animate-fade-in"
-      style={{ boxShadow: `inset 3px 0 0 ${rarity.color}` }}
-    >
-      {review.game.coverUrl ? (
-        <img src={review.game.coverUrl} alt="" loading="lazy" className="w-14 h-20 rounded-lg object-cover bg-slate-800 shrink-0" />
-      ) : (
-        <div className="w-14 h-20 rounded-lg bg-slate-800 shrink-0" />
+    // The keyboard outline goes around the whole card, like the home page's cards
+    <figure className="relative min-w-0 animate-fade-in has-[.review-link:focus-visible]:outline-2 has-[.review-link:focus-visible]:outline-offset-4 has-[.review-link:focus-visible]:outline-white">
+      <CardStage
+        tier={rarity.key}
+        tilt={false}
+        rest={0}
+        className="w-full sm:w-[min(208px,100%)]"
+        front={<CollectibleCard variant="mini" title={review.game.title} score={review.rating} coverUrl={review.game.coverUrl} />}
+      />
+      {review.snippet && (
+        // The opening quote mark hangs into the margin, so the words line up (the box
+        // reaches out to the left to keep the hanging mark inside the clamp)
+        <blockquote className="-ml-[.42em] pl-[.42em] -indent-[.42em] mt-5 sm:mt-7 font-serif italic text-base sm:text-[21px] leading-[1.35] text-white break-words line-clamp-4">
+          “{review.snippet}”
+        </blockquote>
       )}
-      <div className="min-w-0 flex flex-col gap-1">
-        <p className="font-bold text-white leading-tight truncate">{review.game.title}</p>
-        <p className="text-xs font-bold" style={{ color: rarity.color }}>
-          <span className="uppercase tracking-wider">{rarity.label}</span> {review.rating}/10
-        </p>
-        {review.snippet && <p className="text-sm text-slate-300 leading-snug line-clamp-2">“{review.snippet}”</p>}
-        <p className="mt-auto text-[11px] text-slate-500">
-          {timeAgo(review.createdAt)}
-          {review.helpfulCount > 0 && ` · ${review.helpfulCount} found it helpful`}
-        </p>
-      </div>
-    </Link>
+      <figcaption className="flex flex-wrap items-center gap-x-3 mt-2 text-xs text-slate-400">
+        {/* Its ::after stretches over the whole figure, so the card is one link (one tab
+            stop), named for screen readers after the game (the card already shows it)
+            and shown as how long ago it was */}
+        <Link
+          to={`/game/${review.game.id}?review=${review.id}#review-${review.id}`}
+          className={`review-link inline-flex items-center min-h-11 tabular-nums after:absolute after:inset-0 focus-visible:outline-none ${TEXT_LINK}`}
+        >
+          <span className="sr-only">Review of {review.game.title}, </span>
+          <time dateTime={review.createdAt}>{timeAgo(review.createdAt)}</time>
+        </Link>
+        {review.helpfulCount > 0 && <span>{review.helpfulCount} found it helpful</span>}
+        {/* Your own profile: share the card as a picture. Above the card's link layer */}
+        {sharedBy && (
+          <ShareCardButton
+            small
+            className="relative z-1"
+            url={`/game/${review.game.id}?review=${review.id}#review-${review.id}`}
+            title={`${sharedBy}’s card for ${review.game.title}`}
+            text={`${review.rating}/10, ${getRarity(review.rating).label} on IMGM`}
+            card={reviewCardProps({
+              game: review.game,
+              art: review.art,
+              rating: review.rating,
+              reviewer: sharedBy,
+              date: review.createdAt,
+              quote: review.quote,
+              badges: review.badges,
+            })}
+            customize={{ gameId: review.game.id, onChange: (choice) => onCardChange(review.id, choice) }}
+          />
+        )}
+      </figcaption>
+    </figure>
   );
 };
 
-// Your reviews, newest first, 12 at a time
-export const MyReviews = ({ first, total }) => {
+// A player's reviews as cards, newest first, 12 at a time.
+//   first     the first page (from the profile)
+//   total     how many reviews the player has
+//   loadMore  (offset) => the next page: { reviews }
+//   empty     what to say when there are none
+//   sharedBy  your gamer tag, on your own profile: each card gets a Share card button
+export const PlayerReviews = ({ first, total, loadMore, empty, sharedBy }) => {
   const [reviews, setReviews] = useState(first);
   const [loading, setLoading] = useState(false);
-  if (reviews.length === 0) {
-    return (
-      <p className="text-slate-400">
-        No reviews yet. Find a game you've played and start your first <span className="text-brand font-semibold">Review Quest</span>.
-      </p>
-    );
-  }
+  const [failed, setFailed] = useState(false);
+  if (reviews.length === 0) return <p className="text-slate-400">{empty}</p>;
   const more = async () => {
     setLoading(true);
+    setFailed(false);
     try {
-      const page = await getMyReviews(reviews.length);
+      const page = await loadMore(reviews.length);
       setReviews((current) => [...current, ...page.reviews]);
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
   };
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid sm:grid-cols-2 gap-3">
-        {reviews.map((review) => <ReviewTile key={review.id} review={review} />)}
+    <div className="flex flex-col gap-10 sm:gap-14">
+      {/* The home page's grid: two columns on phones, then as many 240px columns as fit.
+          auto-fill keeps the empty columns, so one or two cards stay card-sized. */}
+      <div className="grid grid-cols-2 gap-x-4 gap-y-10 sm:grid-cols-[repeat(auto-fill,minmax(min(240px,100%),1fr))] sm:gap-x-8 sm:gap-y-14">
+        {reviews.map((review) => (
+          <ReviewCard
+            key={review.id}
+            review={review}
+            sharedBy={sharedBy}
+            // The list's copy of the review follows the card's new picture and words
+            onCardChange={(id, { art, quote }) =>
+              setReviews((current) => current.map((r) => (r.id === id ? { ...r, art, quote } : r)))
+            }
+          />
+        ))}
       </div>
       {reviews.length < total && (
-        <button type="button" onClick={more} disabled={loading} className="self-center px-5 py-2.5 rounded-full text-sm font-bold border border-slate-700 text-white hover:border-brand/60 transition disabled:opacity-50">
-          {loading ? 'Loading…' : `Show more (${total - reviews.length} left)`}
-        </button>
+        <div className="flex flex-col items-center gap-2">
+          <button type="button" onClick={more} disabled={loading} className={GHOST_BUTTON}>
+            {loading ? 'Loading…' : `Show more (${total - reviews.length} left)`}
+          </button>
+          {failed && <p role="status" className="text-sm text-red-300">Couldn't load more reviews. Please try again.</p>}
+        </div>
       )}
     </div>
   );

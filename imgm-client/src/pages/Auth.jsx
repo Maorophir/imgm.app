@@ -1,13 +1,32 @@
+/**
+ * Auth — log in or sign up. Route: /login (?redirect=… brings the player back after).
+ * It opens on Log in; /login?mode=signup (the header's "Sign up") opens on Sign up.
+ * The mode lives in the address, so that link works from this page too, and switching
+ * with the link under the form keeps the ?redirect.
+ *
+ * Email and password, or Google (in a popup). New players go on to choose a gamer
+ * tag (/welcome). Behind the card, real popular games' covers drift by, dimmed.
+ *
+ * Noir: a flat card of card stock (no frosted glass), a Big Shoulders heading, the
+ * lime "Log in" (or "Sign up") as the page's one main action, and Google's own dark
+ * sign-in button.
+ */
 import { useState, useEffect } from 'react';
 import { signIn, signUp, authClient, useSession } from '../lib/authClient';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getFeaturedGames } from '../lib/api';
 import { safeRedirect } from '../lib/safeRedirect';
 import { passwordProblems } from '../lib/passwordRules';
+import { TEXT_LINK } from '../lib/ui';
 import PasswordChecklist from '../components/PasswordChecklist';
+import { AUTH_PANEL, AUTH_TITLE, ErrorBox, buttonClass, inputClass } from '../components/AuthCard';
+
+const LABEL_CLASS = 'block text-sm font-medium text-white mb-1.5';
 
 function Auth() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const redirectTo = safeRedirect(searchParams.get('redirect'));
+  const isLogin = searchParams.get('mode') !== 'signup';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -16,8 +35,16 @@ function Auth() {
   const [bgGames, setBgGames] = useState([]);
   const navigate = useNavigate();
   const { refetch: refreshSession } = useSession(); // the shared login state every page reads
-  const [searchParams] = useSearchParams();
-  const redirectTo = safeRedirect(searchParams.get('redirect'));
+
+  // Log in ⇄ Sign up, in place: replace, so Back still leaves the page in one step
+  const switchMode = () => {
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      if (isLogin) next.set('mode', 'signup');
+      else next.delete('mode');
+      return next;
+    }, { replace: true });
+  };
 
   useEffect(() => {
     const controller = new AbortController();
@@ -108,59 +135,55 @@ function Auth() {
   const row2Loop = [...row2, ...row2];
 
   return (
-    <div className="relative min-h-screen bg-slate-950 flex items-center justify-center overflow-hidden">
+    <div className="relative min-h-screen bg-slate-950 flex items-center justify-center px-4 py-12 overflow-hidden">
 
       {/* Background Animated Slider */}
       <div className="absolute inset-0 z-0 opacity-20 pointer-events-none flex flex-col justify-center gap-4">
         {/* Row 1 - scrolling left */}
         <div className="flex animate-scroll-left w-max">
           {row1Loop.map((game, i) => (
-            <img key={`r1-${i}`} src={game.coverUrl} className="h-64 w-48 object-cover rounded-lg mx-2 flex-shrink-0 grayscale hover:grayscale-0 transition duration-700" alt="game cover" />
+            <img key={`r1-${i}`} src={game.coverUrl} className="h-64 w-48 object-cover rounded-sm mx-2 flex-shrink-0 grayscale hover:grayscale-0 transition duration-700" alt="game cover" />
           ))}
         </div>
         {/* Row 2 - scrolling right */}
         <div className="flex animate-scroll-right w-max">
           {row2Loop.map((game, i) => (
-            <img key={`r2-${i}`} src={game.coverUrl} className="h-64 w-48 object-cover rounded-lg mx-2 flex-shrink-0 grayscale hover:grayscale-0 transition duration-700" alt="game cover" />
+            <img key={`r2-${i}`} src={game.coverUrl} className="h-64 w-48 object-cover rounded-sm mx-2 flex-shrink-0 grayscale hover:grayscale-0 transition duration-700" alt="game cover" />
           ))}
         </div>
       </div>
 
-      {/* Auth Form Overlay */}
-      <div className="relative z-10 w-full max-w-md p-8 bg-slate-900/60 backdrop-blur-xl rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.5)] border border-slate-700/50">
+      {/* The form, on flat card stock over the covers */}
+      <div className={`relative z-10 ${AUTH_PANEL}`}>
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-extrabold text-white tracking-wider mb-2">
-            {isLogin ? 'Welcome Back' : 'Join IMGM'}
+          <h1 className={AUTH_TITLE}>
+            {isLogin ? 'Welcome back' : 'Join IMGM'}
           </h1>
-          <p className="text-slate-400 font-medium">
+          <p className="text-slate-400">
             {isLogin ? 'Log in to continue rating games.' : 'Create an account to start reviewing.'}
           </p>
         </div>
 
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/20 border border-red-500/50 text-red-200 rounded-lg text-sm font-medium">
-            {error}
-          </div>
-        )}
+        {error && <ErrorBox>{error}</ErrorBox>}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-1">Email Address</label>
+            <label className={LABEL_CLASS}>Email address</label>
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/40 transition placeholder-slate-500"
+              className={inputClass}
               placeholder="you@example.com"
             />
           </div>
 
           <div>
             <div className="flex items-baseline justify-between mb-1">
-              <label className="block text-sm font-semibold text-slate-300">Password</label>
+              <label className="block text-sm font-medium text-white">Password</label>
               {isLogin && (
-                <Link to="/forgot-password" className="text-xs font-semibold text-slate-400 hover:text-brand">
+                <Link to="/forgot-password" className={`text-sm text-slate-400 ${TEXT_LINK}`}>
                   Forgot password?
                 </Link>
               )}
@@ -174,30 +197,29 @@ function Auth() {
                 setPassword(e.target.value);
                 setError(''); // an old "add a number" goes once they change it
               }}
-              className="w-full bg-slate-800/50 border border-slate-600 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand focus:ring-1 focus:ring-brand/40 transition placeholder-slate-500"
+              className={`${inputClass} mt-1.5`}
               placeholder="••••••••"
             />
             {!isLogin && <PasswordChecklist password={password} />}
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] font-bold py-3 px-4 rounded-lg transition transform hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {loading ? 'Processing...' : (isLogin ? 'Log In' : 'Sign Up')}
+          <button type="submit" disabled={loading} className={buttonClass}>
+            {loading ? 'Processing...' : (isLogin ? 'Log in' : 'Sign up')}
           </button>
         </form>
 
-        <div className="mt-6 flex items-center justify-between">
-          <hr className="w-full border-slate-700" />
-          <span className="p-2 text-slate-500 text-sm font-bold uppercase">Or</span>
-          <hr className="w-full border-slate-700" />
+        <div className="mt-6 flex items-center gap-3">
+          <hr className="flex-1 border-slate-700" />
+          <span className="text-sm text-slate-400">or</span>
+          <hr className="flex-1 border-slate-700" />
         </div>
 
+        {/* Google's own dark sign-in button (its brand colours, not ours), with the
+            four-colour G */}
         <button
+          type="button"
           onClick={handleGoogleAuth}
-          className="mt-6 w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-slate-900 font-bold py-3 px-4 rounded-lg transition"
+          className="mt-6 w-full h-11 flex items-center justify-center gap-3 bg-[#131314] border border-[#8e918f] text-[#e3e3e3] hover:border-white font-medium px-4 rounded-sm transition-colors duration-120"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -209,17 +231,18 @@ function Auth() {
         </button>
 
         {/* Signing up (or in with Google, which can create an account) means agreeing */}
-        <p className="mt-4 text-center text-xs text-slate-500">
+        <p className="mt-4 text-center text-xs text-slate-400">
           By continuing, you agree to IMGM's{' '}
-          <Link to="/terms" className="text-slate-300 hover:text-white underline underline-offset-2">Terms of Use</Link> and{' '}
-          <Link to="/privacy" className="text-slate-300 hover:text-white underline underline-offset-2">Privacy Policy</Link>.
+          <Link to="/terms" className={`text-slate-300 ${TEXT_LINK}`}>Terms of Use</Link> and{' '}
+          <Link to="/privacy" className={`text-slate-300 ${TEXT_LINK}`}>Privacy Policy</Link>.
         </p>
 
         <p className="mt-8 text-center text-sm text-slate-400">
           {isLogin ? "Don't have an account? " : "Already have an account? "}
           <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-white hover:text-brand font-semibold underline underline-offset-4"
+            type="button"
+            onClick={switchMode}
+            className={`font-medium text-white ${TEXT_LINK}`}
           >
             {isLogin ? 'Sign up' : 'Log in'}
           </button>

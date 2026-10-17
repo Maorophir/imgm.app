@@ -3,11 +3,20 @@
  * screen) and the form it opens: bug / idea / other + a message. The page it was sent
  * from goes along. Anything can open the form: openFeedback() (the footer and the
  * player menu use it).
+ *
+ * Noir: the button is a ghost on card stock (no pill, no shadow), and the form is a
+ * flat slip of card stock over a darkened page. Lime stays with each page's own main
+ * action, so "Send" here is ivory.
  */
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Bug, Lightbulb, MessageSquare, MessageSquarePlus, X } from 'lucide-react';
 import { sendFeedback } from '../lib/api';
+import { GHOST_BUTTON, TEXT_BOX } from '../lib/ui';
+
+// The form's own action: solid ivory (the page's lime stays the page's)
+const SEND_BUTTON =
+  'inline-flex items-center justify-center h-11 px-5 rounded-sm bg-white text-slate-950 font-semibold hover:bg-slate-50 transition-colors duration-120 disabled:opacity-40 disabled:cursor-not-allowed';
 
 const OPEN_EVENT = 'imgm:open-feedback';
 // eslint-disable-next-line react-refresh/only-export-components
@@ -65,54 +74,61 @@ const Feedback = () => {
           type="button"
           onClick={openFeedback}
           aria-label="Send feedback"
-          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 p-3 sm:px-4 sm:py-2.5 rounded-full bg-slate-900/95 border border-slate-700 text-sm font-bold text-slate-200 shadow-xl shadow-black/40 hover:text-white hover:border-brand/60 transition"
+          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 h-11 px-3 sm:px-4 rounded-sm bg-slate-900 border border-slate-500 text-sm font-medium text-white hover:border-white hover:text-slate-50 transition-colors duration-120"
         >
-          <MessageSquarePlus className="w-5 h-5 sm:w-4 sm:h-4 text-brand" aria-hidden="true" />
+          <MessageSquarePlus className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
           <span className="hidden sm:inline">Feedback</span>
         </button>
       )}
 
       {open && (
-        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-slate-950/70 backdrop-blur-sm animate-fade-in" onClick={() => setOpen(false)}>
+        <div className="fixed inset-0 z-50 grid place-items-center p-4 bg-slate-950/80 animate-fade-in" onClick={() => setOpen(false)}>
           <div
             role="dialog"
             aria-modal="true"
             aria-labelledby="feedback-title"
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl"
+            className="w-full max-w-md rounded-sm border border-slate-600 bg-slate-900 p-6 shadow-[0_32px_64px_-24px_rgba(0,0,0,.85)]"
           >
-            <div className="flex items-start justify-between gap-4 mb-4">
+            <div className="flex items-start justify-between gap-4 mb-5">
               <div>
-                <h2 id="feedback-title" className="text-xl font-black text-white">Send feedback</h2>
-                <p className="text-sm text-slate-400 mt-1">IMGM is in beta. Every bug and idea helps.</p>
+                <h2 id="feedback-title" className="font-display text-[34px] leading-none tracking-[.005em] text-white">Send feedback</h2>
+                <p className="text-sm text-slate-400 mt-2">IMGM is in beta. Every bug and idea helps.</p>
               </div>
-              <button type="button" onClick={() => setOpen(false)} aria-label="Close" className="text-slate-400 hover:text-white">
-                <X className="w-5 h-5" aria-hidden="true" />
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                aria-label="Close"
+                className="w-11 h-11 -mt-2 -mr-3 shrink-0 grid place-items-center rounded-sm text-slate-400 hover:text-white transition-colors duration-120"
+              >
+                <X className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
               </button>
             </div>
 
             {state === 'sent' ? (
               <div className="text-center py-6">
-                <p className="text-lg font-bold text-white">Thanks, got it!</p>
+                <p className="text-lg font-semibold text-white">Thanks, got it!</p>
                 <p className="text-sm text-slate-400 mt-1">It's on its way to the IMGM team.</p>
-                <button type="button" onClick={() => setOpen(false)} className="mt-5 px-5 py-2.5 rounded-full font-bold bg-brand text-slate-950 hover:brightness-110 transition">
+                <button type="button" onClick={() => setOpen(false)} className={`${GHOST_BUTTON} mt-5`}>
                   Done
                 </button>
               </div>
             ) : (
               <form onSubmit={send} className="flex flex-col gap-4">
-                <div className="grid grid-cols-3 gap-2" role="group" aria-label="What kind of feedback">
+                {/* What kind: one of three, as a segmented control (the picked one ivory) */}
+                <div className="grid grid-cols-3 border border-slate-600 rounded-sm overflow-hidden" role="group" aria-label="What kind of feedback">
                   {KINDS.map(({ value, label, Icon }) => (
                     <button
                       key={value}
                       type="button"
                       aria-pressed={kind === value}
                       onClick={() => setKind(value)}
-                      className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border text-xs font-bold transition ${
-                        kind === value ? 'bg-brand/15 border-brand text-white' : 'border-slate-700 text-slate-300 hover:text-white'
+                      // The focus ring sits just inside (the group clips anything outside)
+                      className={`flex flex-col items-center justify-center gap-1.5 min-h-11 px-2 py-2.5 text-sm font-semibold not-first:border-l not-first:border-slate-600 transition-colors duration-120 focus-visible:outline-offset-[-4px] ${
+                        kind === value ? 'bg-white text-slate-950 focus-visible:outline-slate-950' : 'text-white hover:bg-slate-800'
                       }`}
                     >
-                      <Icon className={`w-5 h-5 ${kind === value ? 'text-brand' : ''}`} aria-hidden="true" /> {label}
+                      <Icon className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> {label}
                     </button>
                   ))}
                 </div>
@@ -121,16 +137,17 @@ const Feedback = () => {
                   onChange={(e) => setMessage(e.target.value)}
                   rows={5}
                   maxLength={2000}
+                  aria-label="Your feedback"
                   placeholder={kind === 'bug' ? 'What happened, and what did you expect?' : "Tell us what's on your mind…"}
-                  className="w-full rounded-xl bg-slate-950 border border-slate-700 focus:border-brand outline-none p-3 text-sm text-white placeholder:text-slate-500"
+                  className={`${TEXT_BOX} resize-y`}
                 />
                 {state === 'error' && <p className="text-sm text-red-300">{error}</p>}
                 <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs text-slate-500">Sent with this page's address.</span>
+                  <span className="text-sm text-slate-400">Sent with this page's address.</span>
                   <button
                     type="submit"
                     disabled={message.trim().length < 5 || state === 'sending'}
-                    className="px-5 py-2.5 rounded-full font-bold bg-brand text-slate-950 hover:brightness-110 transition disabled:opacity-40"
+                    className={SEND_BUTTON}
                   >
                     {state === 'sending' ? 'Sending…' : 'Send'}
                   </button>

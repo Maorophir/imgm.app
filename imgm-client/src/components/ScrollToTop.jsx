@@ -12,7 +12,12 @@
  *   - Back/Forward (and a reload) return to where you were on that visit: every visit's
  *     position is remembered (by React Router's key for it, kept for the tab in
  *     sessionStorage) and restored once the page is tall enough, unless you start
- *     scrolling first. Opening the site fresh (from Google, a typed address) = the top.
+ *     scrolling first. Opening the site fresh (from Google, a typed address) = the top,
+ *     or the section its address names: a shared card link
+ *     (/game/1942?review=abc#review-abc) opens on that card.
+ * A visit with no remembered position is treated like a link. That's how a fresh
+ * opening reaches its section: React Router reports it as Back/Forward ("POP"), but a
+ * fresh opening has nothing remembered (see below), while a reload or Back/Forward does.
  */
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { useLocation, useNavigationType } from 'react-router-dom';
@@ -109,20 +114,22 @@ const ScrollToTop = () => {
 
   useEffect(() => {
     // Back/Forward (or a reload): where you were on that visit, once the page is tall enough
-    if (navigationType === 'POP') {
-      const target = readSaved()[key] ?? 0;
+    const target = navigationType === 'POP' ? readSaved()[key] : undefined;
+    if (target !== undefined) {
       return retry((timeUp) => {
         const reachable = document.documentElement.scrollHeight - window.innerHeight;
         window.scrollTo(0, Math.min(target, reachable));
         return reachable >= target || timeUp;
       }, RESTORE_WAIT_MS);
     }
-    // A link: the top, or the section it names
+    // A link, or a visit with nothing remembered (a fresh opening): the top, or the
+    // section it names. The glide is a jump for people who ask for less motion.
     window.scrollTo(0, 0);
     if (!hash) return undefined;
     return retry((timeUp) => {
       const section = document.getElementById(decodeURIComponent(hash.slice(1)));
-      if (section) section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const behavior = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth';
+      if (section) section.scrollIntoView({ behavior, block: 'start' });
       return Boolean(section) || timeUp;
     }, SECTION_WAIT_MS);
   }, [pathname, hash, key, navigationType]);

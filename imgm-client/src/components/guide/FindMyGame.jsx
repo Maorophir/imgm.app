@@ -7,8 +7,14 @@
  * A screen with one single-choice question moves on as soon as it's tapped.
  * The answers live in the chat's prefs (so "Tune it" can edit them later); the
  * last screen's button sends them as the chat's first question.
+ * A player who'd rather just type can skip the questions ("Skip the questions…" on
+ * the first screen, "Skip to the end" on the others): straight to the last screen's
+ * box, keeping whatever they answered so far.
+ * Noir: the screen's title in Big Shoulders, a thin ivory progress line, square answer
+ * cards, and lime only on "Find my next game" (the quest's one main action).
  */
 import { useRef, useState } from "react";
+import { ArrowLeft, ArrowRight, X } from "lucide-react";
 import { CustomInput, LovedGames } from "./GuidePreferences";
 import {
   MAX_CUSTOM,
@@ -28,18 +34,18 @@ const OptionCard = ({ option, on, disabled, onClick }) => (
     onClick={onClick}
     disabled={disabled}
     aria-pressed={on}
-    className={`flex flex-col gap-1 rounded-2xl border p-4 lg:p-5 text-left transition-all disabled:opacity-35 disabled:cursor-not-allowed ${
+    className={`flex flex-col gap-1 rounded-sm border p-4 lg:p-5 text-left transition-colors duration-120 disabled:opacity-35 disabled:cursor-not-allowed ${
       on
-        ? "bg-brand/15 border-brand shadow-[0_0_18px_rgb(184_240_58/0.25)]"
-        : "bg-slate-800/50 border-slate-700/60 hover:border-slate-500 hover:bg-slate-800/80"
+        ? "bg-slate-800 border-white"
+        : "bg-slate-900 border-slate-600 hover:border-white"
     }`}
   >
-    <span className="font-bold text-white lg:text-lg">{option.label}</span>
+    <span className="font-semibold text-white lg:text-lg">{option.label}</span>
     {option.hint && (
       <span className="text-sm text-slate-300 leading-snug">{option.hint}</span>
     )}
     {option.examples && (
-      <span className="text-xs text-slate-500">{option.examples}</span>
+      <span className="text-sm text-slate-400">{option.examples}</span>
     )}
   </button>
 );
@@ -53,10 +59,10 @@ const Question = ({ question, prefs, onPick, onChange, showLabel }) => {
   return (
     <fieldset className="flex flex-col gap-3">
       {showLabel && (
-        <legend className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-400">
+        <legend className="mb-3 text-sm font-medium text-white">
           {question.label}
           {question.multi && (
-            <span className="normal-case tracking-normal font-semibold">
+            <span className="font-normal text-slate-400">
               {" "}
               · pick any
             </span>
@@ -86,9 +92,9 @@ const Question = ({ question, prefs, onPick, onChange, showLabel }) => {
               key={value}
               type="button"
               onClick={() => onChange(toggleAnswer(prefs, question, value))}
-              className="px-3 py-1.5 rounded-full text-sm font-semibold border bg-brand/15 border-brand text-white"
+              className="inline-flex items-center min-h-9 px-3 py-1.5 rounded-sm text-sm font-medium border bg-slate-800 border-white text-white"
             >
-              {value} <span className="ml-1 text-slate-400">✕</span>
+              {value} <X className="ml-1.5 w-3.5 h-3.5 text-slate-400" strokeWidth={1.8} aria-label="remove" />
             </button>
           ))}
           {own.length < MAX_CUSTOM && (
@@ -153,39 +159,60 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
     go(LAST);
   };
 
+  // Nothing picked (they skipped the questions, or passed on every one): "Anything
+  // else?" would follow answers they never gave, so the last screen asks plainly (and
+  // doesn't call the box optional: it's all there is to go on)
+  const nothingPicked = !Object.values(prefs).flat().some(Boolean);
+
   return (
-    <div className="flex-1 flex flex-col rounded-3xl border border-slate-800 bg-slate-900/60 p-5 md:p-8 lg:border-0 lg:bg-transparent lg:p-0">
+    <div className="flex-1 flex flex-col rounded-sm border border-slate-700 bg-slate-900 p-5 md:p-8 lg:border-0 lg:bg-transparent lg:p-0">
       {/* Progress */}
-      <div className="flex items-center justify-between gap-3 text-xs font-bold uppercase tracking-[0.2em]">
-        <span className="text-brand">Find my game</span>
-        <span className="text-slate-500 tabular-nums">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="font-medium text-white">Find my game</span>
+        <span className="text-slate-400 tabular-nums">
           {step + 1} / {QUEST_SCREENS.length}
         </span>
       </div>
-      <div className="mt-2 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+      <div className="mt-2 h-1 bg-slate-700">
         <div
-          className="h-full bg-brand transition-all duration-300"
+          className="h-full bg-white transition-[width] duration-300"
           style={{ width: `${((step + 1) / QUEST_SCREENS.length) * 100}%` }}
         />
       </div>
 
       {/* The screen — key={step} replays the fade-in on every screen change */}
       <div key={step} className="animate-fade-in mt-7 lg:my-auto lg:py-8">
-        <h2 className="font-display text-3xl md:text-4xl uppercase tracking-tight text-white">
-          {screen.title}
+        <h2 className="font-display text-[34px] md:text-[54px] leading-[.95] uppercase tracking-[.005em] text-white">
+          {step === LAST && nothingPicked
+            ? "What do you want to play?"
+            : screen.title}
         </h2>
-        {screen.subtitle && (
-          <p className="mt-1 text-slate-400">{screen.subtitle}</p>
+        {step === LAST && nothingPicked ? (
+          <p className="mt-1 text-slate-400">Say it in your own words.</p>
+        ) : (
+          screen.subtitle && <p className="mt-1 text-slate-400">{screen.subtitle}</p>
         )}
 
-        {step === 0 && lastAnswers && (
-          <button
-            type="button"
-            onClick={applyLast}
-            className="mt-3 text-sm font-bold text-brand hover:underline"
-          >
-            Use my last answers →
-          </button>
+        {step === 0 && (
+          <div className="mt-2 flex flex-wrap items-center gap-x-6">
+            {lastAnswers && (
+              <button
+                type="button"
+                onClick={applyLast}
+                className="inline-flex items-center gap-1.5 h-11 text-sm font-medium text-white underline decoration-1 underline-offset-5 decoration-slate-500/80 hover:decoration-current hover:text-slate-50 transition-colors duration-120"
+              >
+                Use my last answers <ArrowRight className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+              </button>
+            )}
+            {/* For players who already know what they're after: no questions, just the box */}
+            <button
+              type="button"
+              onClick={() => go(LAST)}
+              className="inline-flex items-center gap-1.5 min-h-11 text-left text-sm font-medium text-white underline decoration-1 underline-offset-5 decoration-slate-500/80 hover:decoration-current hover:text-slate-50 transition-colors duration-120"
+            >
+              Skip the questions, just tell me what you want <ArrowRight className="shrink-0 w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+            </button>
+          </div>
         )}
 
         <div className="mt-6 flex flex-col gap-6">
@@ -211,7 +238,7 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
               maxLength={1000}
               rows={3}
               placeholder='e.g. "Something like Hades, but calmer"'
-              className="w-full rounded-2xl bg-slate-950/60 border border-slate-700 focus:border-brand/60 px-4 py-3 text-white placeholder:text-slate-500 outline-none transition"
+              className="w-full rounded-sm bg-slate-950 border border-slate-500 focus:border-white px-3.5 py-3 text-base text-white placeholder:text-slate-400 outline-none transition-colors duration-120"
             />
           )}
         </div>
@@ -223,16 +250,27 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
           type="button"
           onClick={() => go(step - 1)}
           disabled={step === 0}
-          className="text-sm font-semibold text-slate-400 hover:text-white transition disabled:invisible"
+          className="inline-flex items-center gap-1.5 h-11 text-sm font-medium text-slate-400 hover:text-white transition-colors duration-120 disabled:invisible"
         >
-          ← Back
+          <ArrowLeft className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Back
         </button>
+        {/* Had enough questions: on to the last screen with what's answered so far (not
+            on an optional screen, whose own Next already says "Skip") */}
+        {step > 0 && step < LAST && !screen.optional && (
+          <button
+            type="button"
+            onClick={() => go(LAST)}
+            className="ml-3 inline-flex items-center h-11 text-sm font-medium text-slate-400 hover:text-white transition-colors duration-120"
+          >
+            Skip to the end
+          </button>
+        )}
         <div className="ml-auto flex flex-wrap items-center gap-3">
           {screen.any && (
             <button
               type="button"
               onClick={passScreen}
-              className="px-4 py-2.5 rounded-xl text-sm font-bold text-slate-200 border border-slate-700 hover:border-slate-500 hover:text-white transition"
+              className="inline-flex items-center h-11 px-4 rounded-sm text-sm font-medium text-white border border-slate-500 hover:border-white transition-colors duration-120"
             >
               {screen.any}
             </button>
@@ -242,21 +280,22 @@ const FindMyGame = ({ prefs, onChange, onReveal, lastAnswers, disabled }) => {
               type="button"
               onClick={() => go(step + 1)}
               disabled={!answered}
-              className="px-5 py-2.5 rounded-xl font-bold bg-brand hover:brightness-110 text-slate-950 transition disabled:opacity-40"
+              // Ivory: the lime waits for "Find my next game" at the end
+              className="inline-flex items-center gap-1.5 h-11 px-5 rounded-sm font-semibold bg-white text-slate-950 hover:bg-slate-50 transition-colors duration-120 disabled:opacity-40"
             >
               {screen.optional && !hasAnswer(prefs, "loved_games")
                 ? "Skip"
-                : "Next"}{" "}
-              →
+                : "Next"}
+              <ArrowRight className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
             </button>
           ) : (
             <button
               type="button"
               onClick={() => onReveal(note.trim())}
               disabled={disabled}
-              className="px-6 py-3 rounded-xl font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition disabled:opacity-40"
+              className="inline-flex items-center gap-2 h-13 px-7 rounded-sm font-semibold whitespace-nowrap bg-brand hover:brightness-107 text-slate-950 transition-[filter] duration-120 disabled:opacity-40"
             >
-              Find my next game →
+              Find my next game <ArrowRight className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
             </button>
           )}
         </div>

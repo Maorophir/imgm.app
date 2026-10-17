@@ -1,5 +1,7 @@
 /**
  * API client — thin fetch wrappers for the IMGM backend.
+ * One does a little more: after a player posts, edits or deletes a review, getGame and
+ * getRecentReviews skip the CDN's copy, so they see their change (changedGames).
  */
 // Dev: the API runs on its own port. Production: '' makes requests same-origin
 // (/api/... on imgm.app), which the host proxies to the server.
@@ -38,8 +40,35 @@ export const searchGames = (query, signal) =>
   fetchJson(`/api/games/search?q=${encodeURIComponent(query)}`, { signal });
 
 export const getFeaturedGames = (signal) => fetchJson('/api/games/featured', { signal });
+// Games to get the player reviewing: popular ones in their favourite genres they haven't
+// rated (logged in), else the most played games of all time. { personal, genres, games }
+export const getReviewPicks = (signal) => fetchJson('/api/games/review-picks', { signal });
 
-export const getGame = (id, signal) => fetchJson(`/api/games/${id}`, { signal });
+// Games whose page this player changed in this tab (they posted, edited or deleted a
+// review). Vercel's CDN may still hold a copy of the page from before (the server lets
+// it keep one for a minute, then serve it once more while it refreshes), which would
+// leave their own review out of the score and count. So these games skip that copy: a
+// unique query string is its own cache key, so it always reaches the server, which
+// ignores it. Kept for the tab (sessionStorage), so a reload skips it too.
+const CHANGED_GAMES = 'imgm:changed-games';
+const changedGames = new Set((() => {
+  try {
+    return JSON.parse(sessionStorage.getItem(CHANGED_GAMES)) ?? [];
+  } catch {
+    return [];
+  }
+})());
+const markChanged = (gameId) => {
+  changedGames.add(String(gameId));
+  try {
+    sessionStorage.setItem(CHANGED_GAMES, JSON.stringify([...changedGames]));
+  } catch {
+    // no storage: it's still remembered until the page reloads
+  }
+};
+
+export const getGame = (id, signal) =>
+  fetchJson(`/api/games/${id}${changedGames.has(String(id)) ? `?fresh=${Date.now()}` : ''}`, { signal });
 
 // "Was this review helpful?": true / false, or null to take the vote back
 export const voteOnReview = (reviewId, helpful) =>
@@ -55,8 +84,13 @@ export const getGotwHistory = (signal) => fetchJson('/api/gotw/history', { signa
 export const getTopGames = ({ sort, platform }, signal) =>
   fetchJson(`/api/games/top?${new URLSearchParams({ sort, ...(platform && { platform }) })}`, { signal });
 
-// The newest reviews on any game (home page): [{ id, rating, snippet, createdAt, author, game }]
-export const getRecentReviews = (signal) => fetchJson('/api/reviews/recent?limit=8', { signal });
+// The newest reviews on any game (home page): [{ id, rating, snippet, createdAt, author,
+// game: { id, title, coverUrl, genres, releaseDate, developer, artworks (first only),
+// ratings, reviewCount }, pinned? }]
+// A player who posted, edited or deleted a review in this tab skips the CDN's copy, so
+// their own review shows up straight away (see changedGames)
+export const getRecentReviews = (signal) =>
+  fetchJson(`/api/reviews/recent?limit=8${changedGames.size ? `&fresh=${Date.now()}` : ''}`, { signal });
 
 // One page of a game's reviews: { reviews, mine (the viewer's own, first page only), total, hasMore }
 export const getGameReviews = (gameId, { sort, tier, rating, offset, limit, focus }, signal) => {
@@ -64,14 +98,29 @@ export const getGameReviews = (gameId, { sort, tier, rating, offset, limit, focu
   return fetchJson(`/api/reviews/game/${gameId}?${params}`, { signal });
 };
 
+// Your card for a game: its picture and words now, and what you may choose
+// ({ art, quote, pictures, sentences, sentence }); and choosing ({ art?, sentence? },
+// null = back to the automatic choice)
+export const getMyCard = (gameId, signal) => fetchJson(`/api/reviews/mine/${gameId}/card`, { signal });
+export const setMyCard = (gameId, choice) => fetchJson(`/api/reviews/mine/${gameId}/card`, { method: 'PUT', body: choice });
+
 // The logged-in user's review of a game, or null if they haven't reviewed it
 export const getMyReview = (gameId, signal) => fetchJson(`/api/reviews/mine/${gameId}`, { signal });
 
-// Creates the review, or updates it if the user already reviewed this game
-export const saveReview = (review) => fetchJson('/api/reviews', { method: 'POST', body: review });
+// Creates the review, or updates it if the user already reviewed this game. Either
+// way the game's page has changed for this player (see changedGames).
+export const saveReview = async (review) => {
+  const saved = await fetchJson('/api/reviews', { method: 'POST', body: review });
+  markChanged(review.gameId);
+  return saved;
+};
 
 // Deletes the logged-in user's review of a game
-export const deleteMyReview = (gameId) => fetchJson(`/api/reviews/mine/${gameId}`, { method: 'DELETE' });
+export const deleteMyReview = async (gameId) => {
+  const result = await fetchJson(`/api/reviews/mine/${gameId}`, { method: 'DELETE' });
+  markChanged(gameId);
+  return result;
+};
 
 // Is this gamer tag free and allowed? → { available, reason? }
 export const checkUsername = (name, signal) =>
@@ -93,10 +142,17 @@ export const addToBacklog = (gameId, source) => fetchJson(`/api/backlog/${gameId
 export const removeFromBacklog = (gameId) => fetchJson(`/api/backlog/${gameId}`, { method: 'DELETE' });
 export const reorderBacklog = (gameIds) => fetchJson('/api/backlog/order', { method: 'PUT', body: { gameIds } });
 export const setBacklogFinished = (gameId, finished) => fetchJson(`/api/backlog/${gameId}/finished`, { method: 'PUT', body: { finished } });
+// "Playing now": marks a Backlog game as the one you're playing (true) or not (false)
+export const setBacklogPlaying = (gameId, playing) => fetchJson(`/api/backlog/${gameId}/playing`, { method: 'PUT', body: { playing } });
 
 // Your profile: { player, stats, reviews } and more reviews page by page
 export const getMyProfile = (signal) => fetchJson('/api/users/me/profile', { signal });
 export const getMyReviews = (offset, signal) => fetchJson(`/api/users/me/reviews?offset=${offset}&limit=12`, { signal });
+// Any player's public profile, by gamer tag: { player, stats, reviews } with only what the
+// privacy policy calls public (no email, real name or Game of the Week votes)
+export const getPublicProfile = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/profile`, { signal });
+export const getPublicReviews = (username, offset, signal) =>
+  fetchJson(`/api/users/${encodeURIComponent(username)}/reviews?offset=${offset}&limit=12`, { signal });
 // Profile picture: a data URL from resizeToAvatar (checked by the server before it's saved)
 export const uploadAvatar = (image) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { image } });
 export const deleteAvatar = () => fetchJson('/api/users/me/avatar', { method: 'DELETE' });
@@ -104,7 +160,7 @@ export const deleteAvatar = () => fetchJson('/api/users/me/avatar', { method: 'D
 export const getMyAccount = (signal) => fetchJson('/api/users/me/account', { signal });
 export const deleteMyAccount = (body) => fetchJson('/api/users/me', { method: 'DELETE', body });
 
-// Ready-made character avatars: [{ key, name, game, url }], and choosing one
+// Ready-made avatars (IMGM's original characters): [{ key, name, url }], and choosing one
 export const getAvatarPresets = (signal) => fetchJson('/api/users/avatars/presets', { signal });
 export const chooseAvatarPreset = (preset) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { preset } });
 

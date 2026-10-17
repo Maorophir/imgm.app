@@ -7,11 +7,13 @@
  */
 import { TAG_RULES } from '../hooks/useGamerTagCheck';
 
-const STATE_COLOR = { ok: 'text-emerald-400', bad: 'text-red-400', checking: 'text-slate-400', current: 'text-slate-400', empty: '' };
+// The message under the field: green when the tag is free (the Uncommon ink), red when
+// it can't be used, grey while checking
+const STATE_COLOR = { ok: 'text-rarity-uncommon', bad: 'text-red-400', checking: 'text-slate-400', current: 'text-slate-400', empty: '' };
 
 const GamerTagField = ({ value, onChange, check, id = 'gamer-tag', autoFocus = false }) => (
   <div>
-    <label htmlFor={id} className="block text-sm font-semibold text-slate-300 mb-1.5">Gamer tag</label>
+    <label htmlFor={id} className="block text-sm font-medium text-white mb-1.5">Gamer tag</label>
     <input
       id={id}
       value={value}
@@ -23,16 +25,18 @@ const GamerTagField = ({ value, onChange, check, id = 'gamer-tag', autoFocus = f
       placeholder="e.g. Tarnished_Tom"
       aria-describedby={`${id}-status`}
       aria-invalid={check.state === 'bad'}
-      className={`w-full bg-slate-950/60 border rounded-xl px-4 py-3 text-lg font-bold text-white placeholder:text-slate-600 placeholder:font-normal focus:outline-none focus:ring-1 transition ${
-        check.state === 'bad' ? 'border-red-500/60 focus:ring-red-500/40'
-          : check.state === 'ok' ? 'border-emerald-500/60 focus:ring-emerald-500/40'
-            : 'border-slate-700/60 focus:border-brand/60 focus:ring-brand/30'
+      // The edge says how the tag is doing: red (can't use it), green (free), or the
+      // control grey that turns ivory on focus
+      className={`w-full h-12 px-3.5 rounded-sm bg-slate-950 border text-lg font-semibold text-white placeholder:text-slate-400 placeholder:font-normal focus:outline-none transition-colors duration-120 ${
+        check.state === 'bad' ? 'border-red-400/70'
+          : check.state === 'ok' ? 'border-rarity-uncommon-edge'
+            : 'border-slate-500 focus:border-white'
       }`}
     />
-    <p id={`${id}-status`} role="status" className={`min-h-5 mt-1.5 text-sm font-semibold ${STATE_COLOR[check.state]}`}>
+    <p id={`${id}-status`} role="status" className={`min-h-5 mt-1.5 text-sm font-medium ${STATE_COLOR[check.state]}`}>
       {check.message}
     </p>
-    <p className="text-xs text-slate-500">{TAG_RULES}</p>
+    <p className="text-sm text-slate-400">{TAG_RULES}</p>
   </div>
 );
 

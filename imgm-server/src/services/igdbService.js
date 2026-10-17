@@ -344,6 +344,34 @@ export const getCoverArt = async (id, size = 't_cover_big') => {
  * Popular recent games: released in the last 2 years, sorted by rating count.
  * Cached in memory to keep Home page loads off the IGDB rate limit.
  */
+// IGDB's genre ids by name ("Role-playing (RPG)" → 12), loaded once: our games store
+// genre names, IGDB filters by id
+let genreIds = null;
+export const getGenreIds = async () => {
+  if (!genreIds) {
+    const genres = await igdbRequest('genres', 'fields id, name; limit 100;');
+    genreIds = new Map(genres.map((g) => [g.name, g.id]));
+  }
+  return genreIds;
+};
+
+// The most played games of all time (most ratings on IGDB), optionally in some genres:
+// games nearly everyone has played, so a visitor can rate one right away. Only main
+// games (no editions or bundles). Cached a day per genre set.
+const greatsCache = new Map();
+const GREATS_TTL = 24 * 60 * 60 * 1000;
+// all = true: games in EVERY genre given (IGDB's [a,b]); otherwise in any of them ((a,b))
+export const getAllTimeGreats = async ({ genres = [], all = false, limit = 40 } = {}) => {
+  const key = `${all ? 'all:' : ''}${[...genres].sort().join(',') || 'any'}`;
+  const cached = greatsCache.get(key);
+  if (cached && Date.now() < cached.expiresAt) return cached.results;
+  const inGenres = genres.length ? ` & genres = ${all ? `[${genres.join(',')}]` : `(${genres.join(',')})`}` : '';
+  const body = `${GAME_FIELDS} where cover != null & artworks != null & total_rating_count > 200 & version_parent = null & parent_game = null${inGenres}; sort total_rating_count desc; limit ${limit};`;
+  const results = (await igdbRequest('games', body)).map(mapIgdbGame);
+  greatsCache.set(key, { expiresAt: Date.now() + GREATS_TTL, results });
+  return results;
+};
+
 export const getPopularGames = async (limit = 10) => {
   if (popularCache.results && Date.now() < popularCache.expiresAt) {
     return popularCache.results;

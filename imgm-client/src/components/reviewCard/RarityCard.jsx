@@ -1,22 +1,28 @@
 /**
- * RarityCard — a review as a collectible card, framed in the score's loot rarity.
+ * RarityCard — a review on a game page as a Noir trading card, framed in the score's
+ * rarity: the same card anatomy as CollectibleCard (the home page's cards), with the
+ * review's own details printed on it.
  *
- * Front: reviewer, game art with the stars, rarity, "X meets Y", vibes, setup.
- * Back (tap to flip): the Steam-style checklist. Reviews without a checklist
- * don't flip; quick reviews get a "Quick review" stamp instead.
+ * Front: the game's title and the score numeral in the tier's ink, who reviewed it
+ * (and the badges it earned), an art window, the tier, "X meets Y", vibes, setup.
+ * Back (tap to flip): the Steam-style checklist (CardChecklist, the same back the
+ * home page's card has). Reviews without a checklist don't turn; quick reviews get a
+ * "Quick review" stamp instead.
  *
- * The art stretches to fill whatever room the text doesn't use, so sparse cards
- * show more art and busy cards never cut text off.
+ * The art window takes whatever height the text leaves, so sparse cards show more
+ * art and busy cards never cut text off. Sizes are in cqi (a share of the card's
+ * width), like CollectibleCard, so the card is the same design at any width.
  */
-import { Hourglass, ListChecks, Monitor } from 'lucide-react';
+import { Hourglass, Monitor } from 'lucide-react';
 import ArtIcon from '../ArtIcon';
 import { useState } from 'react';
-import RarityStars from '../RarityStars';
+import RarityMark from '../RarityMark';
 import MarqueeText from '../MarqueeText';
 import {
-  getRarity, RATING_LABELS, VIBES, GOT_GOOD_AFTER, COMPLETION_STATUSES, BADGES, checklistColor,
+  getRarity, RATING_LABELS, VIBES, GOT_GOOD_AFTER, COMPLETION_STATUSES, BADGES,
 } from '../reviewQuest/questOptions';
 import { avatarColor, avatarUrl, formatDate, tickedChecklist, isQuickReview, reviewerName } from './reviewDisplay';
+import CardChecklist from './CardChecklist';
 
 // A player's face: their profile picture if they set one, otherwise their coloured initial.
 // `user` = { id, avatarUpdatedAt }; the time in the address makes a new picture show at once.
@@ -34,7 +40,7 @@ export const Avatar = ({ name, user, size = 'w-8 h-8 text-sm' }) => {
   }
   return (
     <span
-      className={`${size} rounded-full flex items-center justify-center font-extrabold text-white shrink-0`}
+      className={`${size} rounded-full flex items-center justify-center font-semibold text-white shrink-0`}
       style={{ background: avatarColor(name) }}
       aria-hidden="true"
     >
@@ -43,12 +49,35 @@ export const Avatar = ({ name, user, size = 'w-8 h-8 text-sm' }) => {
   );
 };
 
-// The rarity-coloured 3px border around each face of the card
-const Frame = ({ rarity, className = '', children }) => (
-  <div className={`rarity-frame is-${rarity.key} ${className}`} style={{ '--rc': rarity.color }}>
-    <div className="h-full rounded-[17px] bg-slate-900 overflow-hidden flex flex-col">{children}</div>
-  </div>
-);
+// The Legendary frame: the gilt, at rest (this card doesn't tilt)
+const GILT = { backgroundImage: 'var(--gradient-gilt)', backgroundSize: '260% 260%', backgroundPosition: '50% 50%' };
+
+// The hairline between the parts of the card (ivory at 14%, never thinner than 1px)
+const HAIRLINE = 'border-white/14';
+
+// One face of the card: printed card stock, the frame in the tier's ink (the gilt for
+// a Legendary 10), and the dark face inside it that holds the content
+const Face = ({ rarity, className = '', children }) => {
+  const legendary = rarity.key === 'legendary';
+  return (
+    <div className={`${className} flex flex-col rounded-[4.76%/3.41%] overflow-hidden bg-slate-900 text-white inset-ring inset-ring-white/7 p-[2.4cqi]`}>
+      <div
+        className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${
+          legendary ? 'p-[1.3cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(40,28,6,.6)]' : 'p-[max(1px,.55cqi)] bg-(--ink)'
+        }`}
+        style={legendary ? GILT : undefined}
+      >
+        <div
+          className={`flex-1 min-w-0 flex flex-col overflow-hidden bg-slate-900 pt-[3cqi] px-[3.2cqi] pb-[2.6cqi] ${
+            legendary ? 'rounded-[1.6cqi/1.15cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(40,28,6,.5)]' : 'rounded-[2.1cqi/1.5cqi]'
+          }`}
+        >
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const RarityCard = ({ review, game, artUrl }) => {
   const [flipped, setFlipped] = useState(false);
@@ -75,8 +104,11 @@ const RarityCard = ({ review, game, artUrl }) => {
 
   return (
     <div
-      className={`card-flip w-[270px] max-w-full aspect-[300/450] shrink-0 ${flipped ? 'is-flipped' : ''} ${canFlip ? 'cursor-pointer' : ''} rounded-[20px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-brand`}
-      // Only flippable cards act as a button
+      // The tier's colours for the faces: --ink for the frame, numeral and marks,
+      // --deep for an art window with no art
+      className={`card-flip @container w-[280px] max-w-full aspect-[63/88] shrink-0 rounded-[4.76%/3.41%] ${flipped ? 'is-flipped' : ''} ${canFlip ? 'cursor-pointer' : ''}`}
+      style={{ '--ink': rarity.color, '--deep': rarity.deep }}
+      // Only cards that flip act as a button (the global ivory focus ring shows)
       role={canFlip ? 'button' : undefined}
       tabIndex={canFlip ? 0 : undefined}
       aria-label={canFlip ? `${name}'s card. ${flipped ? 'Showing the checklist' : 'Tap to see the checklist'}` : undefined}
@@ -90,129 +122,131 @@ const RarityCard = ({ review, game, artUrl }) => {
     >
       <div className="card-flip-inner">
         {/* ── Front ── */}
-        <Frame rarity={rarity} className="card-face">
-          <div className="flex items-center justify-between gap-2 px-3 py-2.5">
-            <div className="flex items-center gap-2 min-w-0">
-              <Avatar name={name} user={review.user} />
-              <span className="min-w-0">
-                <span className="block text-[13px] font-bold text-white truncate">{name}</span>
-                <span className="block text-[11px] text-slate-400">{formatDate(review.createdAt)}</span>
+        <Face rarity={rarity} className="card-face">
+          {/* The game's title, and the score in the tier's ink */}
+          <div className="flex items-start justify-between gap-[3cqi]">
+            <p className="mt-[.6cqi] min-w-0 font-display text-[length:8cqi] leading-[.9] tracking-[.01em] uppercase text-balance break-words line-clamp-2">
+              {game.title}
+            </p>
+            <p className="flex items-baseline gap-[.8cqi] shrink-0">
+              <span className="font-display text-[length:15cqi] leading-[.78] text-(--ink)">{review.rating}</span>
+              <span className="text-[length:max(9px,2.8cqi)] tabular-nums text-slate-400">/10</span>
+            </p>
+          </div>
+
+          {/* Who reviewed it and when, and the badges the review earned */}
+          <div className={`flex items-center justify-between gap-[2cqi] mt-[2cqi] pb-[1.8cqi] border-b-[length:max(1px,.22cqi)] ${HAIRLINE}`}>
+            <span className="flex items-center gap-[2cqi] min-w-0">
+              <Avatar name={name} user={review.user} size="w-[8cqi] h-[8cqi] text-[length:max(10px,3.6cqi)]" />
+              <span className="min-w-0 truncate text-[length:max(11px,3.8cqi)] leading-[1.2]">
+                <span className="font-semibold">{name}</span>{' '}
+                <span className="text-slate-400 tabular-nums">· {formatDate(review.createdAt)}</span>
               </span>
-            </div>
+            </span>
             {review.badges?.length > 0 && (
-              <span className="flex gap-0.5 text-sm shrink-0">
-                {review.badges.map((b) => <span key={b} title={BADGES[b]?.label}><ArtIcon icon={BADGES[b]?.art} className="w-4 h-4 text-amber-300" /></span>)}
+              <span className="flex gap-[1cqi] shrink-0 text-(--ink)">
+                {review.badges.map((b) => (
+                  <span key={b} title={BADGES[b]?.label}>
+                    <ArtIcon icon={BADGES[b]?.art} className="w-[max(14px,4.6cqi)] h-[max(14px,4.6cqi)]" />
+                  </span>
+                ))}
               </span>
             )}
           </div>
 
-          {/* The art: game artwork → a rarity-tinted placeholder with the title */}
-          <div
-            className="card-art relative flex-[1_1_150px] min-h-[92px] bg-cover bg-center"
-            style={artUrl
-              ? { backgroundImage: `url(${artUrl})` }
-              : { background: `radial-gradient(120% 90% at 30% 20%, ${rarity.color}55, #131c31 70%)` }}
-          >
+          {/* The art window: the game's artwork, or the tier's dark panel with its mark */}
+          <div className="relative flex-[1_1_0] min-h-[24cqi] mt-[2.4cqi] rounded-[.6cqi] overflow-hidden bg-(--deep)">
             {artUrl ? (
-              <span className="absolute top-2 left-2 max-w-[calc(100%-16px)] truncate text-[11px] font-extrabold px-2 py-0.5 rounded-md bg-slate-950/75 backdrop-blur-sm text-white">
-                {game.title}
-              </span>
+              <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${artUrl})` }} aria-hidden="true" />
             ) : (
-              <span className="absolute inset-0 flex items-center justify-center px-4 pb-6 text-center font-bold text-slate-200 text-balance">
-                {game.title}
+              <span aria-hidden="true" className="absolute inset-0 grid place-items-center">
+                <RarityMark tier={rarity.key} thin className="w-[22cqi] h-[22cqi] text-(--ink)" />
               </span>
             )}
-            <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-2 px-3 pt-6 pb-2 bg-gradient-to-t from-slate-950/95 to-transparent">
-              <RarityStars value={review.rating} size="sm" readOnly />
-              <span className="font-black text-white text-xl leading-none tabular-nums">
-                {review.rating}<span className="text-xs text-slate-400 font-semibold">/10</span>
-              </span>
-            </div>
+            {/* A fine line around the window, in the ink */}
+            <span
+              aria-hidden="true"
+              className="absolute inset-0 rounded-[inherit] pointer-events-none shadow-[inset_0_0_0_max(1px,.25cqi)_color-mix(in_srgb,var(--ink)_42%,transparent)]"
+            />
           </div>
 
-          <div className="flex items-baseline justify-between gap-2 px-3 pt-2">
-            <span className="text-lg font-black uppercase tracking-[0.2em]" style={{ color: rarity.color, textShadow: `0 0 14px ${rarity.color}66` }}>
+          {/* The tier, and what the score means */}
+          <div className="flex items-center justify-between gap-[2cqi] mt-[2.2cqi]">
+            <span className="inline-flex items-center gap-[1.4cqi] text-[length:max(11px,3.8cqi)] font-semibold leading-none text-(--ink)">
+              <RarityMark tier={rarity.key} className="w-[max(10px,3.8cqi)] h-[max(10px,3.8cqi)]" />
               {rarity.label}
             </span>
-            <span className="text-xs text-slate-400 font-semibold">{RATING_LABELS[review.rating]}</span>
+            <span className="min-w-0 truncate text-[length:max(10px,3.2cqi)] leading-none text-slate-400">{RATING_LABELS[review.rating]}</span>
           </div>
 
           {hasBody && (
-            <div className="flex flex-col gap-2 px-3 pt-2">
+            <div className="flex flex-col gap-[2cqi] mt-[2.4cqi]">
               {meets.length > 0 && (
                 // One line: each game gets an equal share; long titles scroll
-                <div className="flex items-center gap-1.5 text-xs min-w-0">
+                <div className="flex items-center gap-[1.6cqi] min-w-0 text-[length:max(11px,3.6cqi)]">
                   {meets.map((g, i) => (
                     <span key={g.id} className="contents">
-                      {i > 0 && <span className="font-black text-slate-400 shrink-0">×</span>}
-                      <span className="flex items-center gap-1.5 min-w-0 flex-1">
-                        {g.coverUrl && <img src={g.coverUrl} alt="" className="w-[22px] h-[30px] object-cover rounded-sm shrink-0" />}
+                      {i > 0 && <span className="font-semibold text-slate-400 shrink-0">×</span>}
+                      <span className="flex items-center gap-[1.6cqi] min-w-0 flex-1">
+                        {g.coverUrl && <img src={g.coverUrl} alt="" className="w-[7cqi] h-[10cqi] object-cover rounded-xs shrink-0" />}
                         {/* Long names slowly slide to show the whole title */}
-                        <MarqueeText text={g.title} className="font-bold text-slate-100" />
+                        <MarqueeText text={g.title} className="font-medium text-white" />
                       </span>
                     </span>
                   ))}
                 </div>
               )}
               {vibes.length > 0 && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-[1.2cqi]">
                   {vibes.map((v) => (
-                    <span key={v.value} className="inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-200 whitespace-nowrap">
-                      <ArtIcon icon={v.art} className="w-3 h-3" /> {v.label}
+                    <span key={v.value} className="inline-flex items-center gap-[1cqi] px-[1.6cqi] py-[.4cqi] rounded-xs border border-slate-600 text-[length:max(10px,3.2cqi)] font-medium text-slate-200 whitespace-nowrap">
+                      <ArtIcon icon={v.art} className="w-[max(10px,3.2cqi)] h-[max(10px,3.2cqi)] text-slate-400" /> {v.label}
                     </span>
                   ))}
                 </div>
               )}
-              {gotGood && <p className="flex items-center gap-1 text-[11px] text-slate-400"><ArtIcon icon={gotGood.art} className="w-3 h-3" /> Got good: {gotGood.label.toLowerCase()}</p>}
+              {gotGood && (
+                <p className="flex items-center gap-[1cqi] text-[length:max(10px,3.2cqi)] text-slate-400">
+                  <ArtIcon icon={gotGood.art} className="w-[max(10px,3.2cqi)] h-[max(10px,3.2cqi)]" /> Got good: {gotGood.label.toLowerCase()}
+                </p>
+              )}
             </div>
           )}
 
           {hasFoot && (
-            <div className="flex items-center justify-between gap-2 px-3 pt-2 pb-2.5 mt-2 border-t border-slate-800">
-              <span className="flex flex-wrap gap-x-2.5 gap-y-0.5 text-[11px] text-slate-400 min-w-0">
+            <div className={`flex items-center justify-between gap-[2cqi] mt-[2.4cqi] pt-[1.6cqi] border-t-[length:max(1px,.22cqi)] ${HAIRLINE} text-[length:max(10px,3.2cqi)] leading-[1.3] text-slate-400`}>
+              <span className="flex flex-wrap gap-x-[2.4cqi] gap-y-[.4cqi] min-w-0">
                 {meta.map((m) => (
-                  <span key={m.text} className="inline-flex items-center gap-1">
-                    <ArtIcon icon={m.icon} className="w-3 h-3" />
+                  <span key={m.text} className="inline-flex items-center gap-[1cqi]">
+                    <ArtIcon icon={m.icon} className="w-[max(10px,3.2cqi)] h-[max(10px,3.2cqi)]" />
                     {m.text}
                   </span>
                 ))}
               </span>
-              {canFlip && <span className="text-[11px] font-bold text-slate-300 whitespace-nowrap">Flip ↻</span>}
+              {/* The whole card is the button; this just says what tapping it does */}
+              {canFlip && (
+                <span className="font-medium text-white whitespace-nowrap underline decoration-1 underline-offset-[3px] decoration-slate-500/80">Flip</span>
+              )}
               {!canFlip && quick && (
-                <span className="text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 border border-slate-700 rounded px-1.5 py-0.5 whitespace-nowrap">
-                  Quick review
-                </span>
+                <span className="px-[1.6cqi] py-[.4cqi] rounded-xs border border-slate-600 whitespace-nowrap">Quick review</span>
               )}
             </div>
           )}
-        </Frame>
+        </Face>
 
         {/* ── Back: the checklist ── */}
         {canFlip && (
-          <Frame rarity={rarity} className="card-face card-face-back">
-            <div className="flex flex-col gap-2.5 p-3 h-full overflow-y-auto">
-              <p className="flex items-center justify-between gap-2 font-black text-white">
-                <span className="inline-flex items-center gap-1.5 whitespace-nowrap shrink-0"><ListChecks className="w-4 h-4 text-brand" aria-hidden="true" /> The checklist</span>
-                <span className="text-[11px] font-medium text-slate-400 truncate min-w-0">{name}</span>
-              </p>
-              <div className="grid gap-1.5">
-                {ticks.map(({ category, index, option }) => (
-                  <div key={category.field} className="grid grid-cols-[14px_80px_1fr] gap-2 items-start text-xs leading-snug">
-                    <span
-                      className="w-[13px] h-[13px] mt-0.5 rounded-[3px] flex items-center justify-center text-[9px] font-black text-slate-900"
-                      style={{ background: checklistColor(category, index).solid }}
-                      aria-hidden="true"
-                    >
-                      {index === 'na' ? '–' : '✓'}
-                    </span>
-                    <span className="text-[10px] font-bold uppercase tracking-wide text-slate-400 mt-0.5">{category.title}</span>
-                    <span className={`break-words ${index === 'na' ? 'text-slate-400 italic' : 'text-slate-100'}`}>{option.label}</span>
-                  </div>
-                ))}
-              </div>
-              <span className="mt-auto text-center text-[11px] font-bold text-slate-300">Flip back ↺</span>
-            </div>
-          </Frame>
+          <Face rarity={rarity} className="card-face card-face-back">
+            <CardChecklist
+              ticks={ticks}
+              name={name}
+              footer={
+                <span className="mt-auto text-center text-[length:max(11px,3.6cqi)] font-medium text-white underline decoration-1 underline-offset-[3px] decoration-slate-500/80">
+                  Flip back
+                </span>
+              }
+            />
+          </Face>
         )}
       </div>
     </div>

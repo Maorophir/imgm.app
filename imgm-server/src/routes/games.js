@@ -3,12 +3,7 @@ import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { getSessionUser } from '../lib/session.js';
 import { isInternalRequest } from '../lib/internal.js';
-import {
-  getAllGames,
-  getGameById,
-  searchGames,
-  getFeaturedGames,
-} from '../controllers/gamesController.js';
+import { getAllGames, getGameById, searchGames, getFeaturedGames, getReviewPicks } from '../controllers/gamesController.js';
 
 const router = Router();
 
@@ -55,6 +50,7 @@ router.get('/search', searchLimiter, searchGames);
 
 // GET /api/games/featured
 router.get('/featured', igdbLimiter, getFeaturedGames);
+router.get('/review-picks', igdbLimiter, getReviewPicks); // games to get you reviewing (yours, or the all-time greats)
 
 // GET /api/games/top — IMGM Top Games, the community chart (before /:id, or "top" would be an id)
 router.get('/top', getTopGames);

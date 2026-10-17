@@ -4,15 +4,23 @@
  * Google accounts have no IMGM password: Google manages it, so there's nothing to
  * change here, and deleting works within a day of logging in (Better Auth's safety
  * rule). Deleting asks why (anonymous) and is permanent.
+ *
+ * Noir: each part is flat card stock on a hairline, with a quiet sentence-case label;
+ * saves are ghost buttons (the settings page has no single main action), and only the
+ * final "Delete my account forever" is red.
  */
 import { useEffect, useState } from 'react';
 import { BadgeCheck, KeyRound, Mail, TriangleAlert } from 'lucide-react';
 import { authClient, useSession } from '../../lib/authClient';
 import { deleteMyAccount, getMyAccount } from '../../lib/api';
 import { passwordProblems } from '../../lib/passwordRules';
+import { FIELD, TEXT_BOX, GHOST_BUTTON, TEXT_LINK } from '../../lib/ui';
 import PasswordChecklist from '../PasswordChecklist';
 
-const field = 'w-full rounded-xl bg-slate-950 border border-slate-700 focus:border-brand outline-none px-3 py-2.5 text-white placeholder:text-slate-500';
+const field = FIELD;
+// A settings part: card stock on a hairline
+const PANEL = 'bg-slate-900 border border-slate-700 rounded-sm p-6 flex flex-col';
+const PANEL_LABEL = 'inline-flex items-center gap-2 text-sm text-slate-400';
 
 const REASONS = [
   { value: 'not_using', label: "I don't use it anymore" },
@@ -54,9 +62,9 @@ const ChangePassword = () => {
       </div>
       <input type="password" autoComplete="new-password" placeholder="New password again" value={form.again} onChange={set('again')} className={field} />
       {(problem || state) && (
-        <p role="status" className={`text-sm ${state?.ok && !problem ? 'text-emerald-300' : 'text-red-300'}`}>{problem ?? state.text}</p>
+        <p role="status" className={`text-sm ${state?.ok && !problem ? 'text-rarity-uncommon' : 'text-red-300'}`}>{problem ?? state.text}</p>
       )}
-      <button type="submit" disabled={busy || weak || !!problem || !form.current || !form.next || !form.again} className="self-start px-5 py-2.5 rounded-xl font-bold bg-brand text-slate-950 hover:brightness-110 transition disabled:opacity-40">
+      <button type="submit" disabled={busy || weak || !!problem || !form.current || !form.next || !form.again} className={`${GHOST_BUTTON} self-start`}>
         {busy ? 'Saving…' : 'Change password'}
       </button>
     </form>
@@ -89,38 +97,38 @@ const DeleteAccount = ({ hasPassword }) => {
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className="self-start px-5 py-2.5 rounded-xl font-bold border border-red-500/50 text-red-300 hover:bg-red-500/10 transition">
+      <button type="button" onClick={() => setOpen(true)} className="self-start inline-flex items-center h-11 px-4.5 rounded-sm font-medium border border-red-400/50 text-red-300 hover:border-red-300 transition-colors duration-120">
         Delete my account…
       </button>
     );
   }
   return (
     <form onSubmit={remove} className="flex flex-col gap-4 animate-fade-in">
-      <p className="text-sm text-red-200 bg-red-500/10 border border-red-500/30 rounded-xl px-4 py-3">
-        <TriangleAlert className="inline w-4 h-4 mr-1.5 -mt-0.5" aria-hidden="true" />
+      <p className="text-sm text-red-200 border border-red-400/40 rounded-sm px-4 py-3">
+        <TriangleAlert className="inline w-4 h-4 mr-1.5 -mt-0.5" strokeWidth={1.8} aria-hidden="true" />
         This deletes your account, reviews, votes, Backlog and Play Next chats for good. It can't be undone.
       </p>
       <fieldset className="flex flex-col gap-2">
-        <legend className="text-sm font-bold text-white mb-2">Why are you leaving?</legend>
+        <legend className="text-sm font-semibold text-white mb-2">Why are you leaving?</legend>
         {REASONS.map((r) => (
           <label key={r.value} className="flex items-center gap-2.5 text-sm text-slate-200 cursor-pointer">
-            <input type="radio" name="reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="accent-[var(--color-brand)]" />
+            <input type="radio" name="reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="accent-[var(--color-white)]" />
             {r.label}
           </label>
         ))}
       </fieldset>
-      <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} maxLength={1000} placeholder="Anything we could do better? (optional, anonymous)" className={field} />
+      <textarea value={details} onChange={(e) => setDetails(e.target.value)} rows={3} maxLength={1000} placeholder="Anything we could do better? (optional, anonymous)" className={`${TEXT_BOX} resize-y`} />
       {hasPassword ? (
         <input type="password" autoComplete="current-password" placeholder="Your password, to confirm" value={password} onChange={(e) => setPassword(e.target.value)} className={field} />
       ) : (
-        <p className="text-xs text-slate-400">You log in with Google, so no password is needed. For your safety, this works within a day of logging in.</p>
+        <p className="text-sm text-slate-400">You log in with Google, so no password is needed. For your safety, this works within a day of logging in.</p>
       )}
       {error && <p role="alert" className="text-sm text-red-300">{error}</p>}
       <div className="flex flex-wrap gap-2">
-        <button type="submit" disabled={busy || !reason || (hasPassword && !password)} className="px-5 py-2.5 rounded-xl font-bold bg-red-500 text-white hover:bg-red-400 transition disabled:opacity-40">
+        <button type="submit" disabled={busy || !reason || (hasPassword && !password)} className="inline-flex items-center h-11 px-4.5 rounded-sm font-semibold bg-red-700 text-white hover:bg-red-600 transition-colors duration-120 disabled:opacity-40">
           {busy ? 'Deleting…' : 'Delete my account forever'}
         </button>
-        <button type="button" onClick={() => setOpen(false)} className="px-5 py-2.5 rounded-xl font-bold border border-slate-700 text-slate-200 hover:text-white transition">
+        <button type="button" onClick={() => setOpen(false)} className={GHOST_BUTTON}>
           Keep my account
         </button>
       </div>
@@ -139,18 +147,18 @@ const EmailStatus = () => {
     setSent(error ? 'error' : 'sent');
   };
   return (
-    <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col gap-2">
-      <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500"><Mail className="w-3.5 h-3.5" aria-hidden="true" /> Email</p>
+    <div className={`${PANEL} gap-2`}>
+      <p className={PANEL_LABEL}><Mail className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Email</p>
       <p className="text-white font-semibold break-all">{user.email}</p>
       {user.emailVerified ? (
-        <p className="inline-flex items-center gap-1.5 text-sm text-emerald-300"><BadgeCheck className="w-4 h-4" aria-hidden="true" /> Confirmed</p>
+        <p className="inline-flex items-center gap-1.5 text-sm text-rarity-uncommon"><BadgeCheck className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Confirmed</p>
       ) : (
-        <p className="text-sm text-amber-200">
+        <p className="text-sm text-slate-300">
           Not confirmed yet.{' '}
           {sent === 'sent' ? (
-            <span className="text-emerald-300">Sent! Check your inbox.</span>
+            <span className="text-rarity-uncommon">Sent! Check your inbox.</span>
           ) : (
-            <button type="button" onClick={resend} className="font-bold underline underline-offset-2 hover:text-white">Send the email again</button>
+            <button type="button" onClick={resend} className={`font-medium text-white ${TEXT_LINK}`}>Send the email again</button>
           )}
           {sent === 'error' && <span className="text-red-300"> Couldn't send it, please try later.</span>}
         </p>
@@ -171,17 +179,17 @@ const AccountSettings = () => {
   return (
     <>
       <EmailStatus />
-      <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex flex-col gap-4">
+      <div className={`${PANEL} gap-4`}>
         <div>
-          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-500"><KeyRound className="w-3.5 h-3.5" aria-hidden="true" /> Password</p>
+          <p className={PANEL_LABEL}><KeyRound className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Password</p>
           {!account.hasPassword && (
             <p className="text-sm text-slate-300 mt-2">You log in with {google ? 'Google' : 'another service'}, so your password is managed there, not on IMGM.</p>
           )}
         </div>
         {account.hasPassword && <ChangePassword />}
       </div>
-      <div className="bg-slate-900/60 border border-red-500/20 rounded-2xl p-6 flex flex-col gap-4">
-        <p className="text-xs font-bold uppercase tracking-wider text-red-300/80">Delete account</p>
+      <div className="bg-slate-900 border border-red-400/30 rounded-sm p-6 flex flex-col gap-4">
+        <p className="text-sm text-red-300">Delete account</p>
         <DeleteAccount hasPassword={account.hasPassword} />
       </div>
     </>

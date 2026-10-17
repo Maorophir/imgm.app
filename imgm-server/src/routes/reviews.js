@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
-import { getReviewsByGameId, getMyReview, saveReview, deleteMyReview, voteOnReview, getRecentReviews } from '../controllers/reviewsController.js';
+import { getReviewsByGameId, getMyReview, saveReview, deleteMyReview, voteOnReview, getRecentReviews, getMyCard, setMyCard } from '../controllers/reviewsController.js';
 
 const router = Router();
 
@@ -12,6 +12,8 @@ router.get('/game/:gameId', getReviewsByGameId);
 
 // GET /api/reviews/mine/:gameId — the logged-in user's review (to edit it)
 router.get('/mine/:gameId', getMyReview);
+router.get('/mine/:gameId/card', getMyCard); // your card's picture and words, and the choices
+router.put('/mine/:gameId/card', setMyCard); // choose them
 
 // DELETE /api/reviews/mine/:gameId — delete the logged-in user's review
 router.delete('/mine/:gameId', deleteMyReview);

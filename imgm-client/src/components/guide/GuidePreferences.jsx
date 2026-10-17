@@ -3,10 +3,11 @@
  *
  * One click picks, a second click un-picks. The values are the keys the AI
  * understands (imgm-ai Preferences); players only see the labels.
- * Text-only chips, the selected ones lit in the brand lime.
+ * Text-only square chips; a picked one is raised card stock with an ivory edge.
  * Also home to two pieces the quest reuses: <CustomInput> and <LovedGames>.
  */
 import { useState } from "react";
+import { X } from "lucide-react";
 import GamePicker from "../reviewQuest/GamePicker";
 import {
   MAX_CUSTOM,
@@ -21,10 +22,10 @@ const Chip = ({ on, disabled, onClick, children }) => (
     onClick={onClick}
     disabled={disabled}
     aria-pressed={on}
-    className={`px-3 py-1.5 rounded-full text-sm font-semibold border transition disabled:opacity-35 disabled:cursor-not-allowed ${
+    className={`inline-flex items-center min-h-9 px-3 py-1.5 rounded-sm text-sm font-medium border transition-colors duration-120 disabled:opacity-35 disabled:cursor-not-allowed ${
       on
-        ? "bg-brand/15 border-brand text-white"
-        : "border-slate-700 text-slate-300 hover:border-slate-500 hover:text-white"
+        ? "bg-slate-800 border-white text-white"
+        : "border-slate-500 text-white hover:border-white"
     }`}
   >
     {children}
@@ -46,7 +47,7 @@ export const CustomInput = ({ onAdd }) => {
       }}
       maxLength={40}
       placeholder="Add your own ↵"
-      className="w-40 max-w-full px-3 py-1.5 rounded-full text-sm bg-transparent border border-dashed border-slate-700 text-white placeholder:text-slate-500 outline-none focus:border-brand/60"
+      className="w-40 max-w-full min-h-9 px-3 py-1.5 rounded-sm text-base bg-transparent border border-dashed border-slate-500 text-white placeholder:text-slate-400 outline-none focus:border-white transition-colors duration-120"
     />
   );
 };
@@ -65,7 +66,7 @@ export const LovedGames = ({ prefs, onChange }) => {
               on
               onClick={() => set(loved.filter((t) => t !== title))}
             >
-              {title} <span className="ml-1 text-slate-400">✕</span>
+              {title} <X className="ml-1.5 w-3.5 h-3.5 text-slate-400" strokeWidth={1.8} aria-label="remove" />
             </Chip>
           ))}
         </div>
@@ -91,10 +92,10 @@ const GuidePreferences = ({ prefs, onChange }) => (
       const own = picked.filter((v) => !q.options.some((o) => o.value === v)); // typed by the player
       return (
         <fieldset key={q.key} className="flex flex-col gap-2">
-          <legend className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+          <legend className="text-sm font-medium text-white mb-2">
             {q.label}
             {q.multi && (
-              <span className="normal-case tracking-normal font-semibold">
+              <span className="font-normal text-slate-400">
                 {" "}
                 · {q.max ? `up to ${q.max}` : "pick any"}
               </span>
@@ -120,7 +121,7 @@ const GuidePreferences = ({ prefs, onChange }) => (
                 on
                 onClick={() => onChange(toggleAnswer(prefs, q, value))}
               >
-                {value} <span className="ml-1 text-slate-400">✕</span>
+                {value} <X className="ml-1.5 w-3.5 h-3.5 text-slate-400" strokeWidth={1.8} aria-label="remove" />
               </Chip>
             ))}
             {q.custom && own.length < MAX_CUSTOM && (
@@ -138,9 +139,9 @@ const GuidePreferences = ({ prefs, onChange }) => (
     })}
 
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">
+      <legend className="text-sm font-medium text-white mb-2">
         Loved recently
-        <span className="normal-case tracking-normal font-semibold">
+        <span className="font-normal text-slate-400">
           {" "}
           · up to {MAX_LOVED}
         </span>

@@ -49,9 +49,3 @@ export const pickVideos = (videos = [], max = 4) => {
   const rest = relevant.filter((v) => !picked.includes(v)).sort((a, b) => kindOf(a) - kindOf(b));
   return [...picked, ...rest].slice(0, max);
 };
-
-// All videos without duplicates — for "Show all videos"
-export const allVideos = (videos = []) => {
-  const seen = new Set();
-  return videos.filter((v) => !seen.has(v.youtubeId) && seen.add(v.youtubeId));
-};

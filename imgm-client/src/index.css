@@ -1,34 +1,37 @@
 /*
- * index.css — Global stylesheet for IMGM.
+ * index.css — Global stylesheet for IMGM, in the "Noir" look.
  *
- * This file does THREE things:
+ * This file does four things:
  * 1. Imports Tailwind CSS (which provides all utility classes like flex, p-5, etc.)
- * 2. Sets up font rendering optimizations (makes text look crisp on all OS's)
- * 3. Resets the body margin (browsers add default margin that we don't want)
+ * 2. Holds the design tokens in @theme: the warm-black greys, the ivory text, the
+ *    one lime, the three fonts, the rarity inks and the near-square corners.
+ *    Every bg-slate-* / text-white / rounded-xl in the app picks these up.
+ * 3. Sets a few site-wide basics (focus ring, scrollbars, reduced motion)
+ * 4. Styles the handful of things Tailwind classes can't do well (the card flip,
+ *    and the rarity frames on Play Next's picks)
  *
- * Everything else (colors, spacing, layout) is handled by Tailwind classes
- * directly in the JSX. This keeps styles co-located with the markup.
- *
- * Why we removed the old CSS variables (--text, --accent, etc.):
- * - They were from the Vite starter template and conflicted with Tailwind's
- *   color system (e.g., text-slate-400, bg-brand).
- * - Tailwind already has a complete, consistent design system built in.
- * - Using both creates confusion about which system is "the truth."
+ * Everything else (spacing, layout) is handled by Tailwind classes directly in
+ * the JSX. This keeps styles co-located with the markup.
  */
 @import "tailwindcss";
 
-/* Keyboard focus shows the brand lime. In the base layer, so a component's own
-   focus: classes still win */
+/* short: a screen 850px tall or less (1280×800 and 1366×768 laptops). The home hero's
+   band steps down there, so its card still fits on the first screen. */
+@custom-variant short (@media (max-height: 850px));
+
 @layer base {
+  /* Keyboard focus: an ivory outline. Lime is kept for the one primary action, so
+     focus doesn't use it. In the base layer, so a component's own focus: classes
+     still win */
   :focus-visible {
-    outline: 2px solid var(--color-brand);
-    outline-offset: 2px;
+    outline: 2px solid var(--color-white);
+    outline-offset: 3px;
   }
 
-  /* Scrollbars, site-wide: thin, a quiet grey thumb on no track */
+  /* Scrollbars, site-wide: thin, a quiet warm-grey thumb on no track */
   * {
     scrollbar-width: thin;
-    scrollbar-color: rgb(100 116 139 / 0.5) transparent; /* slate-500 */
+    scrollbar-color: color-mix(in srgb, var(--color-slate-500) 50%, transparent) transparent;
   }
   /* Safari only understands the older -webkit- way */
   @supports not (scrollbar-color: auto) {
@@ -40,12 +43,37 @@
       background: transparent;
     }
     ::-webkit-scrollbar-thumb {
-      background: rgb(100 116 139 / 0.5);
+      background: color-mix(in srgb, var(--color-slate-500) 50%, transparent);
       border-radius: 999px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: rgb(148 163 184 / 0.7); /* slate-400 */
+      background: color-mix(in srgb, var(--color-slate-400) 70%, transparent);
     }
+  }
+
+  /* People who ask their device for less motion get none: every CSS animation and
+     transition finishes at once. Tiny durations (not "none") so code that waits for
+     an animation or transition to end still hears that it did. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* The display face (Big Shoulders) is only ever used at 800. index.html loads only
+   weight 800, and without this a plain `font-display` heading would show the condensed
+   stand-ins (Avenir Next Condensed, Roboto Condensed, Arial Narrow) at their regular
+   weight while it loads. In the components layer, so a weight class still wins. */
+@layer components {
+  .font-display,
+  .font-wordmark {
+    font-weight: 800;
   }
 }
 
@@ -56,6 +84,8 @@ body {
 
 body {
   margin: 0;
+  /* Ivory by default, so text never falls back to the browser's black */
+  color: var(--color-white);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -64,33 +94,52 @@ body {
 
 @theme {
   /* ── Brand (from the logo) ──
-     Lime is the logo's colour and is used sparingly, like GOG's purple or Steam's
-     blue: the logo, the favicon, the active nav link and keyboard focus. Everything
-     else is white on black. Use it as text-brand / bg-brand / border-brand. */
-  --color-brand: #b8f03a;
-  --font-display: "Anton", Impact, "Arial Narrow", sans-serif;
-  --font-wordmark: "Chakra Petch", ui-sans-serif, system-ui, sans-serif;
+     Noir uses the lime on exactly three things: the one primary action on a page
+     ("Rate a game you played", "Start Review Quest"), the full stop of the big
+     headline and the logo's power mark. Everything else is ivory on warm black.
+     Use it as text-brand / bg-brand / border-brand. */
+  --color-brand: #c6eb4e;
+
+  /* No pure white anywhere: "white" is the ivory text colour, so every text-white /
+     bg-white / border-white in the app is ivory. */
+  --color-white: #eee7d9;
 
   /* ── Surfaces ──
-     Tailwind's "slate" greys are tinted navy. IMGM is black like the logo, so the
-     slate scale is redefined here as near-neutral greys (with the logo's faint cool
-     tint). Every bg-slate-* / text-slate-* in the app picks this up automatically. */
-  --color-slate-50: #f8f9fa;
-  --color-slate-100: #f1f2f4;
-  --color-slate-200: #e3e6ea;
-  --color-slate-300: #cfd3da;
-  --color-slate-400: #a0a6b1;
-  --color-slate-500: #707784;
-  --color-slate-600: #4f5560;
-  --color-slate-700: #353943;
-  --color-slate-800: #23262d;
-  --color-slate-900: #16181d;
-  --color-slate-950: #0d0f12;
+     Tailwind's "slate" greys are tinted navy. Noir is a warm near-neutral black, so
+     the slate scale is redefined here. Every bg-slate-* / text-slate-* in the app
+     picks this up automatically. What each step is for:
+       950 the page · 900 card stock and fields · 800 raised, row hover
+       700 hairlines · 600 decorative borders · 500 control borders
+       400 metadata text (the dimmest grey that still reads: keep text at 400 or
+       lighter) · 300/200 softer ivories · 100 the text ivory · 50 its hover */
+  --color-slate-50: #f8f3e9;
+  --color-slate-100: #eee7d9;
+  --color-slate-200: #ddd5c6;
+  --color-slate-300: #c4bbac;
+  --color-slate-400: #948b7d;
+  --color-slate-500: #6b645a;
+  --color-slate-600: #423c35;
+  --color-slate-700: #2e2a25;
+  --color-slate-800: #25221d;
+  --color-slate-900: #1a1815;
+  --color-slate-950: #100f0d;
+
+  /* ── Shape: near-square corners ──
+     Controls are 2px, panels a hair more. rounded-full (pills, avatars) is unchanged.
+     The review cards use the trading-card corner instead: rounded-[4.76%/3.41%]. */
+  --radius: 2px; /* plain `rounded` */
+  --radius-xs: 1px;
+  --radius-sm: 2px;
+  --radius-md: 2px;
+  --radius-lg: 3px;
+  --radius-xl: 4px;
+  --radius-2xl: 6px;
+  --radius-3xl: 8px;
+  --radius-4xl: 10px;
 
   --animate-scroll-left: scrollLeft 120s linear infinite;
   --animate-scroll-right: scrollRight 120s linear infinite;
   --animate-fade-in: fadeIn 0.4s ease-out;
-  --animate-shine: shine 3.5s ease-in-out infinite;
   --animate-pop: pop 0.28s ease-out;
   --animate-marquee: marquee var(--marquee-duration, 6s) linear infinite;
 
@@ -107,15 +156,9 @@ body {
   @keyframes pop {
     50% { transform: scale(1.22); }
   }
-  /* Legendary (10/10): the stars float and glow gold */
+  /* Legendary (10/10): the stars float, one after another. No glow: Noir has none. */
   @keyframes shimmer {
-    50% { transform: translateY(-3px); filter: drop-shadow(0 0 14px #fbbf24) brightness(1.25); }
-  }
-
-  /* A light streak sweeping across a button — sweeps during the first 60%, then rests */
-  @keyframes shine {
-    0% { transform: translateX(-150%) skewX(-20deg); }
-    60%, 100% { transform: translateX(350%) skewX(-20deg); }
+    50% { transform: translateY(-3px); }
   }
 
   @keyframes fadeIn {
@@ -131,11 +174,71 @@ body {
     0% { transform: translateX(-50%); }
     100% { transform: translateX(0); }
   }
+
+  /* The game page's highlight reel: the active thumbnail's timer line fills up (its
+     end moves the reel on), while the big picture drifts slowly closer */
+  --animate-reel-timer: reelTimer var(--reel-time, 6s) linear forwards;
+  --animate-reel-drift: reelDrift calc(var(--reel-time, 6s) + 1s) ease-out forwards;
+  @keyframes reelTimer {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  @keyframes reelDrift {
+    from { transform: scale(1); }
+    to { transform: scale(1.06); }
+  }
+}
+
+/* "static": the tokens below always exist as CSS variables (Tailwind otherwise only
+   writes out the ones its classes use), so inline styles like var(--font-serif) or
+   var(--color-rarity-rare) work too. */
+@theme static {
+  /* ── Type: exactly three families, loaded in index.html ──
+     Host Grotesk (font-sans, the default) for all text, UI and numbers (add
+     tabular-nums for figures). Big Shoulders (font-display) for headlines, card
+     titles and score numerals, always at 800 (see .font-display above); the IMGM
+     wordmark uses it too (font-wordmark). Until it loads (or if it can't), a narrow
+     face the device already has stands in, so headlines keep their width: Avenir
+     Next Condensed on iPhones and Macs, Roboto Condensed or sans-serif-condensed on
+     Android, Arial Narrow on Windows. Noto Serif Display (font-serif, with italic)
+     for review quotes only. */
+  --font-sans: "Host Grotesk", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  --font-display: "Big Shoulders", "Avenir Next Condensed", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", sans-serif;
+  --font-wordmark: "Big Shoulders", "Avenir Next Condensed", "Roboto Condensed", "sans-serif-condensed", "Arial Narrow", sans-serif;
+  --font-serif: "Noto Serif Display", Georgia, serif;
+
+  /* ── Rarity inks ──
+     The same six tiers as RARITIES in components/reviewQuest/questOptions.js (keep
+     the two in step). Each tier has three colours:
+       ink   text, symbols and score numerals: text-rarity-epic
+       edge  the painted card edge and the bars: bg-rarity-epic-edge
+       deep  the panel behind a card with no cover: bg-rarity-epic-deep */
+  --color-rarity-junk: #8a8378;
+  --color-rarity-junk-edge: #6e685e;
+  --color-rarity-junk-deep: #1f1d1a;
+  --color-rarity-common: #d6cfc2;
+  --color-rarity-common-edge: #cfc7b7;
+  --color-rarity-common-deep: #25231f;
+  --color-rarity-uncommon: #5dbe94;
+  --color-rarity-uncommon-edge: #2f8f66;
+  --color-rarity-uncommon-deep: #13241c;
+  --color-rarity-rare: #6b9ae8;
+  --color-rarity-rare-edge: #3567c9;
+  --color-rarity-rare-deep: #141c2b;
+  --color-rarity-epic: #b276d6;
+  --color-rarity-epic-edge: #8a45b8;
+  --color-rarity-epic-deep: #22182b;
+  --color-rarity-legendary: #e2b65e;
+  --color-rarity-legendary-edge: #c9a04e;
+  --color-rarity-legendary-deep: #261f11;
+
+  /* The Legendary gilt: the only gradient in Noir besides the scrims over art.
+     Use as background-image: var(--gradient-gilt) (or bg-(image:--gradient-gilt)). */
+  --gradient-gilt: linear-gradient(100deg, #6e4f10 0%, #c8963a 16%, #f3dc9a 32%, #d9a94e 48%, #8a6418 64%, #e6c377 82%, #7a5812 100%);
 }
 
 /*
- * Review cards (components/reviewCard/RarityCard.jsx)
- * --rc is set inline to the review's rarity colour.
+ * Review cards on game pages (components/reviewCard/RarityCard.jsx)
  */
 
 /* 3D flip: the card rotates around its vertical axis; each face hides its back */
@@ -160,42 +263,24 @@ body {
 }
 .card-face-back { transform: rotateY(180deg); }
 
-/* Rarity frame: a padded wrapper whose background shows as a 3px border */
+/* Rarity frame (Play Next's picks, components/guide/PickCard.jsx): a padded wrapper
+   whose background shows as a 2px edge, flat in the tier's ink (--rc, set inline). Near-
+   square corners and no glow: Noir frames sit on the page like printed card stock. */
 .rarity-frame {
-  padding: 3px;
-  border-radius: 20px;
+  padding: 2px;
+  border-radius: var(--radius-sm);
   background: var(--rc);
-  box-shadow: 0 0 22px color-mix(in srgb, var(--rc) 30%, transparent);
 }
-.rarity-frame.is-junk { box-shadow: none; filter: saturate(0.6); }
-.rarity-frame.is-epic { background: linear-gradient(135deg, #a855f7, #e9d5ff 40%, #a855f7 60%, #7e22ce); }
+.rarity-frame.is-epic { background: var(--color-rarity-epic); }
+/* Legendary (the Best Pick) wears the gilt */
 .rarity-frame.is-legendary {
-  background: linear-gradient(115deg, #b45309, #fbbf24 18%, #fff7cc 32%, #fbbf24 46%, #b45309 64%, #fbbf24 80%, #fff7cc 92%, #fbbf24);
-  background-size: 300% 300%;
-  animation: card-foil 5s linear infinite;
-  box-shadow: 0 0 34px rgb(251 191 36 / 0.35);
-}
-@keyframes card-foil { to { background-position: 300% 0; } }
-
-/* Legendary only: a soft light sweep across the card art */
-.rarity-frame.is-legendary .card-art::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(115deg, transparent 30%, rgb(255 247 204 / 0.28) 45%, transparent 60%);
-  background-size: 250% 100%;
-  animation: card-sheen 4s ease-in-out infinite;
-}
-@keyframes card-sheen {
-  0% { background-position: 150% 0; }
-  60%, 100% { background-position: -100% 0; }
+  background: var(--gradient-gilt);
+  background-size: 260% 260%;
+  background-position: 50% 50%;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .card-flip-inner { transition: none; }
-  .rarity-frame.is-legendary,
-  .rarity-frame.is-legendary .card-art::after { animation: none; }
 }
 
 /* "+5 XP" after a Game of the Week vote: pops in, floats up, fades out */

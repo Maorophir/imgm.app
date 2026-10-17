@@ -6,9 +6,13 @@
  * lands on 5 picks with one Best Pick in the side panel (inline on small screens).
  * Large screens get an app-like layout: the page fits the window, the chat scrolls
  * inside its own panel, and the composer stays pinned at its bottom.
+ * Noir: square panels on hairlines over the moving cover wall, no shadows, and lime
+ * only on the page's one main action (the quest's last button, then "Ask").
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { ChevronDown } from "lucide-react";
+import { PRIMARY_BUTTON } from "../lib/ui";
 import { useSession } from "../lib/authClient";
 import { useGameGuide, MAX_QUESTIONS } from "../hooks/useGameGuide";
 import { getFeaturedGames, wakeGuide } from "../lib/api";
@@ -44,19 +48,16 @@ function GameGuide() {
 
   if (!session) {
     return (
-      <div className="max-w-xl mx-auto px-6 py-24 text-center">
-        <PowerIcon className="w-12 h-12 text-brand mx-auto mb-4" />
-        <h1 className="font-display text-5xl uppercase tracking-tight text-white mb-3">
-          Play Next<span className="text-brand">.</span>
+      <div className="max-w-xl mx-auto px-4 sm:px-6 py-24 text-center">
+        <PowerIcon className="w-10 h-10 text-white mx-auto mb-5" />
+        <h1 className="font-display text-[54px] md:text-[88px] leading-[.9] uppercase tracking-[.005em] text-white mb-4">
+          Play Next
         </h1>
         <p className="text-slate-400 mb-8">
           Tell it what you're in the mood for. It reads your reviews and what
           IMGM players say, then picks your next 5 games.
         </p>
-        <Link
-          to="/login?redirect=%2Fplay-next"
-          className="px-6 py-3 rounded-full font-bold bg-brand hover:brightness-110 text-slate-950 shadow-[0_8px_24px_-8px_var(--color-brand)] transition"
-        >
+        <Link to="/login?redirect=%2Fplay-next" className={PRIMARY_BUTTON}>
           Log in to start
         </Link>
       </div>
@@ -129,10 +130,13 @@ function PlayNextChat({ userId }) {
     if (answerLength) bottomRef.current?.scrollIntoView({ block: "end" });
   }, [answerLength]);
 
-  // The quest's last button: its answers become this chat's first question
+  // The quest's last button: its answers become this chat's first question. They're
+  // kept as "last answers" only if there are some: a skipped quest mustn't wipe them.
   const reveal = (note) => {
-    keepLastAnswers(userId, preferences);
-    setLastAnswers(preferences);
+    if (Object.values(preferences).flat().some(Boolean)) {
+      keepLastAnswers(userId, preferences);
+      setLastAnswers(preferences);
+    }
     ask(note || "Find my next game", preferences);
   };
 
@@ -147,8 +151,14 @@ function PlayNextChat({ userId }) {
   }, []);
   // Worked out again only when the picks, candidates or featured games change (not
   // for every piece of streamed text), so the wall itself doesn't re-render either
-  const cardGames = current?.cards?.games;
-  const candidates = current?.games;
+  // A message turned away (off topic) has no picks: the panel and the wall keep
+  // showing the last picks (or the empty "Your picks will appear here")
+  const shownTurn =
+    current?.status === "done" && !current.cards
+      ? (turns.findLast((turn) => turn.cards) ?? null)
+      : current;
+  const cardGames = shownTurn?.cards?.games;
+  const candidates = shownTurn?.games;
   const wallCovers = useMemo(() => {
     const picks = [...(cardGames ?? [])].sort((a, b) => b.best_pick - a.best_pick);
     return [
@@ -180,9 +190,10 @@ function PlayNextChat({ userId }) {
   );
 
   return (
-    // lg+: fits the window under the navbar (75px), each column scrolls on its own.
+    // lg+: fits the window under the navbar (72px and its 1px hairline), each column
+    // scrolls on its own.
     // isolate: the backdrop sits behind this page's content, above the app's black
-    <div className="isolate max-w-[1600px] mx-auto px-4 md:px-6 py-4 lg:py-5 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-6 lg:h-[calc(100dvh-75px)]">
+    <div className="isolate max-w-[1600px] mx-auto px-4 md:px-6 py-4 lg:py-5 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-6 lg:h-[calc(100dvh-73px)]">
       <PlayNextBackdrop covers={wallCovers} />
 
       {/* Chat history (wide screens) */}
@@ -193,11 +204,11 @@ function PlayNextChat({ userId }) {
       {/* Chat */}
       {/* No blur on these panels: the cover wall behind them never stops moving, and blur
           over moving content is recomputed every frame (it made the chat feel laggy) */}
-      <section className="flex flex-col min-h-[75vh] lg:min-h-0 lg:rounded-3xl lg:border lg:border-white/10 lg:bg-slate-950/75 lg:overflow-hidden">
-        <header className="flex flex-wrap items-center justify-between gap-3 lg:px-6 lg:pt-5 pb-4 lg:border-b lg:border-white/5">
+      <section className="flex flex-col min-h-[75vh] lg:min-h-0 lg:rounded-sm lg:border lg:border-slate-700 lg:bg-slate-950/85 lg:overflow-hidden">
+        <header className="flex flex-wrap items-center justify-between gap-3 lg:px-6 lg:pt-5 pb-4 lg:border-b lg:border-slate-700">
           <div className="min-w-0">
-            <h1 className="font-display text-4xl md:text-5xl uppercase tracking-tight text-white leading-none">
-              Play Next<span className="text-brand">.</span>
+            <h1 className="font-display text-[34px] md:text-[54px] uppercase tracking-[.005em] text-white leading-[.95]">
+              Play Next
             </h1>
             <p className="text-sm text-slate-400 mt-1.5">
               Your reviews and the IMGM community, dug through live to find your
@@ -209,13 +220,14 @@ function PlayNextChat({ userId }) {
             type="button"
             onClick={() => setHistoryOpen((open) => !open)}
             aria-expanded={historyOpen}
-            className="xl:hidden px-4 py-2 rounded-xl text-sm font-bold text-white border border-slate-700 hover:border-slate-500 hover:bg-white/5 transition"
+            className="xl:hidden inline-flex items-center gap-1.5 h-11 px-4 rounded-sm text-sm font-medium text-white border border-slate-500 hover:border-white transition-colors duration-120"
           >
-            Your chats {historyOpen ? "▴" : "▾"}
+            Your chats
+            <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-120 ${historyOpen ? "rotate-180" : ""}`} strokeWidth={1.8} aria-hidden="true" />
           </button>
         </header>
         {historyOpen && (
-          <div className="xl:hidden mb-4 lg:mx-6 rounded-2xl border border-slate-800 bg-slate-900/60 p-3 animate-fade-in">
+          <div className="xl:hidden mb-4 lg:mx-6 rounded-sm border border-slate-700 bg-slate-900 p-3 animate-fade-in">
             {history}
           </div>
         )}
@@ -252,14 +264,14 @@ function PlayNextChat({ userId }) {
 
         {/* The composer: pinned to the panel's bottom (large screens) or the screen's (small) */}
         {turns.length > 0 && (
-          <div className="sticky bottom-4 lg:static rounded-3xl lg:rounded-none bg-slate-950/95 lg:bg-slate-950/80 p-3 lg:px-6 lg:py-4 border border-slate-800 lg:border-0 lg:border-t lg:border-white/5 shadow-2xl shadow-black/50 lg:shadow-none">
+          <div className="sticky bottom-4 lg:static rounded-sm lg:rounded-none bg-slate-950 lg:bg-slate-950/85 p-3 lg:px-6 lg:py-4 border border-slate-700 lg:border-0 lg:border-t">
             {full && (
               <p className="px-2 pb-3 text-sm text-slate-300">
                 This chat is full ({MAX_QUESTIONS} questions).{" "}
                 <button
                   type="button"
                   onClick={newChat}
-                  className="font-bold text-brand hover:underline"
+                  className="font-medium text-white underline decoration-1 underline-offset-5 decoration-slate-500/80 hover:decoration-current"
                 >
                   Start a new chat
                 </button>{" "}
@@ -283,7 +295,7 @@ function PlayNextChat({ userId }) {
       {/* Side panel (large screens) */}
       <aside className="hidden lg:block min-h-0 overflow-y-auto pr-1">
         <GuidePanel
-          turn={current}
+          turn={shownTurn}
           onNotForMe={onNotForMe}
           disabled={running}
         />

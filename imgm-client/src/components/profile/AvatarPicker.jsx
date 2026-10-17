@@ -1,10 +1,11 @@
 /**
- * AvatarPicker — a grid of ready-made character avatars (famous game characters).
+ * AvatarPicker — a grid of ready-made avatars: IMGM's 24 original characters (each a
+ * nod to a kind of game, drawn for IMGM; the pictures come from our own server).
  * Used on the Welcome screen (pick one with your gamer tag) and on your profile.
  */
 import { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
-import { getAvatarPresets } from '../../lib/api';
+import { API_BASE, getAvatarPresets } from '../../lib/api';
 
 const AvatarPicker = ({ selected, onPick, size = 'w-14 h-14' }) => {
   const [presets, setPresets] = useState(null);
@@ -14,7 +15,7 @@ const AvatarPicker = ({ selected, onPick, size = 'w-14 h-14' }) => {
     return () => controller.abort();
   }, []);
 
-  if (!presets) return <div className="h-32 rounded-2xl bg-slate-900/50 animate-pulse" />;
+  if (!presets) return <div className="h-32 rounded-sm bg-slate-900 motion-safe:animate-pulse" />;
   return (
     <ul className="flex flex-wrap gap-2.5" aria-label="Character avatars">
       {presets.map((preset) => {
@@ -25,13 +26,14 @@ const AvatarPicker = ({ selected, onPick, size = 'w-14 h-14' }) => {
               type="button"
               onClick={() => onPick(preset.key)}
               aria-pressed={active}
-              title={`${preset.name} · ${preset.game}`}
-              className={`relative block rounded-full transition ${active ? 'ring-2 ring-brand ring-offset-2 ring-offset-slate-900' : 'hover:scale-105 opacity-90 hover:opacity-100'}`}
+              title={preset.name}
+              // The picked one gets an ivory ring and a tick (no lime: that's each page's main action's)
+              className={`relative block rounded-full transition-[opacity,box-shadow] duration-120 ${active ? 'ring-2 ring-white ring-offset-2 ring-offset-slate-900' : 'opacity-85 hover:opacity-100'}`}
             >
-              <img src={preset.url} alt={preset.name} loading="lazy" className={`${size} rounded-full object-cover object-top bg-slate-800`} />
+              <img src={`${API_BASE}${preset.url}`} alt={preset.name} loading="lazy" className={`${size} rounded-full object-cover bg-slate-800`} />
               {active && (
-                <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center bg-brand text-slate-950">
-                  <Check className="w-3 h-3" aria-hidden="true" />
+                <span className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full grid place-items-center bg-white text-slate-950">
+                  <Check className="w-3 h-3" strokeWidth={3} aria-hidden="true" />
                 </span>
               )}
             </button>
