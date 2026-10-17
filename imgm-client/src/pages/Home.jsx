@@ -179,7 +179,7 @@ const Home = () => {
         className="mt-30 sm:mt-50 scroll-mt-20 sm:scroll-mt-34 lg:scroll-mt-24 focus:outline-none"
       >
         <div className={WRAP}>
-          <div className="grid gap-y-10 items-start lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)] lg:gap-x-10 xl:gap-x-12">
+          <div className="grid gap-y-10 items-start lg:grid-cols-[minmax(0,2fr)_minmax(0,10fr)] lg:gap-x-10 xl:gap-x-12">
             <div>
               <h2 id="featured-title" className={SECTION_TITLE}>
                 Featured games
@@ -213,7 +213,7 @@ const Home = () => {
                   tiles, so even a 320px screen fits two columns. */}
               <div
                 key={page}
-                className="grid grid-cols-[repeat(auto-fill,minmax(min(128px,100%),1fr))] gap-x-4 gap-y-9 sm:grid-cols-[repeat(auto-fill,minmax(min(160px,100%),1fr))] sm:gap-x-6 sm:gap-y-13 animate-fade-in"
+                className="grid grid-cols-[repeat(auto-fill,minmax(min(128px,100%),1fr))] gap-x-4 gap-y-9 sm:grid-cols-[repeat(auto-fill,minmax(min(160px,100%),1fr))] lg:grid-cols-[repeat(auto-fill,minmax(190px,1fr))] sm:gap-x-6 sm:gap-y-13 animate-fade-in"
               >
                 {games === null && !error && Array.from({ length: PAGE_SIZE }, (_, i) => <GameCardSkeleton key={i} />)}
                 {pageGames.map((game) => (
