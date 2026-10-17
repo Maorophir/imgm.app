@@ -14,6 +14,7 @@ import { auth } from '../lib/auth.js';
 import { prisma } from '../lib/db.js';
 import { getSessionUser } from '../lib/session.js';
 import { aiServiceUrl, internalApiKey } from '../lib/config.js';
+import { wakeAiService } from '../lib/aiWake.js';
 import { getPlayerXp } from '../lib/playerXp.js';
 import { withMaskedText } from '../lib/reviewText.js';
 import { voterStats, weekOf } from '../lib/gotw.js';
@@ -104,6 +105,15 @@ export const uploadAvatar = async (req, res) => {
     console.error('Error saving a profile picture:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
+};
+
+// POST /api/users/me/avatar/wake — the avatar window opened: wake the AI service now,
+// so the photo's safety check doesn't wait for it to start (lib/aiWake.js)
+export const wakePictureCheck = async (req, res) => {
+  const user = await requireLogin(req, res);
+  if (!user) return;
+  if (checksEnabled) wakeAiService();
+  res.status(204).end();
 };
 
 // DELETE /api/users/me/avatar — back to the coloured initial

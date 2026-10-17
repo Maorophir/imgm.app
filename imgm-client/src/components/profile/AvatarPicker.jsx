@@ -9,13 +9,14 @@
  *   onUpload  optional: puts an "Upload" circle first in the grid (your profile), for
  *             your own photo
  *   busy      true while a picture is being saved (everything waits)
+ *   uploading true while an uploaded photo is on its way: the Upload circle spins
  *   size      the circles' size classes
  */
 import { useEffect, useState } from 'react';
-import { Check, ImagePlus } from 'lucide-react';
+import { Check, ImagePlus, Loader2 } from 'lucide-react';
 import { API_BASE, getAvatarPresets } from '../../lib/api';
 
-const AvatarPicker = ({ selected, onPick, onUpload, busy = false, size = 'w-14 h-14' }) => {
+const AvatarPicker = ({ selected, onPick, onUpload, busy = false, uploading = false, size = 'w-14 h-14' }) => {
   const [presets, setPresets] = useState(null);
   useEffect(() => {
     const controller = new AbortController();
@@ -33,10 +34,20 @@ const AvatarPicker = ({ selected, onPick, onUpload, busy = false, size = 'w-14 h
             onClick={onUpload}
             disabled={busy}
             title="Upload your own photo"
-            className={`${size} rounded-full grid place-items-center content-center gap-0.5 border border-dashed border-slate-400 text-white hover:border-white hover:bg-slate-800 transition-colors duration-120 disabled:opacity-50`}
+            aria-label={uploading ? 'Uploading your photo' : 'Upload your own photo'}
+            className={`${size} rounded-full grid place-items-center content-center gap-0.5 border border-dashed border-slate-400 text-white hover:border-white hover:bg-slate-800 transition-colors duration-120 ${
+              uploading ? '' : 'disabled:opacity-50'
+            }`}
           >
-            <ImagePlus className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
-            <span className="text-[10px] font-medium leading-none">Upload</span>
+            {uploading ? (
+              // Just a turning circle while the photo is checked and saved
+              <Loader2 className="w-6 h-6 motion-safe:animate-spin" strokeWidth={1.8} aria-hidden="true" />
+            ) : (
+              <>
+                <ImagePlus className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
+                <span className="text-[10px] font-medium leading-none">Upload</span>
+              </>
+            )}
           </button>
         </li>
       )}
