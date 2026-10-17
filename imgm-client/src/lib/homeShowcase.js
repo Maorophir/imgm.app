@@ -9,7 +9,7 @@
  *   rarity    the card beside "Your score sets the rarity": an Epic 8
  *   playNext  the samples under the hero's buttons that show what Play Next does: a
  *             request in a player's words and 5 games it would pick, Best Pick first.
- *             The panel rotates through them (big story games, cozy, co-op)
+ *             The panel rotates through them (big story games, cozy, an online squad)
  *
  * Each has the card's props (CollectibleCard), a review-shaped part the hero reads (the
  * score, the game, the checklist on the back; id null = a sample, so no Share or "Read
@@ -76,21 +76,21 @@ export const HOME_SHOWCASE = {
     {
       request: 'Something cozy for a rainy evening',
       picks: [
-        { title: 'A Little to the Left', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co887d.jpg' },
+        { title: 'Stardew Valley', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/coa93h.jpg' },
+        { title: 'Animal Crossing: New Horizons', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co3wls.jpg' },
         { title: 'Unpacking', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1t45.jpg' },
         { title: 'A Short Hike', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co6e83.jpg' },
-        { title: 'Beacon Pines', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co5d1x.jpg' },
-        { title: 'Portal 2', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1rs4.jpg' },
+        { title: 'Spiritfarer', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co2fe7.jpg' },
       ],
     },
     {
       request: 'Something to play with friends tonight',
       picks: [
-        { title: 'It Takes Two', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/cob22v.jpg' },
-        { title: 'Split Fiction', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co95gf.jpg' },
-        { title: "Baldur's Gate 3", cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co670h.jpg' },
         { title: 'Helldivers 2', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/coabbf.jpg' },
+        { title: 'Lethal Company', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co5ive.jpg' },
         { title: 'Deep Rock Galactic', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/coaat4.jpg' },
+        { title: 'Phasmophobia', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/coamcz.jpg' },
+        { title: 'Sea of Thieves', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co2558.jpg' },
       ],
     },
   ],
