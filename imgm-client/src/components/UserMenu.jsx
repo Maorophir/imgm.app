@@ -53,8 +53,10 @@ function UserMenu({ user }) {
         aria-expanded={open}
         // A name to read out on phones too, where the gamer tag is hidden
         aria-label={`Account menu for ${name}`}
-        className={`flex items-center gap-2 h-11 pl-1.5 pr-2.5 rounded-sm border transition-colors duration-120 ${
-          open ? 'bg-slate-900 border-white' : 'border-slate-500 hover:border-white'
+        // No frame: the avatar and name stand on the bar like the links; a soft fill on
+        // hover and while the menu is open says it's a button
+        className={`flex items-center gap-2 h-11 pl-1.5 pr-2.5 rounded-sm transition-colors duration-120 ${
+          open ? 'bg-slate-900' : 'hover:bg-slate-900'
         }`}
       >
         <span className="relative">
