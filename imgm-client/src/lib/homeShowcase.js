@@ -7,9 +7,9 @@
  *   hero      the card over the band of key art at the top: a Legendary 10, which turns
  *             over to a sample checklist
  *   rarity    the card beside "Your score sets the rarity": an Epic 8
- *   playNext  the sample under the hero's buttons that shows what Play Next does: a
- *             request in a player's words and the 5 games it picked (from a real
- *             answer), Best Pick first
+ *   playNext  the samples under the hero's buttons that show what Play Next does: a
+ *             request in a player's words and 5 games it would pick, Best Pick first.
+ *             The panel rotates through them (big story games, cozy, co-op)
  *
  * Each has the card's props (CollectibleCard), a review-shaped part the hero reads (the
  * score, the game, the checklist on the back; id null = a sample, so no Share or "Read
@@ -62,14 +62,36 @@ export const HOME_SHOWCASE = {
       badges: [],
     },
   },
-  playNext: {
-    request: 'Something cozy for a rainy evening',
-    picks: [
-      { title: 'A Little to the Left', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co887d.jpg' },
-      { title: 'Unpacking', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1t45.jpg' },
-      { title: 'A Short Hike', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co6e83.jpg' },
-      { title: 'Beacon Pines', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co5d1x.jpg' },
-      { title: 'Portal 2', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1rs4.jpg' },
-    ],
-  },
+  playNext: [
+    {
+      request: 'A story that will wreck me',
+      picks: [
+        { title: 'Red Dead Redemption 2', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1q1f.jpg' },
+        { title: 'The Last of Us Part II', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co5ziw.jpg' },
+        { title: 'God of War', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/cobkt6.jpg' },
+        { title: 'Clair Obscur: Expedition 33', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co9gam.jpg' },
+        { title: 'Life Is Strange', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1r8e.jpg' },
+      ],
+    },
+    {
+      request: 'Something cozy for a rainy evening',
+      picks: [
+        { title: 'A Little to the Left', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co887d.jpg' },
+        { title: 'Unpacking', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1t45.jpg' },
+        { title: 'A Short Hike', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co6e83.jpg' },
+        { title: 'Beacon Pines', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co5d1x.jpg' },
+        { title: 'Portal 2', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1rs4.jpg' },
+      ],
+    },
+    {
+      request: 'Something to play with friends tonight',
+      picks: [
+        { title: 'It Takes Two', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/cob22v.jpg' },
+        { title: 'Split Fiction', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co95gf.jpg' },
+        { title: "Baldur's Gate 3", cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co670h.jpg' },
+        { title: 'Helldivers 2', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/coabbf.jpg' },
+        { title: 'Deep Rock Galactic', cover: 'https://images.igdb.com/igdb/image/upload/t_cover_big/coaat4.jpg' },
+      ],
+    },
+  ],
 };

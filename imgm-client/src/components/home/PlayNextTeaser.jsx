@@ -1,26 +1,44 @@
 /**
  * PlayNextTeaser — under the hero's buttons, what Play Next is, at a glance: a player's
- * request in their own words and the 5 games it picked (a fixed sample from
- * lib/homeShowcase.js, from a real answer), Best Pick first in its Legendary gold.
- * The whole panel opens Play Next.
+ * request in their own words and the 5 games it would pick, Best Pick first in its
+ * Legendary gold. It rotates through a few very different requests (lib/homeShowcase.js:
+ * big story games, cozy, co-op), so it's clear Play Next handles any mood. The whole
+ * panel opens Play Next.
  *
- * Phones get one line instead ("Not sure what to play? Ask Play Next"), so the hero's
- * card stays on the first screen. On desktop the panel floats over the key art under
- * the hero's words (absolutely placed), so it never makes that column taller: the
- * card keeps its place and still fits the first screen. Shown only to visitors who may use Play Next (the
- * server decides: everyone once it's open, its beta players before that).
+ * The rotation pauses while the pointer is over the panel or it has keyboard focus, and
+ * doesn't run at all for people who ask their device for less motion.
+ *
+ * Phones get one line instead, so the hero's card stays on the first screen. On desktop
+ * the panel floats over the key art under the hero's words (absolutely placed), so it
+ * never makes that column taller: the card keeps its place and still fits the first
+ * screen. Shown only to visitors who may use Play Next (the server decides: everyone once
+ * it's open, its beta players before that).
  */
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { usePlayNextAccess } from '../../hooks/usePlayNextAccess';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { HOME_SHOWCASE } from '../../lib/homeShowcase';
 import { igdbImage } from '../../lib/igdbImage';
 
-const { request, picks } = HOME_SHOWCASE.playNext;
+const SAMPLES = HOME_SHOWCASE.playNext;
+const ROTATE_EVERY = 4500; // ms per sample: long enough to read the request and see the covers
 
 const PlayNextTeaser = () => {
   const { enabled } = usePlayNextAccess();
+  const reduced = usePrefersReducedMotion();
+  const [at, setAt] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  useEffect(() => {
+    if (!enabled || reduced || paused) return undefined;
+    const timer = setInterval(() => setAt((i) => (i + 1) % SAMPLES.length), ROTATE_EVERY);
+    return () => clearInterval(timer);
+  }, [enabled, reduced, paused]);
+
   if (!enabled) return null;
+  const { request, picks } = SAMPLES[at];
 
   return (
     <div className="lg:absolute lg:left-0 lg:top-full lg:w-[min(480px,100%)]">
@@ -30,24 +48,26 @@ const PlayNextTeaser = () => {
         className="sm:hidden mt-5 inline-flex items-center gap-2 min-h-11 text-base font-medium text-white underline decoration-1 underline-offset-4 decoration-slate-500 hover:decoration-white"
       >
         <span className="text-brand" aria-hidden="true">✦</span>
-        Not sure what to play? Ask Play Next
+        Stuck? Find my next game
       </Link>
 
-      {/* Tablets and up: the panel with a sample request and its picks */}
+      {/* Tablets and up: the panel with a request and its picks, rotating */}
       <Link
         to="/play-next"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
         className="group hidden sm:block mt-8 lg:mt-7 max-w-[480px] rounded-sm border border-slate-700 bg-slate-950/80 px-5 py-4 transition-colors duration-120 hover:border-white"
       >
         <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[.14em] text-brand">
           <span aria-hidden="true">✦</span> Play Next
         </p>
-        <p className="mt-1.5 text-lg font-semibold leading-snug text-white">Not sure what to play next?</p>
-        <p className="mt-1 text-sm text-slate-300">
-          Tell it what you're in the mood for. It picks 5 games for you and says why each one fits.
-        </p>
+        <p className="mt-1.5 text-lg font-semibold leading-snug text-white">Stuck on the menu screen?</p>
+        <p className="mt-1 text-sm text-slate-300">Tell Play Next your mood. Get 5 picks you'll actually want to play.</p>
 
-        {/* The sample: what a player asked, and what came back */}
-        <div className="mt-4 flex items-center gap-4">
+        {/* The sample: what a player asked, and what came back (key replays the fade) */}
+        <div key={at} className="mt-4 flex items-center gap-4 motion-safe:animate-fade-in">
           <p className="min-w-0 flex-1 rounded-sm bg-slate-900 border border-slate-700 px-3 py-2 text-sm italic text-slate-200">
             “{request}”
           </p>
@@ -59,7 +79,6 @@ const PlayNextTeaser = () => {
                   src={igdbImage(pick.cover, 't_cover_small')}
                   alt={pick.title}
                   title={pick.title}
-                  loading="lazy"
                   className={`w-10 aspect-[3/4] object-cover rounded-xs ring-2 ${i === 0 ? 'ring-rarity-legendary' : 'ring-slate-950'}`}
                 />
               </li>
@@ -67,9 +86,17 @@ const PlayNextTeaser = () => {
           </ul>
         </div>
 
-        <span className="mt-4 inline-flex items-center gap-1.5 text-base font-medium text-white underline decoration-1 underline-offset-4 decoration-slate-500 group-hover:decoration-white">
-          Ask Play Next <ArrowRight className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
-        </span>
+        <div className="mt-4 flex items-center justify-between gap-4">
+          <span className="inline-flex items-center gap-1.5 text-base font-medium text-white underline decoration-1 underline-offset-4 decoration-slate-500 group-hover:decoration-white">
+            Find my next game <ArrowRight className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+          </span>
+          {/* Which sample is on: one dash each, the current one lit */}
+          <span className="flex gap-1.5" aria-hidden="true">
+            {SAMPLES.map((sample, i) => (
+              <span key={sample.request} className={`h-0.5 w-4 rounded-full transition-colors duration-300 ${i === at ? 'bg-white' : 'bg-slate-600'}`} />
+            ))}
+          </span>
+        </div>
       </Link>
     </div>
   );
