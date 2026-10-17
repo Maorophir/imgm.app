@@ -74,10 +74,10 @@ export const uploadAvatar = async (req, res) => {
     const match = PICTURE.exec(req.body?.image ?? '');
     const data = match && Buffer.from(match[2], 'base64');
     if (!data || data.length === 0 || data.length > MAX_PICTURE) {
-      return res.status(400).json({ error: 'Please choose a JPG, PNG or WebP picture.' });
+      return res.status(400).json({ error: 'Please choose a JPG, PNG or WebP image.' });
     }
     if (!checksEnabled) {
-      return res.status(503).json({ error: "Profile pictures can't be checked right now. Please try again later." });
+      return res.status(503).json({ error: "Uploaded avatars can't be checked right now. Please try again later, or pick a character." });
     }
 
     // The safety check first: nothing is saved unless it passes
@@ -93,10 +93,10 @@ export const uploadAvatar = async (req, res) => {
       verdict = await response.json();
     } catch (error) {
       console.error('Profile picture check failed:', error.message);
-      return res.status(503).json({ error: "We couldn't check the picture right now. Please try again in a bit." });
+      return res.status(503).json({ error: "We couldn't check that photo right now. Please try again in a bit." });
     }
     if (!verdict.allowed) {
-      return res.status(422).json({ error: "This picture can't be used as a profile picture. Please choose another one." });
+      return res.status(422).json({ error: "This photo can't be used as an avatar. Please choose another one." });
     }
 
     res.json({ avatarUpdatedAt: await saveAvatar(user.id, { data, mime: match[1], preset: null }) });

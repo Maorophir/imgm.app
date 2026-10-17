@@ -44,7 +44,7 @@ const pictureLimiter = rateLimit({
   limit: 10,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  message: { error: 'Too many picture changes. Try again in an hour.' },
+  message: { error: 'Too many avatar changes. Try again in an hour.' },
 });
 router.get('/avatars/presets', getAvatarPresets);
 router.get('/avatars/presets/:file', getAvatarPresetImage);
