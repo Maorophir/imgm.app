@@ -10,6 +10,7 @@
  * response is mapped to the shape of our Prisma `Game` model.
  */
 import 'dotenv/config';
+import { setTimeout as delay } from 'node:timers/promises';
 
 const TWITCH_TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const IGDB_BASE_URL = 'https://api.igdb.com/v4';
@@ -18,6 +19,10 @@ const IGDB_IMAGE_BASE = 'https://images.igdb.com/igdb/image/upload';
 const SEARCH_CACHE_TTL = 5 * 60 * 1000;        // 5 minutes
 const POPULAR_CACHE_TTL = 6 * 60 * 60 * 1000;  // 6 hours
 const TOKEN_EXPIRY_BUFFER = 60 * 1000;         // refresh 60s before actual expiry
+// IGDB answers in a second or two; a request hanging longer than this is given up
+// (without it, a stuck connection would keep a page, or a Steam import, waiting forever)
+const REQUEST_TIMEOUT = 15 * 1000;
+const RATE_LIMIT_RETRY = 1000;                 // wait this long after a 429, then try once more
 
 const GAME_FIELDS = `fields name, slug, summary, first_release_date, cover.image_id,
   artworks.image_id, artworks.artwork_type, artworks.alpha_channel, artworks.width, artworks.height,
@@ -59,7 +64,7 @@ const requestNewToken = async () => {
     grant_type: 'client_credentials',
   });
 
-  const response = await fetch(`${TWITCH_TOKEN_URL}?${params}`, { method: 'POST' });
+  const response = await fetch(`${TWITCH_TOKEN_URL}?${params}`, { method: 'POST', signal: AbortSignal.timeout(REQUEST_TIMEOUT) });
   if (!response.ok) {
     throw new Error(`[IGDB] Twitch token request failed with status ${response.status}`);
   }
@@ -94,9 +99,11 @@ const clearToken = () => {
 
 /**
  * POSTs an Apicalypse query to an IGDB endpoint.
- * Retries once with a fresh token if IGDB responds with 401.
+ * Retries once with a fresh token if IGDB responds with 401, and once after a
+ * second if it responds with 429 (over IGDB's 4 requests a second, which every
+ * player shares).
  */
-const igdbRequest = async (endpoint, body, isRetry = false) => {
+const igdbRequest = async (endpoint, body, retried = {}) => {
   const accessToken = await getAccessToken();
 
   const response = await fetch(`${IGDB_BASE_URL}/${endpoint}`, {
@@ -108,11 +115,17 @@ const igdbRequest = async (endpoint, body, isRetry = false) => {
       Accept: 'application/json',
     },
     body,
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT),
   });
 
-  if (response.status === 401 && !isRetry) {
+  if (response.status === 401 && !retried.token) {
     clearToken();
-    return igdbRequest(endpoint, body, true);
+    return igdbRequest(endpoint, body, { ...retried, token: true });
+  }
+
+  if (response.status === 429 && !retried.rate) {
+    await delay(RATE_LIMIT_RETRY);
+    return igdbRequest(endpoint, body, { ...retried, rate: true });
   }
 
   if (!response.ok) {
@@ -296,6 +309,74 @@ export const getTimesToBeat = async (ids) => {
       { normal: toHours(row.normally), rushed: toHours(row.hastily), completionist: toHours(row.completely), reports: row.count ?? 0 },
     ])
   );
+};
+
+// ---------------------------------------------------------------------------
+// Steam: which IGDB game each Steam app is
+// ---------------------------------------------------------------------------
+
+// IGDB links games to stores in /external_games; Steam is source 1 (/external_game_sources).
+// The old `category = 1` filter silently matches nothing now.
+const STEAM_SOURCE = 1;
+const STEAM_UIDS_PER_QUERY = 250; // ~10 bytes each: 10 queries stay under IGDB's 32 KB body limit
+const MULTIQUERY_MAX = 10;        // IGDB runs at most 10 queries in one multiquery request
+export const STEAM_APPIDS_PER_REQUEST = STEAM_UIDS_PER_QUERY * MULTIQUERY_MAX;
+// Everything a library card needs, for the linked game and for the main game of an edition
+const STEAM_FIELDS = `fields uid, game.name, game.cover.image_id, game.first_release_date, game.game_type,
+  game.platforms.name, game.version_parent.name, game.version_parent.cover.image_id,
+  game.version_parent.game_type, game.version_parent.first_release_date, game.version_parent.platforms.name`;
+
+// One /external_games row as IMGM keeps it (the SteamApp model)
+const toSteamApp = (appid, game) => {
+  // A "Game of the Year" or "Complete" edition: the game everyone reviews is its main game
+  const target = game.version_parent ?? game;
+  const type = target.game_type ?? 0;
+  const reviewable = REVIEWABLE_GAME_TYPES.includes(type);
+  return {
+    appid,
+    gameId: reviewable ? target.id : null,
+    kind: !reviewable ? (type === 3 ? 'bundle' : 'other')
+      : game.version_parent ? 'edition'
+      : type === 1 || type === 2 ? 'dlc'
+      : 'game',
+    title: target.name ?? game.name ?? null,
+    coverUrl: igdbImageUrl(target.cover?.image_id, 't_cover_big'),
+    releaseDate: target.first_release_date ? new Date(target.first_release_date * 1000) : null,
+    platforms: (target.platforms ?? []).map((p) => PLATFORM_NAME_MAP[p.name] ?? p.name),
+  };
+};
+
+/**
+ * Steam appids → Map(appid → { appid, gameId, kind, title, coverUrl, releaseDate, platforms }),
+ * in as few requests as possible: one multiquery per STEAM_APPIDS_PER_REQUEST appids.
+ * An appid missing from the map is one IGDB doesn't know (tools, soundtracks, very new
+ * games). No appid links to two IGDB games, and the rare duplicate row is the same game,
+ * so the first row per appid wins. Throws if IGDB fails: nothing is guessed.
+ */
+export const getGamesBySteamAppIds = async (appids) => {
+  const uids = [...new Set(appids.filter((id) => Number.isSafeInteger(id) && id > 0))];
+  const matches = new Map();
+  for (let i = 0; i < uids.length; i += STEAM_APPIDS_PER_REQUEST) {
+    const batch = uids.slice(i, i + STEAM_APPIDS_PER_REQUEST);
+    const queries = [];
+    for (let j = 0; j < batch.length; j += STEAM_UIDS_PER_QUERY) {
+      const list = batch.slice(j, j + STEAM_UIDS_PER_QUERY).map((uid) => `"${uid}"`).join(',');
+      // 250 appids, room for 500 rows: a duplicate row can't push another appid out
+      queries.push(`query external_games "s${j}" { ${STEAM_FIELDS}; where external_game_source = ${STEAM_SOURCE} & uid = (${list}); limit 500; };`);
+    }
+    const answers = await igdbRequest('multiquery', queries.join('\n'));
+    // Every query must have answered: a missing one would turn its 250 games into "not on IGDB"
+    if (!Array.isArray(answers) || answers.length !== queries.length || !answers.every((a) => Array.isArray(a?.result))) {
+      throw new Error('[IGDB] multiquery answered in an unexpected shape');
+    }
+    for (const { result } of answers) {
+      for (const row of result) {
+        const appid = Number(row.uid);
+        if (!matches.has(appid) && row.game && typeof row.game === 'object') matches.set(appid, toSteamApp(appid, row.game));
+      }
+    }
+  }
+  return matches;
 };
 
 export const searchGames = async (query, limit = 12) => {

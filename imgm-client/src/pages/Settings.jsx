@@ -2,21 +2,36 @@
  * Settings — Route: /settings (reached from the cog on your profile)
  *
  *   gamer tag       change it once every 30 days (changing only its capitals: any time)
+ *   email           whether it's confirmed (and sending the email again)
  *   password        change it (Google accounts manage theirs at Google)
+ *   Steam           connect it (to log in with it and see your Steam library), or
+ *                   disconnect it
  *   delete account  for good, with an anonymous reason
+ *
+ * Connecting Steam leaves for Steam's own page and comes back here with
+ * ?steam=connected or ?steam_error=<code>: read once, shown as a notice at the top in
+ * the site's words (only known codes have any), and cleared from the address.
  */
 import { Hourglass, ArrowLeft } from 'lucide-react';
-import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
 import { setUsername } from '../lib/api';
+import { steamErrorMessage } from '../lib/steam';
 import GamerTagField from '../components/GamerTagField';
 import { useGamerTagCheck } from '../hooks/useGamerTagCheck';
 import AccountSettings from '../components/profile/AccountSettings';
-import { GHOST_BUTTON, TEXT_LINK } from '../lib/ui';
+import { GHOST_BUTTON, TEXT_BUTTON_SM, TEXT_LINK } from '../lib/ui';
 
 const COOLDOWN_DAYS = 30;
 const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+// Steam's answer, from the address: connected, or why not (known codes only)
+const steamNoticeFrom = (params) => {
+  if (params.get('steam') === 'connected') return { ok: true, text: 'You can log in with Steam from now on.' };
+  const text = steamErrorMessage(params.get('steam_error'));
+  return text ? { ok: false, text } : null;
+};
 
 function Settings() {
   const { data: session, isPending, refetch } = useSession();
@@ -25,6 +40,20 @@ function Settings() {
   const [result, setResult] = useState(null); // { ok, text } after saving
   const current = session?.user.displayUsername ?? null;
   const check = useGamerTagCheck(name, current);
+
+  // Read once, then cleared from the address (replace: Back doesn't bring it back, and
+  // a reload doesn't show it again)
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [steamNotice, setSteamNotice] = useState(() => steamNoticeFrom(searchParams));
+  useEffect(() => {
+    if (!searchParams.has('steam') && !searchParams.has('steam_error')) return;
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete('steam');
+      next.delete('steam_error');
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   if (isPending) return <div className="min-h-[70vh] animate-pulse" />;
   if (!session) return <Navigate to="/login?redirect=%2Fsettings" replace />;
@@ -62,6 +91,22 @@ function Settings() {
         </Link>
         <h1 className="font-display text-[54px] md:text-[88px] leading-[.9] uppercase tracking-[.005em] text-white mt-2">Settings</h1>
       </header>
+      {steamNotice && (
+        <div role="status" className="flex items-center justify-between gap-4 rounded-sm border border-slate-700 bg-slate-900 px-5 py-2">
+          <p className="text-slate-200">
+            {steamNotice.ok && <span className="font-semibold text-white">Steam connected.</span>} {steamNotice.text}
+            {steamNotice.ok && (
+              <>
+                {' '}
+                <Link to="/steam/library" className={`font-medium text-white ${TEXT_LINK}`}>See your Steam library</Link>
+              </>
+            )}
+          </p>
+          <button type="button" onClick={() => setSteamNotice(null)} className={`shrink-0 ${TEXT_BUTTON_SM}`}>
+            Close
+          </button>
+        </div>
+      )}
       <form onSubmit={save} className="bg-slate-900 border border-slate-700 rounded-sm p-6 flex flex-col gap-5">
         <div>
           <p className="text-sm text-slate-400">Your gamer tag</p>

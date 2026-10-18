@@ -1,15 +1,17 @@
 /**
  * Navbar — the site header on every page: logo, game search, the main links (Games ·
- * Game of the Week · Hall of Fame · Play Next) and the account: the player's menu, or
- * for visitors "Log in" and "Sign up". Noir: a solid warm-black bar on a hairline.
+ * Game of the Week · Hall of Fame · Steam · Play Next) and the account: the player's
+ * menu, or for visitors "Log in" and "Sign up". Noir: a solid warm-black bar on a hairline.
  *
- * Laptop and up (lg+): one 72px row: logo · search (centred) · links · account.
+ * Laptop and up (lg+): one 72px row: logo · search (centred) · links · account. Below
+ * xl the links sit 20px apart (28px from xl), so all five leave the search its 200px.
  * Tablet (sm–lg): the same, with the links wrapped onto a second row underneath.
  * Phone: a 56px row (logo · search button · account), then the links on a row of their
  * own in 14px type, as in the design: no menu to open. Below 400px wide they're 13px
- * with 12px gaps, so all four fit a 360px screen (about 283px of words + 36px of gaps,
- * in 328px). Below 360px that row scrolls sideways instead of breaking. The search
- * button opens the search field on its own row.
+ * with 12px gaps (about 315px of words + 48px of gaps for all five). Where they don't
+ * fit (phones below about 435px wide, while Play Next shows) the row scrolls sideways
+ * instead of breaking, and the last link peeks in at the edge to say there's more. The
+ * search button opens the search field on its own row.
  *
  * Visitors: "Sign up" is a ghost button at every width (not lime: that's kept for each
  * page's own main action). "Log in", a plain link, shows beside it from 360px wide,
@@ -56,6 +58,10 @@ const BASE_LINKS = [
   { to: '/hall-of-fame', label: 'Hall of Fame' },
   // Trending is hidden until it has real content (pages/Trending.jsx)
 ];
+// Steam is for everyone: visitors land on the page that explains it, players connect
+// there or open their library from it. It comes before Play Next, so it stays in view
+// where the phone row has to scroll (and it stays underlined on /steam/library too).
+const STEAM_LINK = { to: '/steam', label: 'Steam' };
 // Play Next keeps its lime star, IMGM's mark for its AI guide
 const PLAY_NEXT_LINK = { to: '/play-next', label: <><span className="text-brand mr-1.5" aria-hidden="true">✦</span>Play Next</> };
 
@@ -63,7 +69,7 @@ function Navbar() {
   const { data: session, isPending } = useSession();
   // Play Next shows for everyone after launch, before that only for beta players
   const playNext = usePlayNextAccess();
-  const LINKS = playNext.enabled ? [...BASE_LINKS, PLAY_NEXT_LINK] : BASE_LINKS;
+  const LINKS = [...BASE_LINKS, STEAM_LINK, ...(playNext.enabled ? [PLAY_NEXT_LINK] : [])];
 
   // The phone's search row remembers the page it was opened on, so it closes by
   // itself once a search takes the player somewhere else (a result, or Enter)
@@ -136,10 +142,10 @@ function Navbar() {
           </div>
 
           {/* Links: their own row on phones and tablets (14px type on phones, 13px with
-              tighter gaps below 400px so all four fit at 360px, scrolling sideways only
-              below that; from tablets up they always fit, so nothing clips their focus
-              ring), in the bar from lg */}
-          <ul className="flex order-last basis-full gap-4 pb-1.5 text-sm overflow-x-auto [scrollbar-width:none] max-[25rem]:gap-3 max-[25rem]:text-[13px] sm:overflow-visible sm:gap-6 sm:text-base lg:order-none lg:basis-auto lg:gap-7 lg:pb-0">
+              tighter gaps below 400px, scrolling sideways where they don't fit; from
+              tablets up they always fit, so nothing clips their focus ring), in the bar
+              from lg, a little closer together below xl so the search keeps its room */}
+          <ul className="flex order-last basis-full gap-4 pb-1.5 text-sm overflow-x-auto [scrollbar-width:none] max-[25rem]:gap-3 max-[25rem]:text-[13px] sm:overflow-visible sm:gap-6 sm:text-base lg:order-none lg:basis-auto lg:gap-5 lg:pb-0 xl:gap-7">
             {LINKS.map((l) => (
               <li key={l.to}>
                 <NavLink to={l.to} end={l.end} className={navClass}>{l.label}</NavLink>

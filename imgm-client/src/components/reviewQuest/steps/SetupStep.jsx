@@ -1,6 +1,8 @@
 /**
  * ② Your setup — platform, hours, completion, solo/co-op.
  * Every group is optional; tapping a selected choice again un-selects it.
+ * From the Steam library, a quiet line (steamNote, from the quest) says which answers it
+ * filled in, or, editing a review, the hours Steam has for the game.
  */
 import { Chip, ChoiceCard, FieldLabel } from '../Choice';
 import { COMPLETION_STATUSES, PLAY_STYLES } from '../questOptions';
@@ -23,7 +25,7 @@ const StepperButton = ({ label, onClick, disabled, children }) => (
   </button>
 );
 
-const SetupStep = ({ answers, update, game }) => {
+const SetupStep = ({ answers, update, game, steamNote }) => {
   // Tap once to pick, tap again to clear
   const toggle = (field, value) => update({ [field]: answers[field] === value ? null : value });
 
@@ -42,6 +44,8 @@ const SetupStep = ({ answers, update, game }) => {
 
   return (
     <div className="flex flex-col gap-6">
+      {steamNote && <p className="-mt-2 text-sm text-slate-400">{steamNote}</p>}
+
       {/* Only the platforms this game is actually on (the server checks this too) */}
       {game.platforms?.length > 0 && (
         <div>
