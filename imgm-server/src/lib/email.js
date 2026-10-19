@@ -78,7 +78,7 @@ const WHAT_TO_DO =
 export const welcomeVerifyEmail = (url) => ({
   subject: 'Welcome to IMGM: confirm your email',
   text: [
-    'Welcome to IMGM, player one!',
+    'Welcome to IMGM. Press start.',
     '',
     WHAT_TO_DO,
     '',
@@ -91,7 +91,7 @@ export const welcomeVerifyEmail = (url) => ({
     'IMGM',
   ].join('\n'),
   html: emailFrame(
-    'Welcome to IMGM, player one!',
+    'Welcome to IMGM. Press start.',
     `${WHAT_TO_DO}<br><br>One quick thing: confirm this is your email address.`,
     { url, label: 'Confirm my email' },
     "<strong style=\"color:#ffffff\">Didn't sign up?</strong> Just ignore this email: nothing happens without this link."
@@ -101,6 +101,6 @@ export const welcomeVerifyEmail = (url) => ({
 /** After a Google sign-up (Google already confirmed the email): just a welcome. */
 export const welcomeEmail = (siteUrl) => ({
   subject: 'Welcome to IMGM!',
-  text: ['Welcome to IMGM, player one!', '', WHAT_TO_DO, '', `Jump in: ${siteUrl}`, '', 'See you in the reviews,', 'IMGM'].join('\n'),
-  html: emailFrame('Welcome to IMGM, player one!', WHAT_TO_DO, { url: siteUrl, label: 'Start playing' }),
+  text: ['Welcome to IMGM. Press start.', '', WHAT_TO_DO, '', `Jump in: ${siteUrl}`, '', 'See you in the reviews,', 'IMGM'].join('\n'),
+  html: emailFrame('Welcome to IMGM. Press start.', WHAT_TO_DO, { url: siteUrl, label: 'Start playing' }),
 });

@@ -58,7 +58,9 @@ const BASE_LINKS = [
   // Trending is hidden until it has real content (pages/Trending.jsx)
 ];
 // Play Next keeps its lime star, IMGM's mark for its AI guide
-const PLAY_NEXT_LINK = { to: '/play-next', label: <><span className="text-brand mr-1.5" aria-hidden="true">✦</span>Play Next</> };
+// One span around the star and the words, with a real space between them: in the link's
+// flex row, separate pieces (and a margin) would leave a gap in the underline
+const PLAY_NEXT_LINK = { to: '/play-next', label: <span><span className="text-brand" aria-hidden="true">✦</span>{'\u00a0Play Next'}</span> };
 
 function Navbar() {
   const { data: session, isPending } = useSession();
