@@ -185,6 +185,8 @@ function PlayNextChat({ userId }) {
         guide.openChat(id).catch(() => {});
         setHistoryOpen(false);
       }}
+      maxPins={guide.maxPins}
+      onPin={guide.pinChat}
       onDelete={guide.deleteChat}
     />
   );

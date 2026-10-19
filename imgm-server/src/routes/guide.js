@@ -3,7 +3,7 @@ import { rateLimit } from 'express-rate-limit';
 import { requireUser, getSessionUser } from '../lib/session.js';
 import { canUsePlayNext, playNextEnabled } from '../lib/config.js';
 import { streamGuide, wakeGuide } from '../controllers/guideController.js';
-import { listChats, getChat, saveChat, deleteChat } from '../controllers/playNextChatsController.js';
+import { listChats, getChat, saveChat, pinChat, deleteChat } from '../controllers/playNextChatsController.js';
 
 const router = Router();
 
@@ -54,6 +54,7 @@ const historyLimiter = limit(60 * 1000, 60, 'Too many requests. Please slow down
 router.get('/chats', requireUser, playNextAccess, historyLimiter, listChats);
 router.get('/chats/:id', requireUser, playNextAccess, historyLimiter, getChat);
 router.put('/chats/:id', requireUser, playNextAccess, historyLimiter, saveChat);
+router.put('/chats/:id/pin', requireUser, playNextAccess, historyLimiter, pinChat);
 router.delete('/chats/:id', requireUser, playNextAccess, historyLimiter, deleteChat);
 
 // POST /api/guide/wake — the page opened: wake the AI service up early

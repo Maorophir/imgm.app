@@ -29,6 +29,7 @@ import {
   deleteGuideChat,
   getGuideChat,
   listGuideChats,
+  pinGuideChat,
   saveGuideChat,
   streamGuide,
 } from "../lib/api";
@@ -192,14 +193,18 @@ export function useGameGuide(userId) {
   const [turns, dispatch] = useReducer(reducer, saved.turns);
   const [prefs, setPrefs] = useState(saved.prefs);
   const [chatId, setChatId] = useState(saved.chatId);
-  const [chats, setChats] = useState([]); // the history: [{ id, title, updatedAt }]
+  const [chats, setChats] = useState([]); // the history: [{ id, title, updatedAt, pinned }], pinned first
+  const [maxPins, setMaxPins] = useState(5); // how many chats can be pinned (the server says)
   const abortRef = useRef(null);
   const chatIdRef = useRef(saved.chatId); // the id a running request belongs to
   const finishedRef = useRef(false); // an answer just finished: save the chat
 
   const refreshChats = useCallback(() => {
     listGuideChats()
-      .then((data) => setChats(data.chats))
+      .then((data) => {
+        setChats(data.chats);
+        if (data.limits?.pins) setMaxPins(data.limits.pins);
+      })
       .catch(() => {}); // the history is a convenience: the chat works without it
   }, []);
   useEffect(refreshChats, [refreshChats]);
@@ -383,6 +388,15 @@ export function useGameGuide(userId) {
     [show],
   );
 
+  // Pin or unpin a chat; the list comes back in its new order
+  const pinChat = useCallback(
+    async (id, pinned) => {
+      await pinGuideChat(id, pinned).catch(() => {});
+      refreshChats();
+    },
+    [refreshChats],
+  );
+
   const deleteChat = useCallback(
     async (id) => {
       await deleteGuideChat(id).catch(() => {});
@@ -402,6 +416,7 @@ export function useGameGuide(userId) {
     prefs,
     setPrefs,
     chats,
+    maxPins,
     ask,
     notForMe,
     stop,
@@ -409,6 +424,7 @@ export function useGameGuide(userId) {
     retryLast,
     newChat,
     openChat,
+    pinChat,
     deleteChat,
   };
 }

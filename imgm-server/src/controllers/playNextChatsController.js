@@ -7,6 +7,10 @@
  *   20 chats per player   the oldest is deleted when a 21st starts
  *   30 days               chats untouched for longer are deleted (the AI forgets them then too)
  *   10 questions a chat   enforced by the AI service; the page then offers a new chat
+ *
+ * Pinned chats (up to 5) sit at the top of the list, don't expire, and are never the
+ * one deleted to make room (they still count toward the 20). The AI service still forgets them after 30 days, so
+ * an old pinned chat shows its history but its follow-ups start fresh.
  */
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
@@ -15,6 +19,7 @@ import { aiServiceUrl, internalApiKey } from '../lib/config.js';
 const MAX_CHATS = 20;
 const MAX_TURNS = 10;
 const RETENTION_DAYS = 30;
+const MAX_PINS = 5;
 
 const chatId = z.string().regex(/^[A-Za-z0-9-]{8,64}$/);
 const saveSchema = z.object({
@@ -23,6 +28,7 @@ const saveSchema = z.object({
   // The "Tune it" answers (the AI service checks their exact shape when they're used)
   prefs: z.record(z.string(), z.any()).default({}),
 });
+const pinSchema = z.object({ pinned: z.boolean() });
 
 // Forget a chat in the AI service too (fire-and-forget: the history row is what matters)
 const forgetInAi = (userId, id) =>
@@ -38,20 +44,24 @@ const deleteChats = async (userId, ids) => {
   ids.forEach((id) => forgetInAi(userId, id));
 };
 
-// GET /api/guide/chats — the player's chats, newest first (titles only)
+// GET /api/guide/chats — the player's chats: pinned first (latest pin on top), then
+// newest first (titles only)
 export const listChats = async (req, res) => {
   const userId = req.user.id;
-  // Chats past the 30 days go first (the AI service forgets them on its own)
+  // Unpinned chats past the 30 days go first (the AI service forgets them on its own)
   const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
-  await prisma.playNextChat.deleteMany({ where: { userId, updatedAt: { lt: cutoff } } });
+  await prisma.playNextChat.deleteMany({ where: { userId, pinnedAt: null, updatedAt: { lt: cutoff } } });
 
   const chats = await prisma.playNextChat.findMany({
     where: { userId },
-    orderBy: { updatedAt: 'desc' },
+    orderBy: [{ pinnedAt: { sort: 'desc', nulls: 'last' } }, { updatedAt: 'desc' }],
     take: MAX_CHATS,
-    select: { id: true, title: true, updatedAt: true },
+    select: { id: true, title: true, updatedAt: true, pinnedAt: true },
   });
-  res.json({ chats, limits: { chats: MAX_CHATS, questions: MAX_TURNS } });
+  res.json({
+    chats: chats.map(({ pinnedAt, ...chat }) => ({ ...chat, pinned: Boolean(pinnedAt) })),
+    limits: { chats: MAX_CHATS, questions: MAX_TURNS, pins: MAX_PINS },
+  });
 };
 
 // GET /api/guide/chats/:id — one chat, to reopen it
@@ -80,11 +90,12 @@ export const saveChat = async (req, res) => {
 
   const exists = await prisma.playNextChat.findUnique({ where: key, select: { id: true } });
   if (!exists) {
-    // A new chat: make room, keeping the newest 19 + this one
+    // A new chat: make room for it, keeping the pinned chats + the newest unpinned ones
+    const pins = await prisma.playNextChat.count({ where: { userId, pinnedAt: { not: null } } });
     const older = await prisma.playNextChat.findMany({
-      where: { userId },
+      where: { userId, pinnedAt: null },
       orderBy: { updatedAt: 'desc' },
-      skip: MAX_CHATS - 1,
+      skip: MAX_CHATS - 1 - pins,
       select: { id: true },
     });
     await deleteChats(userId, older.map((chat) => chat.id));
@@ -95,6 +106,30 @@ export const saveChat = async (req, res) => {
     create: { userId, id: id.data, title, turns, prefs },
     update: { title, turns, prefs },
   });
+  res.status(204).end();
+};
+
+// PUT /api/guide/chats/:id/pin — the player pins or unpins a chat
+export const pinChat = async (req, res) => {
+  const id = chatId.safeParse(req.params.id);
+  const body = pinSchema.safeParse(req.body);
+  if (!id.success || !body.success) return res.status(400).json({ error: 'Invalid chat.' });
+
+  const userId = req.user.id;
+  const key = { userId_id: { userId, id: id.data } };
+  const chat = await prisma.playNextChat.findUnique({ where: key, select: { pinnedAt: true } });
+  if (!chat) return res.status(404).json({ error: 'Chat not found.' });
+
+  if (body.data.pinned && !chat.pinnedAt) {
+    const pins = await prisma.playNextChat.count({ where: { userId, pinnedAt: { not: null } } });
+    if (pins >= MAX_PINS) {
+      return res.status(409).json({ error: `You can pin up to ${MAX_PINS} chats. Unpin one first.` });
+    }
+  }
+  // Pinning again keeps the first pin's time, so the order doesn't jump
+  if (body.data.pinned !== Boolean(chat.pinnedAt)) {
+    await prisma.playNextChat.update({ where: key, data: { pinnedAt: body.data.pinned ? new Date() : null } });
+  }
   res.status(204).end();
 };
 
