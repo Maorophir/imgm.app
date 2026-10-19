@@ -8,8 +8,8 @@
  *   30 days               chats untouched for longer are deleted (the AI forgets them then too)
  *   10 questions a chat   enforced by the AI service; the page then offers a new chat
  *
- * Pinned chats (up to 5) sit at the top of the list and are kept: they don't expire
- * and don't count toward the 20. The AI service still forgets them after 30 days, so
+ * Pinned chats (up to 5) sit at the top of the list, don't expire, and are never the
+ * one deleted to make room (they still count toward the 20). The AI service still forgets them after 30 days, so
  * an old pinned chat shows its history but its follow-ups start fresh.
  */
 import { z } from 'zod';
@@ -55,7 +55,7 @@ export const listChats = async (req, res) => {
   const chats = await prisma.playNextChat.findMany({
     where: { userId },
     orderBy: [{ pinnedAt: { sort: 'desc', nulls: 'last' } }, { updatedAt: 'desc' }],
-    take: MAX_CHATS + MAX_PINS,
+    take: MAX_CHATS,
     select: { id: true, title: true, updatedAt: true, pinnedAt: true },
   });
   res.json({
@@ -90,11 +90,12 @@ export const saveChat = async (req, res) => {
 
   const exists = await prisma.playNextChat.findUnique({ where: key, select: { id: true } });
   if (!exists) {
-    // A new chat: make room, keeping the newest 19 + this one (pinned chats aside)
+    // A new chat: make room for it, keeping the pinned chats + the newest unpinned ones
+    const pins = await prisma.playNextChat.count({ where: { userId, pinnedAt: { not: null } } });
     const older = await prisma.playNextChat.findMany({
       where: { userId, pinnedAt: null },
       orderBy: { updatedAt: 'desc' },
-      skip: MAX_CHATS - 1,
+      skip: MAX_CHATS - 1 - pins,
       select: { id: true },
     });
     await deleteChats(userId, older.map((chat) => chat.id));

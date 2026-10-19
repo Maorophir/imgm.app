@@ -1,9 +1,9 @@
 /**
  * ChatHistory — the player's past Play Next chats, to reopen one: pinned chats on top,
  * then the rest, newest first. "New chat" on top (a ghost button: "Ask" is Play Next's
- * lime action). Each chat has two quiet buttons that are always shown (no hover needed,
- * so touch screens and every screen size see them): pin/unpin, and delete (a second
- * click confirms).
+ * lime action). Each chat has two quiet buttons, pin/unpin and delete (a second click
+ * confirms). With a mouse they show while pointing at the chat (or tabbing to it); on
+ * touch screens, where nothing hovers, they're always shown.
  */
 import { useState } from 'react';
 import { Pin, PinOff, Plus, X } from 'lucide-react';
@@ -17,7 +17,7 @@ const ChatRow = ({ chat, active, onOpen, onPin, onDelete, disabled, pinsFull }) 
   const [confirming, setConfirming] = useState(false);
   const cantPin = !chat.pinned && pinsFull;
   return (
-    <li className="relative" onMouseLeave={() => setConfirming(false)}>
+    <li className="group relative" onMouseLeave={() => setConfirming(false)}>
       <button
         type="button"
         onClick={() => onOpen(chat.id)}
@@ -33,7 +33,11 @@ const ChatRow = ({ chat, active, onOpen, onPin, onDelete, disabled, pinsFull }) 
 
       {/* While an answer runs, the chats can't change */}
       {!disabled && (
-        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center">
+        <div
+          className={`absolute right-1 top-1/2 -translate-y-1/2 flex items-center ${
+            confirming ? '' : 'pointer-fine:opacity-0 pointer-fine:group-hover:opacity-100 pointer-fine:focus-within:opacity-100'
+          }`}
+        >
           {confirming ? (
             <button
               type="button"
@@ -60,11 +64,11 @@ const ChatRow = ({ chat, active, onOpen, onPin, onDelete, disabled, pinsFull }) 
                 {chat.pinned ? (
                   <>
                     {/* Pinned: a filled pin; hovering shows what a click does */}
-                    <Pin className="w-3.5 h-3.5 fill-current group-hover/pin:hidden" strokeWidth={1.8} aria-hidden="true" />
-                    <PinOff className="w-3.5 h-3.5 hidden group-hover/pin:block" strokeWidth={1.8} aria-hidden="true" />
+                    <Pin className="w-3.5 h-3.5 rotate-45 fill-current group-hover/pin:hidden" strokeWidth={1.8} aria-hidden="true" />
+                    <PinOff className="w-3.5 h-3.5 rotate-45 hidden group-hover/pin:block" strokeWidth={1.8} aria-hidden="true" />
                   </>
                 ) : (
-                  <Pin className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" />
+                  <Pin className="w-3.5 h-3.5 rotate-45" strokeWidth={1.8} aria-hidden="true" />
                 )}
               </button>
               <button
@@ -121,7 +125,7 @@ const ChatHistory = ({ chats, activeId, onOpen, onPin, onDelete, onNew, disabled
         </>
       )}
       <p className="px-1 text-xs text-slate-400 leading-snug">
-        Your newest 20 chats are kept for 30 days. Pinned chats are kept until you unpin them.
+        Up to 20 chats are kept, pinned ones included. Unpinned chats are deleted after 30 days.
       </p>
     </nav>
   );
