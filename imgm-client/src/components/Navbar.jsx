@@ -24,6 +24,7 @@ import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
+import { wakeGuide } from '../lib/api';
 import { WRAP } from '../lib/ui';
 import SearchBar from './SearchBar';
 import UserMenu from './UserMenu';
@@ -57,7 +58,9 @@ const BASE_LINKS = [
   // Trending is hidden until it has real content (pages/Trending.jsx)
 ];
 // Play Next keeps its lime star, IMGM's mark for its AI guide
-const PLAY_NEXT_LINK = { to: '/play-next', label: <><span className="text-brand mr-1.5" aria-hidden="true">✦</span>Play Next</> };
+// One span around the star and the words, with a real space between them: in the link's
+// flex row, separate pieces (and a margin) would leave a gap in the underline
+const PLAY_NEXT_LINK = { to: '/play-next', label: <span><span className="text-brand" aria-hidden="true">✦</span>{'\u00a0Play Next'}</span> };
 
 function Navbar() {
   const { data: session, isPending } = useSession();
@@ -142,7 +145,15 @@ function Navbar() {
           <ul className="flex order-last basis-full gap-4 pb-1.5 text-sm overflow-x-auto [scrollbar-width:none] max-[25rem]:gap-3 max-[25rem]:text-[13px] sm:overflow-visible sm:gap-6 sm:text-base lg:order-none lg:basis-auto lg:gap-7 lg:pb-0">
             {LINKS.map((l) => (
               <li key={l.to}>
-                <NavLink to={l.to} end={l.end} className={navClass}>{l.label}</NavLink>
+                <NavLink
+                  to={l.to}
+                  end={l.end}
+                  className={navClass}
+                  // About to open Play Next: wake its AI service on the way (logged in only)
+                  {...(l === PLAY_NEXT_LINK && session && { onPointerEnter: wakeGuide, onFocus: wakeGuide })}
+                >
+                  {l.label}
+                </NavLink>
               </li>
             ))}
           </ul>

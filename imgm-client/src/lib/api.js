@@ -175,10 +175,18 @@ export const chooseAvatarPreset = (preset) => fetchJson('/api/users/me/avatar', 
 export const listGuideChats = (signal) => fetchJson('/api/guide/chats', { signal });
 export const getGuideChat = (id) => fetchJson(`/api/guide/chats/${id}`);
 export const saveGuideChat = (id, chat) => fetchJson(`/api/guide/chats/${id}`, { method: 'PUT', body: chat });
+export const pinGuideChat = (id, pinned) => fetchJson(`/api/guide/chats/${id}/pin`, { method: 'PUT', body: { pinned } });
 export const deleteGuideChat = (id) => fetchJson(`/api/guide/chats/${id}`, { method: 'DELETE' });
 
-// Play Next page opened: wake the AI service so the first answer starts sooner
-export const wakeGuide = () => fetchJson('/api/guide/wake', { method: 'POST' }).catch(() => {});
+// Wake the AI service (it sleeps when unused) so the first answer starts sooner: when
+// the Play Next page opens, and earlier, when a logged-in player sees the home teaser or
+// points at a Play Next link. At most once a minute (the server wakes it once a minute too).
+let lastWake = 0;
+export const wakeGuide = () => {
+  if (Date.now() - lastWake < 60 * 1000) return;
+  lastWake = Date.now();
+  fetchJson('/api/guide/wake', { method: 'POST' }).catch(() => {});
+};
 
 export async function streamGuide(body, { signal, onEvent }) {
   const response = await fetch(`${API_BASE}/api/guide/stream`, {

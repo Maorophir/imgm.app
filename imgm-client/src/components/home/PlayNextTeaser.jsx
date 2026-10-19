@@ -12,13 +12,16 @@
  * the panel floats over the key art under the hero's words (absolutely placed), so it
  * never makes that column taller: the card keeps its place and still fits the first
  * screen. Shown only to visitors who may use Play Next (the server decides: everyone once
- * it's open, its beta players before that).
+ * it's open, its beta players before that). For a logged-in player it also wakes Play
+ * Next's AI service, so their first answer doesn't wait for it to start.
  */
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { usePlayNextAccess } from '../../hooks/usePlayNextAccess';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
+import { useSession } from '../../lib/authClient';
+import { wakeGuide } from '../../lib/api';
 import { HOME_SHOWCASE } from '../../lib/homeShowcase';
 import { igdbImage } from '../../lib/igdbImage';
 
@@ -31,8 +34,15 @@ const ROTATE_EVERY = 4500; // ms per sample: long enough to read the request and
 const PlayNextTeaser = () => {
   const { enabled } = usePlayNextAccess();
   const reduced = usePrefersReducedMotion();
+  const { data: session } = useSession();
   const [at, setAt] = useState(0);
   const [paused, setPaused] = useState(false);
+
+  // A logged-in player may well open Play Next next: start its AI service now
+  const loggedIn = Boolean(session);
+  useEffect(() => {
+    if (enabled && loggedIn) wakeGuide();
+  }, [enabled, loggedIn]);
 
   useEffect(() => {
     if (!enabled || reduced || paused) return undefined;

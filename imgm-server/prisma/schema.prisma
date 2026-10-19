@@ -239,6 +239,9 @@ model PlayNextChat {
   title     String   // the chat's first question
   turns     Json     // the turns as the page shows them (question, steps, answer, cards)
   prefs     Json     @default("{}") // this chat's "Tune it" answers, restored when it's reopened
+  // When the player pinned it (null = not pinned). Pinned chats sit at the top of the
+  // list and are kept: no 30-day expiry, and they don't count toward the 20 chats.
+  pinnedAt  DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
