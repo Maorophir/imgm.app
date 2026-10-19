@@ -5,6 +5,8 @@
  * SMTP ports (25, 465, 587). Without RESEND_API_KEY (local development) nothing is
  * sent: the email is printed to the server log instead, link included.
  */
+import { clientOrigins } from './config.js';
+
 const RESEND_URL = 'https://api.resend.com/emails';
 const FROM = (process.env.EMAIL_FROM || 'IMGM <no-reply@imgm.app>').trim(); // a stray space after = must not break it
 
@@ -23,6 +25,20 @@ export const sendEmail = async ({ to, subject, html, text }) => {
     throw new Error(`Email to ${to} failed: ${response.status} ${await response.text()}`);
   }
 };
+
+const LIME = '#c6eb4e'; // the site's lime (--color-brand)
+const LOGO = `${clientOrigins[0]}/email-start.png`; // the power switch as a picture: mail apps don't show SVG
+
+// Every email's top: the logo (power switch + IMGM) and what the letters stand for, and
+// a lime line across the card's top
+const HEADER = `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 28px"><tr>
+      <td style="vertical-align:middle;padding-right:12px"><img src="${LOGO}" width="32" height="32" alt="" style="display:block;border:0"></td>
+      <td style="vertical-align:middle">
+        <span style="display:block;font-size:24px;line-height:1;font-weight:900;letter-spacing:3px;color:#ffffff">IMGM</span>
+        <span style="display:block;margin-top:5px;font-size:11px;line-height:1;font-weight:700;letter-spacing:3px;color:${LIME}">I AM GAMING</span>
+      </td>
+    </tr></table>`;
+const CARD = `max-width:480px;margin:0 auto;background:#141414;border:1px solid #262626;border-top:3px solid ${LIME};border-radius:16px;padding:32px`;
 
 /**
  * The "reset your password" email: IMGM's look (black, white text, a lime button),
@@ -45,11 +61,11 @@ export const resetPasswordEmail = (url) => ({
   ].join('\n'),
   html: `
 <div style="background:#0a0a0a;padding:40px 16px;font-family:Arial,Helvetica,sans-serif">
-  <div style="max-width:480px;margin:0 auto;background:#141414;border:1px solid #262626;border-radius:16px;padding:32px">
-    <p style="margin:0 0 24px;font-size:22px;font-weight:900;letter-spacing:4px;color:#ffffff">IMGM<span style="color:#b8f03a">.</span></p>
+  <div style="${CARD}">
+    ${HEADER}
     <h1 style="margin:0 0 12px;font-size:22px;color:#ffffff">Respawning your password</h1>
     <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#d4d4d4">We got a request to reset the password for your IMGM account. If that was you, hit the button and pick a new one. The link works for 1 hour, then it times out.</p>
-    <a href="${url}" style="display:inline-block;background:#b8f03a;color:#0a0a0a;font-weight:700;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:10px">Choose a new password</a>
+    <a href="${url}" style="display:inline-block;background:${LIME};color:#0a0a0a;font-weight:700;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:10px">Choose a new password</a>
     <div style="margin:28px 0 0;padding:16px;border-radius:10px;background:#1c1c1c;border:1px solid #262626">
       <p style="margin:0;font-size:14px;line-height:1.6;color:#d4d4d4"><strong style="color:#ffffff">Didn't ask for this?</strong> No action needed. Your password stays the same, and nobody can change it without this link.</p>
     </div>
@@ -58,14 +74,26 @@ export const resetPasswordEmail = (url) => ({
 </div>`,
 });
 
-// The frame every IMGM email shares: black card, white text, a lime button
+// The welcome emails' button: IMGM's power switch (the logo, as a picture the site hosts:
+// mail apps don't show SVG) over the word START, for "Press start." The word is text, so
+// the button still reads and works when a mail app hides pictures.
+const startButton = (url) => `
+    <div style="text-align:center">
+      <a href="${url}" style="display:inline-block;text-decoration:none;padding:16px 32px;border:2px solid ${LIME};border-radius:12px">
+        <img src="${LOGO}" width="56" height="56" alt="" style="display:block;margin:0 auto;border:0">
+        <span style="display:block;margin-top:10px;font-size:15px;font-weight:700;letter-spacing:4px;color:${LIME}">START</span>
+      </a>
+    </div>`;
+
+// The frame every IMGM email shares: black card, white text, a lime button (or, with
+// button.start, the START button)
 const emailFrame = (title, intro, button, note) => `
 <div style="background:#0a0a0a;padding:40px 16px;font-family:Arial,Helvetica,sans-serif">
-  <div style="max-width:480px;margin:0 auto;background:#141414;border:1px solid #262626;border-radius:16px;padding:32px">
-    <p style="margin:0 0 24px;font-size:22px;font-weight:900;letter-spacing:4px;color:#ffffff">IMGM<span style="color:#b8f03a">.</span></p>
+  <div style="${CARD}">
+    ${HEADER}
     <h1 style="margin:0 0 12px;font-size:22px;color:#ffffff">${title}</h1>
     <p style="margin:0 0 24px;font-size:15px;line-height:1.6;color:#d4d4d4">${intro}</p>
-    <a href="${button.url}" style="display:inline-block;background:#b8f03a;color:#0a0a0a;font-weight:700;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:10px">${button.label}</a>
+    ${button.start ? startButton(button.url) : `<a href="${button.url}" style="display:inline-block;background:${LIME};color:#0a0a0a;font-weight:700;font-size:15px;text-decoration:none;padding:12px 24px;border-radius:10px">${button.label}</a>`}
     ${note ? `<div style="margin:28px 0 0;padding:16px;border-radius:10px;background:#1c1c1c;border:1px solid #262626"><p style="margin:0;font-size:14px;line-height:1.6;color:#d4d4d4">${note}</p></div>` : ''}
     <p style="margin:24px 0 0;font-size:13px;color:#737373">See you in the reviews,<br>IMGM</p>
   </div>
@@ -82,7 +110,7 @@ export const welcomeVerifyEmail = (url) => ({
     '',
     WHAT_TO_DO,
     '',
-    'One quick thing: confirm this is your email address:',
+    'One quick thing: press start to confirm this is your email address:',
     url,
     '',
     "Didn't sign up? Just ignore this email.",
@@ -91,9 +119,9 @@ export const welcomeVerifyEmail = (url) => ({
     'IMGM',
   ].join('\n'),
   html: emailFrame(
-    'Welcome to IMGM. Press start.',
-    `${WHAT_TO_DO}<br><br>One quick thing: confirm this is your email address.`,
-    { url, label: 'Confirm my email' },
+    `Welcome to IMGM. <span style="color:${LIME}">Press start.</span>`,
+    `${WHAT_TO_DO}<br><br>One quick thing: press start to confirm this is your email address.`,
+    { url, start: true },
     "<strong style=\"color:#ffffff\">Didn't sign up?</strong> Just ignore this email: nothing happens without this link."
   ),
 });
@@ -101,6 +129,6 @@ export const welcomeVerifyEmail = (url) => ({
 /** After a Google sign-up (Google already confirmed the email): just a welcome. */
 export const welcomeEmail = (siteUrl) => ({
   subject: 'Welcome to IMGM!',
-  text: ['Welcome to IMGM. Press start.', '', WHAT_TO_DO, '', `Jump in: ${siteUrl}`, '', 'See you in the reviews,', 'IMGM'].join('\n'),
-  html: emailFrame('Welcome to IMGM. Press start.', WHAT_TO_DO, { url: siteUrl, label: 'Start playing' }),
+  text: ['Welcome to IMGM. Press start.', '', WHAT_TO_DO, '', `Press start: ${siteUrl}`, '', 'See you in the reviews,', 'IMGM'].join('\n'),
+  html: emailFrame(`Welcome to IMGM. <span style="color:${LIME}">Press start.</span>`, WHAT_TO_DO, { url: siteUrl, start: true }),
 });
