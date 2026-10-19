@@ -137,7 +137,7 @@ const Home = () => {
   const notice = searchParams.get('goodbye') === '1'
     ? { title: 'Your account is deleted.', text: "Thanks for playing with us. You're always welcome back." }
     : searchParams.get('verified') === '1'
-      ? { title: 'Email confirmed.', text: 'Welcome to IMGM. Press start.' }
+      ? { title: 'Your email is verified.', text: '' }
       : null;
 
   return (
