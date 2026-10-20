@@ -338,7 +338,7 @@ def get_game_family(game_id: int, config: RunnableConfig) -> str:
             "themes: " + (", ".join(game["themes"]) or "?"),
         ]
     )
-    lines = [f"The family of {game['title']} ({about}). Every game below is verified."]
+    lines = [f"The family of {game['title']} [id {game['id']}] ({about}). Every game below is verified."]
     for key, heading in FAMILY_SECTIONS.items():
         lines.append(heading)
         lines += [format_family_game(g) for g in family[key]] or ["(none)"]

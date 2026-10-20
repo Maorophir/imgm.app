@@ -2,14 +2,14 @@
  * PickCard — one recommended game. The Best Pick gets the big Legendary-style card;
  * the other four are compact rows, the next two framed in their tier's colours
  * (#2 Epic purple, #3 Rare blue). Every card links to the game's IMGM page.
- * With onNotForMe, each card's bottom row also gets "Played it" and "Not for me" (each
- * swaps that game out; onNotForMe(pick, "played") for the first).
+ * Each card's bottom row has Add to Backlog; "Played it" and "Not for me" live in the
+ * Sort your picks screen, which answers all 5 at once (SortYourPicks).
  * Noir: the frames are thin edges in the tier's ink (the gilt for the Best Pick), with
  * square corners, square buttons and the tier's mark instead of words in capitals.
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, ChevronDown, Star, X } from 'lucide-react';
+import { ChevronDown, Star } from 'lucide-react';
 import { getRarity } from '../reviewQuest/questOptions';
 import BacklogButton from '../BacklogButton';
 import RarityMark from '../RarityMark';
@@ -43,49 +43,10 @@ const hoursText = (hours) => (hours ? `~${hours}h to beat` : null);
 const platformsText = (platforms = []) =>
   platforms.length > 3 ? `${platforms.slice(0, 3).join(' · ')} +${platforms.length - 3}` : platforms.join(' · ');
 
-// Inside the card's link, so they must stop the click from opening the game
-const SwapButton = ({ onClick, disabled, title, hover, children }) => (
-  <button
-    type="button"
-    disabled={disabled}
-    onClick={(e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      onClick();
-    }}
-    title={title}
-    className={`inline-flex items-center gap-1 h-8 px-2.5 rounded-sm text-xs font-medium text-white border border-slate-600 ${hover} transition-colors duration-120 disabled:opacity-40 disabled:cursor-not-allowed`}
-  >
-    {children}
-  </button>
-);
-
-const SwapButtons = ({ pick, onNotForMe, disabled }) => (
-  <>
-    <SwapButton
-      onClick={() => onNotForMe(pick, 'played')}
-      disabled={disabled}
-      title={`Already played ${pick.title}: swap it for one you haven't`}
-      hover="hover:border-white"
-    >
-      <Check className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} aria-hidden="true" /> Played it
-    </SwapButton>
-    <SwapButton
-      onClick={() => onNotForMe(pick)}
-      disabled={disabled}
-      title={`Not for me: swap ${pick.title} for something else`}
-      hover="hover:border-red-400/70"
-    >
-      <X className="w-3.5 h-3.5 text-slate-400" strokeWidth={2} aria-hidden="true" /> Not for me
-    </SwapButton>
-  </>
-);
-
-// The card's bottom row: Add to Backlog, then (with onNotForMe) Played it and Not for me
-const Actions = ({ pick, onNotForMe, disabled }) => (
+// The card's bottom row: Add to Backlog
+const Actions = ({ pick }) => (
   <div className="flex flex-wrap items-center gap-1.5 mt-1">
     <BacklogButton gameId={pick.game_id} source="play_next" />
-    {onNotForMe && <SwapButtons pick={pick} onNotForMe={onNotForMe} disabled={disabled} />}
   </div>
 );
 
@@ -127,8 +88,8 @@ const Why = ({ text, defaultOpen = false, className = '' }) => {
   );
 };
 
-const PickCard = ({ pick, rank, onNotForMe, disabled }) => {
-  const actions = <Actions pick={pick} onNotForMe={onNotForMe} disabled={disabled} />;
+const PickCard = ({ pick, rank }) => {
+  const actions = <Actions pick={pick} />;
 
   if (pick.best_pick) {
     return (

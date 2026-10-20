@@ -246,7 +246,7 @@ def verified_games(messages: list) -> dict[int, str]:
 
 def game_families(messages: list) -> list[dict]:
     """The families get_game_family listed in this conversation, one per game it was asked
-    about: [{"of": "The Witcher 3: Wild Hunt", "series": {80, 478, …}, "studio": {1877}}].
+    about: [{"of": "The Witcher 3: Wild Hunt", "id": 1942, "series": {80, 478, …}, "studio": {1877}}].
 
     Read from the tool's own headings (FAMILY_SECTIONS), so a game counts as "series" only
     if it was listed under that game's series.
@@ -257,10 +257,10 @@ def game_families(messages: list) -> list[dict]:
         if not (isinstance(message, ToolMessage) and message.name == "get_game_family"):
             continue
         lines = message.text.splitlines()
-        title = re.match(r"The family of (.+?) \(", lines[0]) if lines else None
+        title = re.match(r"The family of (.+?) \[id (\d+)\]", lines[0]) if lines else None
         if not title:
             continue  # "No game with id … in the catalog."
-        family = {"of": title.group(1), "series": set(), "studio": set()}
+        family = {"of": title.group(1), "id": int(title.group(2)), "series": set(), "studio": set()}
         section = None
         for line in lines[1:]:
             section = sections.get(line, section)  # a heading starts a new section
@@ -469,6 +469,13 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
                 f"{game.title} takes about {hours:g}h to beat, but the player wants games "
                 f"under {max_hours:g}h: replace it with a shorter one."
             )
+    # The game the player named ("like Valorant"): they play it already
+    named = {family["id"]: family["of"] for family in game_families(state["messages"])}
+    for game in games:
+        if game.game_id in named:
+            problems.append(
+                f"{game.title} is the game the player named: they already play it. Replace it."
+            )
     # A named game's family: at most one game from its series, and at most 3 from its
     # series and studio together, so the rest are discoveries (unless the player asked
     # for the series or the studio itself)
@@ -524,7 +531,12 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
             name=CHECK_FEEDBACK,
             content="[Automatic check] Your answer has problems:\n- "
             + "\n- ".join(problems)
-            + "\nFix them (verify new games with search_games if needed), then write the full answer again.",
+            + "\nFix them (verify new games with search_games if needed), then write the full answer again."
+            # The player never saw the rejected draft: an answer that says "I swapped out
+            # the battle royale" would be about a list they've never seen
+            + " The player never saw the answer you're fixing, so write it as your first"
+            " answer to their request: don't mention this check, a previous list, or which"
+            " games you kept, swapped or replaced.",
         )
         return {
             "messages": [feedback],
@@ -554,6 +566,7 @@ def good_mentions(
     for mention in recommendations.mentions:
         line = verified.get(mention.game_id, "")
         hours = game_hours(line)
+        named = any(mention.game_id == family["id"] for family in families)
         too_much_series = not recommendations.asked_for_series and any(
             mention.game_id in family["series"]
             and len(taken & family["series"]) >= MAX_SERIES_PICKS
@@ -569,6 +582,7 @@ def good_mentions(
             or (hours and not fits_length(hours, lengths))
             or (hours and max_hours and hours > max_hours)
             or too_much_series
+            or named
         ):
             continue
         kept.append(mention)

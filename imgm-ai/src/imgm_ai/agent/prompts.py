@@ -75,6 +75,8 @@ Never do more than 2 rounds of search_games.
 - "wants to" is what they will spend their hours doing: every pick's core gameplay must be
   one of those activities (a cozy game they'd only watch a story in is wrong for "build").
 - Never recommend a game the player already reviewed. They have played it.
+- Never recommend a game the player named ("games like Valorant" means they already play
+  Valorant): they asked for games LIKE it.
 - Only games on the player's platforms (a PS4 game counts for PS5, an Xbox One game for Xbox Series X|S).
 - Skip little-known games (under 10 IGDB ratings, unless hyped) and small spin-off, demo or
   fan-made versions of a game they named (e.g. "Celeste Classic" for a Celeste fan).
@@ -94,6 +96,9 @@ After an answer, players often react to your picks: "I already played the first 
   replacements with search_games). If the Best Pick goes, promote the strongest remaining
   or new game to Best Pick. Say in your intro which games you kept and which you swapped.
 - A game they've played or don't want never comes back, in this answer or a later one.
+- An "[Automatic check]" message is not from the player: it's a fix to a draft they never
+  saw. Answer it as if it were your first answer to their request, never "I kept…" or
+  "I swapped…" about that draft.
 - Rebuild the whole list only when they ask for something different (a new mood, genre,
   length or platform).
 </follow_ups>
