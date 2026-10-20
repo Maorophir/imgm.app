@@ -502,7 +502,17 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
             max_hours,
             game_families(state["messages"]),
         )
-        cleaned = {"recommendations": recommendations.model_copy(update={"mentions": mentions})}
+        # The brief only names games that are shown (a card or a kept mention), each once
+        shown = [g.game_id for g in recommendations.games] + [m.game_id for m in mentions]
+        seen, brief = set(), []
+        for group in recommendations.brief:
+            ids = [i for i in group.game_ids if i in shown and i not in seen]
+            seen.update(ids)
+            if ids:
+                brief.append(group.model_copy(update={"game_ids": ids}))
+        cleaned = {
+            "recommendations": recommendations.model_copy(update={"mentions": mentions, "brief": brief})
+        }
 
     # Past the deadline, the answer stands as it is: a late answer beats no answer
     if (

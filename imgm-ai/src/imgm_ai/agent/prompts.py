@@ -182,6 +182,10 @@ Rules:
 - asked_for_series: decide it from the player's requests below, not from the answer.
 - mentions: the answer's honorable mentions, in its order, with the guide's label and words.
   Copy each id from the verified list. Leave it empty if the answer has none.
+- brief: group the 5 games and the mentions into 2-3 groups by what a player would want
+  from them (the same studio's feel, other studios with the same challenge, an easier
+  way in, more exploring…), using the answer's own reasons. Short headings in the player's
+  terms, no game names in them. Every game in exactly one group.
 - fit: grade every game severely against the player's requests (see the field's description).
 - played: only from the player's LATEST request (the last line of player_requests): the games
   they say they already played, finished or don't want. Positions ("the first two", "#3",

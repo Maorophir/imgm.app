@@ -50,6 +50,20 @@ class Mention(BaseModel):
     why: str = Field(description="The guide's one sentence on why, in its own words.")
 
 
+class BriefGroup(BaseModel):
+    """One line of the chat's short brief: a kind of player, and the games for them."""
+
+    heading: str = Field(
+        description=(
+            "2-6 words naming what this group offers, from the player's side "
+            "(e.g. 'The closest feel (FromSoftware)', 'Other studios', 'If you loved exploring')."
+        )
+    )
+    game_ids: list[int] = Field(
+        description="The ids of this group's games, copied from the cards and mentions."
+    )
+
+
 class PlayedGame(BaseModel):
     """A game the player said they already played (or don't want)."""
 
@@ -66,6 +80,15 @@ class Recommendations(BaseModel):
     mentions: list[Mention] = Field(
         default_factory=list,
         description="The answer's honorable mentions, in its order. Empty if it has none.",
+    )
+    # The chat's short brief (like "If you want the closest feel: …"): the cards and the
+    # mentions grouped by what a player wants. The check drops ids that aren't shown
+    brief: list[BriefGroup] = Field(
+        default_factory=list,
+        description=(
+            "2-3 groups that sort ALL the recommended games and mentions by what a player "
+            "would want from them, each game in exactly one group, Best Pick in the first."
+        ),
     )
     # "I already played the first two": remembered like "Not for me" (the format node
     # adds them to `rejected`), so they're replaced now and never suggested again

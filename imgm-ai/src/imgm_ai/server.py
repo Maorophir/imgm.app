@@ -17,7 +17,7 @@ POST /guide/stream answers with Server-Sent Events (SSE), in this order:
     step     {id, state, label, detail}   a timeline entry: "running", then "done"
     games    {source, query, games}       games the agent is considering (side panel)
     token    {message_id, text}           the answer streaming in, word by word
-    cards    {intro, games, mentions, follow_up}    the final 5 picks (+ honorable mentions), ready to show
+    cards    {intro, games, mentions, brief, follow_up}    the final 5 picks (+ honorable mentions and the chat's brief), ready to show
     done     {problems}                   the run finished
     error    {message, code?}             something broke (code "chat_full": start a new chat)
 """
@@ -424,6 +424,7 @@ def guide_events(request: GuideRequest, user_id: str | None):
                     "intro": recommendations.intro,
                     "games": cards,
                     "mentions": mentions,
+                    "brief": [group.model_dump() for group in recommendations.brief],
                     "follow_up": recommendations.follow_up,
                 },
             )

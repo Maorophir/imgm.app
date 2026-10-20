@@ -59,7 +59,8 @@ const GuidePanel = ({ turn, onSort, disabled }) => {
             <ListChecks className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Sort your picks
           </button>
         )}
-        <HonorableMentions mentions={turn.cards.mentions} />
+        {/* With a brief in the chat, the mentions are named there; older answers list them here */}
+        {!turn.cards.brief?.length && <HonorableMentions mentions={turn.cards.mentions} />}
       </div>
     );
   }
