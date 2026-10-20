@@ -66,19 +66,19 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
   const meta = [pick.year, pick.hours && `~${pick.hours}h`].filter(Boolean).join(' · ');
 
   return (
-    <div className="flex flex-col gap-2 min-w-0">
-      <div className="@container">
+    <div className="flex flex-col gap-2 min-w-0 lg:grid lg:row-span-3 lg:grid-rows-subgrid">
+      <div className="@container lg:h-full">
         <article
           aria-label={`Pick ${rank}: ${pick.title}`}
-          className={`relative rounded-[2.4cqi] p-[2cqi] bg-slate-900 inset-ring inset-ring-white/7 transition-opacity duration-160 ${choice === 'no' ? 'opacity-60' : ''}`}
+          className={`relative h-full flex flex-col rounded-[2.4cqi] p-[2cqi] bg-slate-900 inset-ring inset-ring-white/7 transition-opacity duration-160 ${choice === 'no' ? 'opacity-60' : ''}`}
           style={{ '--ink': tier.color, '--deep': tier.deep }}
         >
           {/* The frame: the rank's ink (gilt for the Best Pick) around the face */}
           <div
-            className={`rounded-[1.8cqi] ${legendary ? 'p-[1.3cqi]' : 'p-[max(1px,.6cqi)] bg-(--ink)'}`}
+            className={`flex-1 flex flex-col rounded-[1.8cqi] ${legendary ? 'p-[1.3cqi]' : 'p-[max(1px,.6cqi)] bg-(--ink)'}`}
             style={legendary ? GILT : undefined}
           >
-            <div className="flex flex-col rounded-[1.4cqi] bg-slate-900 pt-[3cqi] px-[3.4cqi] pb-[2.6cqi]">
+            <div className="flex-1 flex flex-col rounded-[1.4cqi] bg-slate-900 pt-[3cqi] px-[3.4cqi] pb-[2.6cqi]">
               {/* Title and the IMGM score */}
               <div className="flex items-start justify-between gap-[3cqi]">
                 <h3 className="min-w-0 mt-[.6cqi] font-display text-[length:9.5cqi] leading-[.9] tracking-[.01em] uppercase text-balance break-words line-clamp-3">
@@ -141,7 +141,7 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
               </div>
 
               {/* Why Play Next picked it (plain text: italics were hard to read here) */}
-              <div className="mt-[2.4cqi] text-[length:max(12px,3.8cqi)] leading-snug text-slate-200">
+              <div className="flex-1 mt-[2.4cqi] text-[length:max(12px,3.8cqi)] leading-snug text-slate-200">
                 <p className={open ? '' : 'line-clamp-4'}>{pick.why}</p>
                 {(pick.why?.length ?? 0) > 120 && (
                   <button
@@ -197,7 +197,7 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
           </Choice>
         </div>
       ) : (
-        !out && <BacklogButton gameId={pick.game_id} source="play_next" className="self-start" />
+        <div>{!out && <BacklogButton gameId={pick.game_id} source="play_next" />}</div>
       )}
     </div>
   );
@@ -289,7 +289,8 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
           </header>
 
           {/* Desktop: all five side by side */}
-          <div className="hidden lg:grid grid-cols-5 gap-4 px-8 pb-6">{picks.map(card)}</div>
+          {/* Three shared rows (cards, choices, extras): every card is as tall as the tallest */}
+          <div className="hidden lg:grid grid-cols-5 grid-rows-[auto_auto_auto] gap-x-4 gap-y-2 px-8 pb-6">{picks.map(card)}</div>
 
           {/* Phones and tablets: one card at a time */}
           <div className="lg:hidden px-5 pb-4">
