@@ -1,6 +1,6 @@
 # IMGM (imgm.app): notes for Claude
 
-IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot-style rarity, and **Play Next** is an AI agent that picks a player's next 5 games. It's a public beta, built by one developer (Maorophir). The visual design is "Noir", contributed by roiegold.
+IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot-style rarity, and **Play Next** is an AI agent that picks a player's next 5 games. The site is a public beta, built by one developer (Maorophir). **Play Next is open to every player** (Render `PLAY_NEXT=on`), no longer a closed beta. The visual design is "Noir", contributed by roiegold.
 
 ## Architecture
 | Part | Stack | Production |
@@ -64,6 +64,7 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
   - Lime (`bg-brand`) marks one primary action per page only.
   - Square-ish corners, hairline borders, no glow.
   - Rarity colours come from `--color-rarity-*` and `getRarity()`.
+  - Play Next picks: the frame is the game's IMGM score rarity (`scoreFrame.js`); the rank is a flat corner tab (`RankTab.jsx`: gold/silver/bronze, then plain). Never colour a pick by its rank.
   - Buttons come from `lib/ui.js`.
   - Text is ivory/white, not italic in long passages.
 - **Code style:** match the surrounding comment density. Comments say *why*, in plain English.
@@ -75,6 +76,15 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
   - Write copyable code with a short "why", and apply it only when asked.
   - Review what they paste; indentation slips have happened.
 - **Never paste secrets.** `.env` files are per machine and never committed.
+
+## Releasing
+1. Merge `development` into `main` and push (only when the user says so). That deploys Vercel and Render.
+2. If `imgm-ai` changed, redeploy it on Cloud Run:
+   - project `gen-lang-client-0029420490` ("Premium IMGM"), region `europe-west3`, service `imgm-ai`;
+   - deploy a clean copy of the committed code: `git archive main imgm-ai | tar -x -C <scratch dir>`, then `gcloud run deploy imgm-ai --source <scratch dir>/imgm-ai --project … --region europe-west3`;
+   - `--source` keeps the service's env values and secrets. New settings need `--set-env-vars` / `--set-secrets`;
+   - the gcloud CLI is `~/google-cloud-sdk/bin/gcloud` on the desktop. It needs `gcloud auth login` (in the user's terminal); the auto-mode classifier blocks Claude's deploy, so the user runs it.
+3. Smoke test on imgm.app with a `delivered+<tag>@resend.dev` account, deleted afterwards with `DELETE /api/users/me` (password + reason). Check: a real answer, the shelves and spotlight, Sort your picks → Replace, no page errors.
 
 ## Decisions (and why)
 - **Vertex in production, not the free Gemini key:** 20 free calls a day isn't enough, because one answer makes 6–13 calls.

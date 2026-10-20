@@ -1,83 +1,28 @@
-# Handoff (2026-10-20)
+# Handoff (2026-10-20, after the release)
 
-## Goal
-Release the Play Next upgrade to production. It's finished and tested on `development`, and not released yet.
+## Where things are
+- **Everything is released.** `main` = `development` content at **3f7a4b1** (Vercel + Render), and Cloud Run `imgm-ai` is on revision **imgm-ai-00008** (100% of traffic).
+- **Play Next is open to every player** (Render `PLAY_NEXT=on`; `/api/guide/access` says `enabled: true` to logged-out visitors). It is no longer a closed beta. The site as a whole is still a public beta.
+- The production smoke test passed (2026-10-20): a real answer in 40s with Split Fiction, shelves + spotlight, the deal, Sort your picks → Replace in 20s, no "0 reviews", no page errors. The test account was deleted.
 
-## Repo state
-- Branch `development` at **2d818bc**: clean working tree, fully pushed to GitHub (`imgm.app/development`).
-- `main` (production) is at **522648c**. `development` is **10 commits ahead**: the Play Next work below.
-- The local AI service may still be running on port 8000, on Gemini. `imgm-ai/.env` has `LLM_PROVIDER=gemini` and Vertex is signed in on this machine.
-
-## Done (on development, tested)
-- [x] **Server:** `GET /api/games/:id/family` returns a game's series, its studio's games that share a genre and a game mode, and IGDB's similar games. Main games only, released, 10+ IGDB ratings, cached for 6h.
-- [x] **Agent:** the `get_game_family` tool. Family games count as already verified.
-- [x] **Agent check rules:**
-  - at most 1 game from the named game's series;
-  - at most 3 from its series + studio together;
-  - never the game the player named;
-  - prefer the newest family game (prompt only).
-- [x] **Honorable mentions** (`Mention`, `good_mentions()`): broken ones are dropped quietly, at most 4.
-- [x] **Chat brief, option A** (`BriefGroup`, `ChatBrief.jsx`): picks + mentions grouped under short headings, then "If you only play one: …".
-- [x] **Sort your picks** (`SortYourPicks.jsx`, `sortMessage.js`):
-  - Noir cards framed by rank, with the IMGM score and the Hall of Fame rank;
-  - Keep / Played it (did you like it?) / Not for me, plus Backlog;
-  - Done sends ONE message;
-  - desktop shows 5 equal-height cards, phones show one card at a time.
-  - The old per-card Played it / Not for me buttons and `notForMe` were removed.
-- [x] **Per-job model timeouts:** format 25s, screen 15s (it was 60s for everything).
-- [x] **Check-fix drafts read as the first answer** (no "I kept / I swapped").
-- [x] **Tests:**
-  - browser end to end on Gemma: ~100s per answer;
-  - browser end to end on Gemini: 32s and 18s;
-  - a reopened chat keeps its brief;
-  - no page errors.
-
-## Left
-- [ ] **The user's go-ahead** to release (they were testing on development).
-- [ ] **Merge `development` into `main` and push.** That deploys Vercel (site) and Render (server). No new migrations in this batch.
-- [ ] **Redeploy `imgm-ai` on Cloud Run** with `gcloud run deploy`, from a clean `git archive` of the committed code (the established method).
-  - The exact service, region and flags aren't recorded in the repo.
-  - The CLI needs `gcloud auth login` first: only Application Default Credentials are set up here.
-  - Then check the flags with `gcloud run services describe imgm-ai`.
-  - Without this redeploy, production keeps the old agent: no family tool, brief, mentions or new timeouts. The site still works; the brief just doesn't appear.
-- [ ] **Smoke test on imgm.app:**
-  - "a game like it takes two" should include Split Fiction;
-  - Sort your picks → Replace;
-  - the brief shows.
-- [ ] Optional, ask first: delete the merged GitHub branch `feature/sort-your-picks`.
-- [ ] **Next feature: Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
-  - Earlier test: 36/36 accuracy, ~0.25s vs Gemini's 0.6–1s.
-  - Plan: pin `typesafe-sdk` 0.7.5, keep a Gemini fallback, add `TYPESAFE_API_KEY` as a Cloud Run secret, and add TypeSafe to the Privacy Policy.
-
-## Central files
-- `imgm-ai/src/imgm_ai/agent/`:
-  - `tools.py`: `get_game_family`, `FAMILY_SECTIONS`;
-  - `nodes.py`: `check_answer`, `game_families`, `good_mentions`, `verified_games`;
-  - `prompts.py`;
-  - `schemas.py`: `Mention`, `BriefGroup`, `asked_for_series`.
-- `imgm-ai/src/imgm_ai/models/llm.py`: `get_model(timeout=)`.
-- `imgm-ai/src/imgm_ai/server.py`: the `cards` event now has `mentions` and `brief`.
-- `imgm-ai/src/imgm_ai/data/imgm_api.py`: `get_game_family`.
-- `imgm-server/src/services/igdbService.js` (`getGameFamily`), `controllers/gamesController.js`, `routes/games.js`.
-- `imgm-client/src/components/guide/`: `SortYourPicks.jsx`, `sortMessage.js`, `ChatBrief.jsx`, `HonorableMentions.jsx`, `GuidePanel.jsx`, `GuideTurn.jsx`, `PickCard.jsx`.
-- `imgm-client/src/pages/GameGuide.jsx` and `components/BacklogButton.jsx` (the new `variant="icon"`).
-- `docs/design/sort-your-picks.{html,md}`: the original design. Its preview is in the old pre-Noir look; the built version is Noir.
+## What this release shipped
+- **Agent:** the `get_game_family` tool, series/studio caps, never the named game, honorable mentions, the brief groups, per-job model timeouts, fixed drafts read as first answers, and the right review count on cards looked up from Express (`reviewStats.count`).
+- **Side panel:** Sort your picks above the picks; every pick framed by its IMGM score's rarity (gilt for a 10/10, plain when unrated); its rank as a flat corner tab (1ST gold, 2ND silver, 3RD bronze, then plain).
+- **Sort your picks:** the cards are dealt from a face-down IMGM deck and flip over (a tap skips it; off for reduced motion); titles fit one box so the art lines up; the dialog renders into `<body>` so the header can't cover it on phones.
+- **Chat:** the brief is shelves of small framed covers (picks with rank tabs, mentions tagged), tap for details (why, score, Backlog, Open game); small shelves sit side by side; "If you only play one" is a featured card.
+- **Home teaser:** rank tabs instead of the old Legendary/Epic/Rare rings.
 
 ## Known issues
-- **After Sort**, the model sometimes makes a new game the Best Pick, although the follow-up rule says to keep the kept picks' order. There's no code check for it.
-- **Brief headings** can run past the asked 2–6 words, especially on the small backup models.
-- **Google's free Gemini models** were often overloaded (503/504) or out of daily quota in development. The fallback chain handles it locally now that Vertex and the paid key are set.
-- **Gemma (local)** works end to end, but its picks are weak (a single-player game in a co-op list, invented reasons in intros). Judge pick quality on Gemini.
-- **Old saved chats** have no brief, so the panel shows the mentions row instead (by design).
+- **After Sort**, the model sometimes makes a new game the Best Pick, although the follow-up rule says to keep the kept picks' order. No code check for it yet.
+- **Which family game the model picks varies:** for It Takes Two the tool returns Split Fiction and A Way Out, and some answers pick only A Way Out.
+- **Locally**, the free Gemini key often times out or runs out of quota, so answers can take 70–150s before Vertex takes over. Production has no free key (~20–40s).
+- **Old saved chats** keep a wrong "0 reviews" in their data; the badge now hides a 0 count.
 
-## Constraints
-- Release only when the user says so: feature → development → main.
-- `imgm-ai` is the user's code. Don't edit it unprompted.
-- No AI co-author lines. No emoji in the UI. Noir look.
-- Test accounts are `@example.test`, deleted by exact email.
+## Next
+- **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
+  - Earlier test: 36/36 accuracy, ~0.25s vs Gemini's 0.6–1s.
+  - Plan: pin `typesafe-sdk` 0.7.5, keep a Gemini fallback, add `TYPESAFE_API_KEY` as a Cloud Run secret (`--set-secrets`), and add TypeSafe to the Privacy Policy.
+- Optional, ask first: delete the merged GitHub branch `feature/sort-your-picks`, and the merged local branch `feature/play-next-polish` (never pushed).
 
-## Exact next step
-Ask the user whether `development` is ready to release. If yes:
-1. `git switch main && git pull --ff-only imgm.app main && git merge --no-ff development -m "Release: …(from development)" && git push imgm.app main`
-2. Redeploy `imgm-ai` on Cloud Run as described above.
-3. Run the smoke test on imgm.app.
+## How to release (see .claude/CLAUDE.md → Releasing)
+`development` → `main` push for the site and server; Cloud Run redeploy from a `git archive` of `main` for the AI service (project `gen-lang-client-0029420490`, `europe-west3`); then the smoke test on imgm.app.
