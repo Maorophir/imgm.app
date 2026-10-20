@@ -1,7 +1,7 @@
 /**
  * SortYourPicks — one screen to answer all 5 picks at once, instead of a search per
  * card. Each pick is a collectible card framed in its IMGM score's rarity (the gilt for
- * a 10/10, plain for a game with no IMGM score), with a gold, silver or bronze medal
+ * a 10/10, plain for a game with no IMGM score), with a gold, silver or bronze tab
  * for its rank, the score as the big number, and its Hall of Fame rank in the footer
  * when it has one. The cards are dealt from a face-down deck as the screen opens (a tap
  * skips it).
@@ -24,7 +24,7 @@ import { getRarity } from '../reviewQuest/questOptions';
 import { PRIMARY_BUTTON } from '../../lib/ui';
 import BacklogButton from '../BacklogButton';
 import RarityMark from '../RarityMark';
-import RankMedal from './RankMedal';
+import RankTab from './RankTab';
 import { pickName } from './pickName';
 import { sortMessage } from './sortMessage';
 
@@ -178,8 +178,8 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike, deal }
                     <RarityMark tier={scoreRarity ? tier.key : 'junk'} thin className="w-[24cqi] h-[24cqi] text-(--ink)" />
                   </span>
                 )}
-                {/* The rank's medal, pinned to the art's corner */}
-                <RankMedal rank={rank} className="absolute top-[2cqi] left-[2cqi] w-[13cqi] h-[13cqi] min-w-7 min-h-7 text-[length:max(14px,7cqi)] shadow-[0_2px_8px_rgba(0,0,0,.6),inset_0_0_0_2px_rgba(0,0,0,.22)]" />
+                {/* The rank's tab, in the art's corner */}
+                <RankTab rank={rank} corner="tl" className="px-[2.6cqi] pt-[1.8cqi] pb-[1.4cqi] text-[length:max(13px,6cqi)]" />
                 <span aria-hidden="true" className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_0_max(1px,.25cqi)_color-mix(in_srgb,var(--ink)_42%,transparent)]" />
                 {choice === 'played' && (
                   <Stamp sub={liked === true ? 'Loved it' : liked === false ? "Didn't enjoy it" : null}>Played</Stamp>

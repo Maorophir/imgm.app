@@ -1,7 +1,7 @@
 /**
  * PlayNextTeaser — under the hero's buttons, what Play Next is, at a glance: a player's
- * request in their own words and the 5 games it would pick, each with its rank medal
- * like Play Next's own cards (gold, silver, bronze, then a plain disc). The samples have
+ * request in their own words and the 5 games it would pick, each with its rank tab
+ * like Play Next's own cards (gold, silver, bronze, then plain). The samples have
  * no IMGM scores, so the covers get no score frame. It rotates through a few very
  * different requests (lib/homeShowcase.js: big story games, cozy, co-op), so it's clear
  * Play Next handles any mood. The whole panel opens Play Next.
@@ -25,7 +25,7 @@ import { useSession } from '../../lib/authClient';
 import { wakeGuide } from '../../lib/api';
 import { HOME_SHOWCASE } from '../../lib/homeShowcase';
 import { igdbImage } from '../../lib/igdbImage';
-import RankMedal from '../guide/RankMedal';
+import RankTab from '../guide/RankTab';
 
 const SAMPLES = HOME_SHOWCASE.playNext;
 const ROTATE_EVERY = 4500; // ms per sample: long enough to read the request and see the covers
@@ -94,7 +94,7 @@ const PlayNextTeaser = () => {
                   className="w-10 aspect-[3/4] object-cover rounded-xs ring-2 ring-slate-950"
                 />
                 {/* Bottom right: the next cover tucks under this one's left side, never its right */}
-                <RankMedal rank={i + 1} className="absolute -bottom-1.5 -right-1 w-4.5 h-4.5 text-[10px] ring-2 ring-slate-950" />
+                <RankTab rank={i + 1} corner="br" className="px-1 pt-[3px] pb-[2px] text-[9px]" />
               </li>
             ))}
           </ul>

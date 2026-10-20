@@ -236,11 +236,11 @@ body {
      Use as background-image: var(--gradient-gilt) (or bg-(image:--gradient-gilt)). */
   --gradient-gilt: linear-gradient(100deg, #6e4f10 0%, #c8963a 16%, #f3dc9a 32%, #d9a94e 48%, #8a6418 64%, #e6c377 82%, #7a5812 100%);
 
-  /* Play Next's rank medals (components/guide/RankMedal.jsx): gold is the gilt; silver
-     and bronze are cut the same way, so the three read as one set */
-  --gradient-medal-gold: var(--gradient-gilt);
-  --gradient-medal-silver: linear-gradient(100deg, #5f636a 0%, #a9aeb6 16%, #f1f2f4 32%, #c3c7cd 48%, #6f737a 64%, #dfe2e6 82%, #5f636a 100%);
-  --gradient-medal-bronze: linear-gradient(100deg, #5a3317 0%, #9c6232 16%, #e8b384 32%, #b87a46 48%, #6e4020 64%, #d19566 82%, #5a3317 100%);
+  /* Play Next's rank tabs (components/guide/RankTab.jsx): flat metal inks, no gradient,
+     with dark text on them */
+  --color-medal-gold: #dcb35c;
+  --color-medal-silver: #c6cad0;
+  --color-medal-bronze: #c98d5c;
 }
 
 /*

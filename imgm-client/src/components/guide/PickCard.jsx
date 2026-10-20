@@ -1,6 +1,6 @@
 /**
  * PickCard — one recommended game. The Best Pick gets the big card; the other four are
- * compact rows. Each one wears a gold, silver or bronze medal for its rank (RankMedal),
+ * compact rows. Each one wears a gold, silver or bronze tab for its rank (RankTab),
  * and is framed in its IMGM score's rarity (Epic purple, Rare blue, the gilt for a
  * 10/10), so a game looks the same here as in Sort your picks; a game with no IMGM
  * score gets a plain hairline. Every card links to the game's IMGM page.
@@ -15,8 +15,7 @@ import { ChevronDown, Star } from 'lucide-react';
 import { getRarity } from '../reviewQuest/questOptions';
 import BacklogButton from '../BacklogButton';
 import RarityMark from '../RarityMark';
-import RankMedal from './RankMedal';
-import { pickName } from './pickName';
+import RankTab from './RankTab';
 import RichText from './RichText';
 import { scoreFrame } from './scoreFrame';
 
@@ -117,8 +116,7 @@ const PickCard = ({ pick, rank }) => {
         <Cover src={pick.cover} title={pick.title} className="w-28 h-40 rounded-sm shrink-0" />
         <div className="min-w-0 flex flex-col gap-1.5">
           <span className="inline-flex items-center gap-2 text-sm font-medium text-white">
-            <RankMedal rank={rank} className="w-7 h-7 text-base" />
-            {pickName(rank)}
+            <RankTab rank={rank} words className="px-2 pt-1.5 pb-1 text-sm" />
             <span className="inline-flex items-center gap-1 text-slate-400 font-normal">
               · <Star className="w-3.5 h-3.5" strokeWidth={2} aria-hidden="true" /> Best pick
             </span>
@@ -140,10 +138,7 @@ const PickCard = ({ pick, rank }) => {
     <>
       <Cover src={pick.cover} title={pick.title} className="w-14 h-20 rounded-sm shrink-0" />
       <div className="min-w-0 flex flex-col gap-1">
-        <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-300">
-          <RankMedal rank={rank} className="w-5 h-5 text-xs" />
-          {pickName(rank)}
-        </span>
+        <RankTab rank={rank} words className="self-start px-1.5 pt-1 pb-[3px] text-xs" />
         <h3 className="font-semibold text-white leading-tight">{pick.title}</h3>
         <span className="flex flex-wrap items-center gap-x-2">
           <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />

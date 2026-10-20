@@ -1,13 +1,13 @@
 /**
  * BriefSpotlight — "If you only play one": the Best Pick as a featured card at the end
  * of the brief. Its cover art fills the card's right side under a dark scrim (the only
- * kind of gradient Noir allows over art), with the gold medal, the title, its IMGM
+ * kind of gradient Noir allows over art), with the gold tab, the title, its IMGM
  * score and a line on why. The whole card opens the game; Backlog sits above the link.
  */
 import { Link } from 'react-router-dom';
 import BacklogButton from '../BacklogButton';
 import { ImgmBadge } from './PickCard';
-import RankMedal from './RankMedal';
+import RankTab from './RankTab';
 
 const BriefSpotlight = ({ pick }) => {
   if (!pick) return null;
@@ -26,7 +26,7 @@ const BriefSpotlight = ({ pick }) => {
         )}
         <div className="min-w-0 flex-1 flex flex-col gap-1">
           <p className="inline-flex items-center gap-1.5 text-sm text-slate-300">
-            <RankMedal rank={1} className="w-5 h-5 text-xs" /> If you only play one
+            <RankTab rank={1} className="px-1.5 pt-1 pb-[3px] text-xs" /> If you only play one
           </p>
           <h3 className="font-display text-[26px] sm:text-[30px] uppercase leading-[.9] text-white text-balance">
             <Link to={`/game/${pick.game_id}`} className="after:absolute after:inset-0">

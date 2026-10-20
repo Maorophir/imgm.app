@@ -1,7 +1,7 @@
 /**
  * BriefShelves — the answer's brief in the chat, under its intro. Each brief group is a
  * shelf: its heading, then a row of small cards that mixes the picks (with their rank
- * medal) and the honorable mentions (tagged "Mention"), each framed in its IMGM score's
+ * tab) and the honorable mentions (tagged "Mention"), each framed in its IMGM score's
  * rarity like the pick cards, with the score in the corner. They're dealt in one after
  * another as the answer lands.
  *
@@ -17,7 +17,7 @@ import { getRarity } from '../reviewQuest/questOptions';
 import BacklogButton from '../BacklogButton';
 import BriefSpotlight from './BriefSpotlight';
 import { ImgmBadge } from './PickCard';
-import RankMedal from './RankMedal';
+import RankTab from './RankTab';
 import { briefGroups } from './briefGames';
 import { pickName } from './pickName';
 import { scoreFrame } from './scoreFrame';
@@ -43,24 +43,29 @@ const Tile = ({ game, order, open, onToggle, panelId }) => {
           } ${open ? 'outline-1 outline-white outline-offset-2' : ''}`}
           style={frame?.style}
         >
-          {game.cover ? (
-            <img src={game.cover} alt="" loading="lazy" className="block w-full aspect-[3/4] rounded-xs object-cover bg-slate-800" />
-          ) : (
-            <span className="block w-full aspect-[3/4] rounded-xs bg-slate-800" />
-          )}
-          {pick ? (
-            <RankMedal rank={game.rank} className="absolute top-1.5 left-1.5 w-6 h-6 text-xs shadow-[0_1px_4px_rgba(0,0,0,.6),inset_0_0_0_2px_rgba(0,0,0,.22)]" />
-          ) : (
-            <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded-xs bg-slate-950/90 text-[11px] font-medium text-slate-200">Mention</span>
-          )}
-          {game.rating ? (
-            <span
-              className="absolute bottom-1.5 right-1.5 px-1.5 py-1 rounded-xs bg-slate-950/90 font-display text-sm leading-none tabular-nums"
-              style={{ color: getRarity(game.rating).color }}
-            >
-              {scoreText(game.rating)}
-            </span>
-          ) : null}
+          {/* Inside the frame: the cover, which clips the tabs in its corners */}
+          <span className="relative block overflow-hidden rounded-xs">
+            {game.cover ? (
+              <img src={game.cover} alt="" loading="lazy" className="block w-full aspect-[3/4] object-cover bg-slate-800" />
+            ) : (
+              <span className="block w-full aspect-[3/4] bg-slate-800" />
+            )}
+            {pick ? (
+              <RankTab rank={game.rank} corner="tl" className="px-1.5 pt-1 pb-[3px] text-xs" />
+            ) : (
+              <span className="absolute top-0 left-0 px-1.5 pt-1 pb-[3px] rounded-br-xs bg-slate-950 shadow-[inset_0_0_0_1px_var(--color-slate-600)] font-display uppercase text-xs leading-none tracking-[.05em] text-white">
+                Mention
+              </span>
+            )}
+            {game.rating ? (
+              <span
+                className="absolute bottom-0 right-0 px-1.5 pt-1 pb-[3px] rounded-tl-xs bg-slate-950/90 font-display text-sm leading-none tabular-nums"
+                style={{ color: getRarity(game.rating).color }}
+              >
+                {scoreText(game.rating)}
+              </span>
+            ) : null}
+          </span>
         </span>
         {/* Two lines kept for every title, so the row's covers stay level */}
         <span className={`mt-2 min-h-[2lh] text-sm leading-tight line-clamp-2 transition-colors duration-120 ${open ? 'text-white font-medium' : 'text-slate-200 group-hover:text-white'}`}>
@@ -76,7 +81,7 @@ const Details = ({ game, id }) => (
     <p className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400">
       {game.kind === 'pick' ? (
         <>
-          <RankMedal rank={game.rank} className="w-4.5 h-4.5 text-[11px]" /> {pickName(game.rank)}
+          <RankTab rank={game.rank} words className="px-1.5 pt-1 pb-[3px] text-[11px]" />
         </>
       ) : (
         <>Honorable mention · {game.label}</>
