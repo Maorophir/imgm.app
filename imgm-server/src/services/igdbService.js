@@ -384,3 +384,123 @@ export const getPopularGames = async (limit = 10) => {
   popularCache = { expiresAt: Date.now() + POPULAR_CACHE_TTL, results };
   return results;
 };
+
+// ---------------------------------------------------------------------------
+// A game's family, for Play Next: "games like X" usually starts with X's own family
+// ---------------------------------------------------------------------------
+
+// The family's lists, as IGDB knows them:
+//   series   the game's series (IGDB collections): sequels, prequels, spin-offs
+//   studio   its developer's other games that share a genre AND a game mode with it, so
+//            a studio's unrelated games stay out (FromSoftware's Hello Kitty game for an
+//            Elden Ring fan); each comes with its themes, so the agent can tell a
+//            different feel (Cyberpunk's science fiction vs The Witcher's fantasy)
+//   similar  IGDB's own "similar games"
+// Main games only (no DLC, bundles or collector's editions), out already, and not
+// practically unknown: Play Next's check refuses games with fewer IGDB ratings anyway.
+const FAMILY_GAME_TYPES = [0, 8, 9]; // main game, remake, remaster
+const FAMILY_MIN_RATINGS = 10; // = Play Next's MIN_POPULARITY
+const MAX_SERIES = 10;
+const MAX_STUDIO = 8;
+const MAX_SIMILAR = 10;
+const FAMILY_FIELDS = `fields name, slug, first_release_date, cover.image_id, genres.name, platforms.name,
+  game_modes.name, themes.name, involved_companies.developer, involved_companies.publisher,
+  involved_companies.company.name, total_rating_count, hypes;`;
+const familyCache = new Map(); // id -> { expiresAt, family }
+
+const names = (list) => (list ?? []).map((item) => item.name);
+
+// One family member: what Play Next's search results show, plus game modes and themes
+const familyGame = (raw) => {
+  const game = mapIgdbGame(raw);
+  return {
+    id: game.id,
+    title: game.title,
+    releaseDate: game.releaseDate,
+    coverUrl: game.coverUrl,
+    developer: game.developer,
+    platforms: game.platforms,
+    genres: game.genres,
+    modes: names(raw.game_modes),
+    themes: names(raw.themes),
+    ratingCount: raw.total_rating_count ?? 0,
+    hypes: raw.hypes ?? 0,
+  };
+};
+
+const newestFirst = (a, b) => (b.releaseDate ?? 0) - (a.releaseDate ?? 0);
+// The best-known `max` games (a long series keeps San Andreas, not GTA Advance), newest first
+const bestKnown = (games, max) =>
+  [...games].sort((a, b) => b.ratingCount - a.ratingCount).slice(0, max).sort(newestFirst);
+const shares = (a, b) => a.some((item) => b.includes(item));
+
+/**
+ * A game's family: { game, series, studio, similar } (see above), or null if IGDB
+ * doesn't know the game. Three IGDB requests: the game, its relatives, their lengths.
+ */
+export const getGameFamily = async (id) => {
+  const cached = familyCache.get(id);
+  if (cached && Date.now() < cached.expiresAt) return cached.family;
+
+  const [raw] = await igdbRequest(
+    'games',
+    `fields name, genres.name, game_modes.name, themes.name, collections.games, similar_games,
+      involved_companies.developer, involved_companies.porting, involved_companies.company.name,
+      involved_companies.company.developed; where id = ${Number(id)};`
+  );
+  if (!raw) return null;
+
+  // The studio that made it (not the ones that only ported it)
+  const studios = (raw.involved_companies ?? []).filter((ic) => ic.developer && !ic.porting);
+  const ids = {
+    series: (raw.collections ?? []).flatMap((c) => c.games ?? []),
+    studio: studios.flatMap((ic) => ic.company?.developed ?? []),
+    similar: raw.similar_games ?? [],
+  };
+  const all = [...new Set(Object.values(ids).flat())].filter((other) => other !== raw.id);
+
+  const now = Math.floor(Date.now() / 1000);
+  const relatives = all.length
+    ? await igdbRequest(
+        'games',
+        `${FAMILY_FIELDS} where id = (${all.join(',')}) & version_parent = null
+          & game_type = (${FAMILY_GAME_TYPES.join(',')}) & first_release_date < ${now}
+          & total_rating_count >= ${FAMILY_MIN_RATINGS}; limit 500;`
+      )
+    : [];
+  const times = await getTimesToBeat(relatives.map((game) => game.id)).catch(() => new Map());
+  const byId = new Map(
+    relatives.map((game) => [game.id, { ...familyGame(game), timeToBeat: times.get(game.id) ?? null }])
+  );
+  const pick = (list) => [...new Set(list)].map((other) => byId.get(other)).filter(Boolean);
+
+  const genres = names(raw.genres);
+  const modes = names(raw.game_modes);
+  const series = bestKnown(pick(ids.series), MAX_SERIES);
+  const taken = new Set(series.map((game) => game.id));
+  const studio = bestKnown(
+    pick(ids.studio).filter(
+      (game) => !taken.has(game.id) && shares(game.genres, genres) && shares(game.modes, modes)
+    ),
+    MAX_STUDIO
+  );
+  studio.forEach((game) => taken.add(game.id));
+  // IGDB's order (most similar first), minus the games already listed above
+  const similar = pick(ids.similar).filter((game) => !taken.has(game.id)).slice(0, MAX_SIMILAR);
+
+  const family = {
+    game: {
+      id: raw.id,
+      title: raw.name,
+      developer: studios.map((ic) => ic.company?.name).filter(Boolean).join(', ') || null,
+      genres,
+      modes,
+      themes: names(raw.themes),
+    },
+    series,
+    studio,
+    similar,
+  };
+  familyCache.set(id, { expiresAt: Date.now() + POPULAR_CACHE_TTL, family });
+  return family;
+};
