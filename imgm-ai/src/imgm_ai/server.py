@@ -173,7 +173,7 @@ def game_tile_from_imgm(game_id: int, user_id: str | None = None) -> dict:
         "year": (game.get("releaseDate") or "")[:4] or None,
         "platforms": game.get("platforms", []),
         "rating": rating,
-        "review_count": len(game.get("reviews", [])),
+        "review_count": (game.get("reviewStats") or {}).get("count", 0),
     }
 
 
