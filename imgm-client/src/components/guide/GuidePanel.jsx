@@ -46,6 +46,13 @@ const GuidePanel = ({ turn, onSort, disabled }) => {
         <h2 className="text-sm text-slate-400">
           Your 5 picks
         </h2>
+        {/* One screen to answer all 5 (played it, not for me, keep) instead of one search per card.
+            Above the picks, so it's seen without scrolling past them */}
+        {onSort && (
+          <button type="button" onClick={onSort} disabled={disabled} className={`${GHOST_BUTTON_SM} w-full`}>
+            <ListChecks className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Sort your picks
+          </button>
+        )}
         {picks.map((pick, i) => (
           <PickCard
             key={pick.game_id}
@@ -53,12 +60,6 @@ const GuidePanel = ({ turn, onSort, disabled }) => {
             rank={i + 1}
           />
         ))}
-        {/* One screen to answer all 5 (played it, not for me, keep) instead of one search per card */}
-        {onSort && (
-          <button type="button" onClick={onSort} disabled={disabled} className={`${GHOST_BUTTON_SM} w-full`}>
-            <ListChecks className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Sort your picks
-          </button>
-        )}
         {/* With a brief in the chat, the mentions are named there; older answers list them here */}
         {!turn.cards.brief?.length && <HonorableMentions mentions={turn.cards.mentions} />}
       </div>

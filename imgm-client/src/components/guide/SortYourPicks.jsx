@@ -1,8 +1,10 @@
 /**
  * SortYourPicks — one screen to answer all 5 picks at once, instead of a search per
- * card. Each pick is a collectible card framed by its rank (#1 the Best Pick in gilt,
- * #2 Epic, #3 Rare, #4 and #5 plain), with the game's IMGM score as the big number and
- * its Hall of Fame rank in the footer when it has one.
+ * card. Each pick is a collectible card framed in its IMGM score's rarity (the gilt for
+ * a 10/10, plain for a game with no IMGM score), with a gold, silver or bronze tab
+ * for its rank, the score as the big number, and its Hall of Fame rank in the footer
+ * when it has one. The cards are dealt from a face-down deck as the screen opens (a tap
+ * skips it).
  *
  * On each card: Keep it, Played it (then "Did you like it?") or Not for me, plus Add to
  * Backlog (saved at once). Untouched cards count as kept. Done sends ONE message that
@@ -13,18 +15,27 @@
  * Desktop shows the 5 side by side; phones deal them one at a time (a choice moves on
  * to the next card). Esc or the close button leaves without sending anything.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronLeft, ChevronRight, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
+import { PowerIcon } from '../Logo';
 import { getTopGames } from '../../lib/api';
 import { getRarity } from '../reviewQuest/questOptions';
 import { PRIMARY_BUTTON } from '../../lib/ui';
 import BacklogButton from '../BacklogButton';
 import RarityMark from '../RarityMark';
+import RankTab from './RankTab';
+import { pickName } from './pickName';
 import { sortMessage } from './sortMessage';
 
-// The frame for each rank, like the pick cards: #1 Legendary, #2 Epic, #3 Rare, then plain
-const RANK_TIER = { 1: getRarity(10), 2: getRarity(8), 3: getRarity(6) };
+// A game with no IMGM score gets a plain frame
 const PLAIN = { key: 'plain', color: '#5b564e', deep: '#1c1a17' };
+
+// The deal: how long one card takes, and the gap between two cards (keep in step with
+// .deal-card in index.css)
+const DEAL_MS = 900;
+const DEAL_STEP_MS = 120;
+const TILTS = ['-4deg', '3deg', '-2deg', '4deg', '-3deg'];
 
 // The Legendary frame's gilt (the same one the collectible cards use)
 const GILT = { backgroundImage: 'var(--gradient-gilt)', backgroundSize: '260% 260%', backgroundPosition: '50% 50%' };
@@ -56,21 +67,74 @@ const Choice = ({ active, onClick, children, label }) => (
   </button>
 );
 
-const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
+// A card's title: every card gives it the same box (two lines at full size), so the
+// art below starts at the same height on all five. A title that doesn't fit steps
+// down a size until it does ("Middle-earth: Shadow of Mordor" ends up on 3 smaller lines).
+const TITLE_SIZES = ['9.5cqi', '8.2cqi', '7cqi', '6cqi'];
+const FitTitle = ({ children }) => {
+  const ref = useRef(null);
+  const [step, setStep] = useState(0);
+
+  // Too tall for its box: one size smaller (this runs again after each step)
+  useLayoutEffect(() => {
+    const box = ref.current;
+    if (box && box.scrollHeight > box.clientHeight + 1 && step < TITLE_SIZES.length - 1) setStep(step + 1);
+  }, [step, children]);
+
+  // The card changed width (a resized window): measure again from full size
+  useEffect(() => {
+    const box = ref.current;
+    if (!box) return;
+    let width = box.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (box.clientWidth !== width) {
+        width = box.clientWidth;
+        setStep(0);
+      }
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <h3
+      ref={ref}
+      className="min-w-0 h-[18.5cqi] overflow-hidden mt-[.6cqi] font-display leading-[.9] tracking-[.01em] uppercase text-balance break-words"
+      style={{ fontSize: TITLE_SIZES[step] }}
+    >
+      {children}
+    </h3>
+  );
+};
+
+// The back of a card while it's dealt: the IMGM mark on card stock
+const CardBack = () => (
+  <span className="deal-back grid place-items-center rounded-[2.4cqi] bg-slate-900 inset-ring inset-ring-white/7 p-[2cqi]" aria-hidden="true">
+    <span className="w-full h-full grid place-items-center rounded-[1.8cqi] border border-slate-600 bg-[repeating-linear-gradient(45deg,transparent_0_6px,rgba(255,255,255,.03)_6px_7px)]">
+      <span className="flex flex-col items-center gap-[2cqi]">
+        <PowerIcon className="w-[16cqi] h-[16cqi] text-white" />
+        <span className="font-display text-[length:8cqi] leading-none tracking-[.08em] text-white">IMGM</span>
+      </span>
+    </span>
+  </span>
+);
+
+const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike, deal }) => {
   const [open, setOpen] = useState(false);
-  const tier = RANK_TIER[rank] ?? PLAIN;
-  const legendary = rank === 1;
   const score = pick.rating ? Number(pick.rating) : null;
   const scoreRarity = score ? getRarity(score) : null;
+  const tier = scoreRarity ?? PLAIN;
+  const legendary = tier.key === 'legendary';
   const out = choice === 'played' || choice === 'no';
   const meta = [pick.year, pick.hours && `~${pick.hours}h`].filter(Boolean).join(' · ');
 
   return (
     <div className="flex flex-col gap-2 min-w-0 lg:grid lg:row-span-3 lg:grid-rows-subgrid">
-      <div className="@container lg:h-full">
+      <div className={`@container lg:h-full ${deal ? 'deal-card' : ''}`} style={deal}>
+        {deal && <CardBack />}
         <article
-          aria-label={`Pick ${rank}: ${pick.title}`}
-          className={`relative h-full flex flex-col rounded-[2.4cqi] p-[2cqi] bg-slate-900 inset-ring inset-ring-white/7 transition-opacity duration-160 ${choice === 'no' ? 'opacity-60' : ''}`}
+          aria-label={`${pickName(rank)}: ${pick.title}`}
+          className={`${deal ? 'deal-front' : ''} relative h-full flex flex-col rounded-[2.4cqi] p-[2cqi] bg-slate-900 inset-ring inset-ring-white/7 transition-opacity duration-160 ${choice === 'no' ? 'opacity-60' : ''}`}
           style={{ '--ink': tier.color, '--deep': tier.deep }}
         >
           {/* The frame: the rank's ink (gilt for the Best Pick) around the face */}
@@ -81,9 +145,7 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
             <div className="flex-1 flex flex-col rounded-[1.4cqi] bg-slate-900 pt-[3cqi] px-[3.4cqi] pb-[2.6cqi]">
               {/* Title and the IMGM score */}
               <div className="flex items-start justify-between gap-[3cqi]">
-                <h3 className="min-w-0 mt-[.6cqi] font-display text-[length:9.5cqi] leading-[.9] tracking-[.01em] uppercase text-balance break-words line-clamp-3">
-                  {pick.title}
-                </h3>
+                <FitTitle>{pick.title}</FitTitle>
                 {score ? (
                   <p className="flex items-baseline gap-[.8cqi] shrink-0" title={`IMGM score: ${score.toFixed(1)}`}>
                     <span className="font-display text-[length:16cqi] leading-[.78]" style={{ color: scoreRarity.color }}>
@@ -97,11 +159,10 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
                   </span>
                 )}
               </div>
-              {meta && (
-                <p className={`mt-[2cqi] pb-[1.8cqi] border-b-[length:max(1px,.22cqi)] ${HAIRLINE} text-[length:max(10px,3.4cqi)] tabular-nums text-slate-400`}>
-                  {meta}
-                </p>
-              )}
+              {/* Always there (even empty), so the art lines up across the cards */}
+              <p className={`mt-[2cqi] pb-[1.8cqi] border-b-[length:max(1px,.22cqi)] ${HAIRLINE} text-[length:max(10px,3.4cqi)] leading-snug tabular-nums text-slate-400`}>
+                {meta || '\u00a0'}
+              </p>
 
               {/* The art window, with the stamp once it's sorted out */}
               <div className="relative mt-[2.4cqi] aspect-[16/10] rounded-[.6cqi] overflow-hidden bg-(--deep)">
@@ -114,9 +175,11 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
                   />
                 ) : (
                   <span className="w-full h-full grid place-items-center" aria-hidden="true">
-                    <RarityMark tier={rank <= 3 ? tier.key : 'junk'} thin className="w-[24cqi] h-[24cqi] text-(--ink)" />
+                    <RarityMark tier={scoreRarity ? tier.key : 'junk'} thin className="w-[24cqi] h-[24cqi] text-(--ink)" />
                   </span>
                 )}
+                {/* The rank's tab, in the art's corner */}
+                <RankTab rank={rank} corner="tl" className="px-[2.6cqi] pt-[1.8cqi] pb-[1.4cqi] text-[length:max(13px,6cqi)]" />
                 <span aria-hidden="true" className="absolute inset-0 rounded-[inherit] shadow-[inset_0_0_0_max(1px,.25cqi)_color-mix(in_srgb,var(--ink)_42%,transparent)]" />
                 {choice === 'played' && (
                   <Stamp sub={liked === true ? 'Loved it' : liked === false ? "Didn't enjoy it" : null}>Played</Stamp>
@@ -129,15 +192,14 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
                 )}
               </div>
 
-              {/* The rank's tier, and Best pick / Pick #N */}
+              {/* Its place (1st pick…), and Best pick on the first */}
               <div className="mt-[2.2cqi] flex items-center justify-between gap-[2cqi] text-[length:max(10px,3.4cqi)] leading-none">
-                <span className="inline-flex items-center gap-[1.4cqi] font-semibold text-(--ink)">
-                  {rank <= 3 && <RarityMark tier={tier.key} className="w-[3.8cqi] h-[3.8cqi] min-w-2.5 min-h-2.5" />}
-                  {rank <= 3 ? tier.label : <span className="text-slate-300">Pick #{rank}</span>}
-                </span>
-                <span className="inline-flex items-center gap-[1cqi] text-slate-400">
-                  {legendary ? <><Star className="w-[3.4cqi] h-[3.4cqi] min-w-2.5 min-h-2.5" strokeWidth={2} aria-hidden="true" /> Best pick</> : rank <= 3 && `Pick #${rank}`}
-                </span>
+                <span className="font-semibold text-white">{pickName(rank)}</span>
+                {rank === 1 && (
+                  <span className="inline-flex items-center gap-[1cqi] text-slate-400">
+                    <Star className="w-[3.4cqi] h-[3.4cqi] min-w-2.5 min-h-2.5" strokeWidth={2} aria-hidden="true" /> Best pick
+                  </span>
+                )}
               </div>
 
               {/* Why Play Next picked it (plain text: italics were hard to read here) */}
@@ -174,8 +236,8 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
         </article>
       </div>
 
-      {/* The choices */}
-      <div className="flex gap-1.5" role="group" aria-label={`What about ${pick.title}?`}>
+      {/* The choices (while dealing, they fade in once the card has turned over) */}
+      <div className={`flex gap-1.5 ${deal ? 'deal-after' : ''}`} style={deal} role="group" aria-label={`What about ${pick.title}?`}>
         <Choice active={choice === 'keep'} onClick={() => onChoose('keep')} label={`Keep ${pick.title}`}>
           <Check className="w-3.5 h-3.5" strokeWidth={2} aria-hidden="true" /> Keep it
         </Choice>
@@ -197,7 +259,7 @@ const SortCard = ({ pick, rank, hofRank, choice, liked, onChoose, onLike }) => {
           </Choice>
         </div>
       ) : (
-        <div>{!out && <BacklogButton gameId={pick.game_id} source="play_next" />}</div>
+        <div className={deal ? 'deal-after' : ''} style={deal}>{!out && <BacklogButton gameId={pick.game_id} source="play_next" />}</div>
       )}
     </div>
   );
@@ -208,7 +270,14 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
   const [liked, setLiked] = useState({}); // game id → true | false (for played games)
   const [at, setAt] = useState(0); // phones: the card being shown
   const [hof, setHof] = useState(new Map()); // game id → Hall of Fame rank
+  const [dealing, setDealing] = useState(true); // the cards are being dealt
   const headingRef = useRef(null);
+
+  // The deal ends after the last card turns over (a tap anywhere ends it sooner)
+  useEffect(() => {
+    const timer = setTimeout(() => setDealing(false), DEAL_MS + DEAL_STEP_MS * (picks.length - 1));
+    return () => clearTimeout(timer);
+  }, [picks.length]);
 
   // The Hall of Fame, to print each pick's rank on its card (a nice touch: no rank, no line)
   useEffect(() => {
@@ -248,7 +317,17 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
     next(i);
   };
 
-  const card = (pick, i) => (
+  // While dealing, where each card starts: desktop stacks all 5 on the middle one (the
+  // deck); phones deal their one card from just below
+  const deal = (i, phone) =>
+    dealing && {
+      '--deal-i': phone ? 0 : i,
+      '--deal-x': phone ? '0px' : `calc(${2 - i} * (100% + 1rem))`,
+      '--deal-y': phone ? '48px' : '24px',
+      '--deal-tilt': TILTS[i % TILTS.length],
+    };
+
+  const card = (pick, i, phone = false) => (
     <SortCard
       key={pick.game_id}
       pick={pick}
@@ -258,16 +337,20 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
       liked={liked[pick.game_id]}
       onChoose={(choice) => choose(i, pick, choice)}
       onLike={(value) => like(i, pick, value)}
+      deal={deal(i, phone) || undefined}
     />
   );
 
-  return (
+  // Into <body>: the Play Next page is `isolate`, which would keep the dialog under the
+  // site's sticky header (on phones the header covered its top)
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
       aria-labelledby="sort-picks-title"
       className="fixed inset-0 z-50 overflow-y-auto bg-slate-950/90 backdrop-blur-sm"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+      onPointerDownCapture={() => setDealing(false)}
     >
       <div className="min-h-full flex items-start lg:items-center justify-center p-3 sm:p-6">
         <div className="w-full max-w-[1400px] rounded-sm border border-slate-700 bg-slate-950 shadow-[0_32px_64px_-24px_rgba(0,0,0,.85)]">
@@ -290,7 +373,7 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
 
           {/* Desktop: all five side by side */}
           {/* Three shared rows (cards, choices, extras): every card is as tall as the tallest */}
-          <div className="hidden lg:grid grid-cols-5 grid-rows-[auto_auto_auto] gap-x-4 gap-y-2 px-8 pb-6">{picks.map(card)}</div>
+          <div className="hidden lg:grid grid-cols-5 grid-rows-[auto_auto_auto] gap-x-4 gap-y-2 px-8 pb-6">{picks.map((pick, i) => card(pick, i))}</div>
 
           {/* Phones and tablets: one card at a time */}
           <div className="lg:hidden px-5 pb-4">
@@ -333,7 +416,7 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
                 <ChevronRight className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />
               </button>
             </nav>
-            <div className="mx-auto w-[min(340px,100%)]">{card(picks[at], at)}</div>
+            <div className="mx-auto w-[min(340px,100%)]">{card(picks[at], at, true)}</div>
           </div>
 
           <footer className="sticky bottom-0 flex flex-wrap items-center justify-between gap-3 px-5 sm:px-8 py-4 border-t border-slate-700 bg-slate-950">
@@ -352,7 +435,8 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
           </footer>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
