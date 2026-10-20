@@ -92,6 +92,26 @@ export const searchGames = async (req, res) => {
   }
 };
 
+// GET /api/games/:id/family — the game's series, its studio's games like it, and
+// IGDB's similar games (for Play Next; see igdbService.getGameFamily). Each game comes
+// with what a search result has (platforms, length, IMGM rating), plus modes and themes.
+export const getGameFamily = async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id <= 0) return res.status(400).json({ error: 'Invalid game id' });
+
+  try {
+    const family = await igdb.getGameFamily(id);
+    if (!family) return res.status(404).json({ error: 'Game not found' });
+    const [series, studio, similar] = await Promise.all(
+      [family.series, family.studio, family.similar].map(withImgmRatings)
+    );
+    res.json({ ...family, series, studio, similar });
+  } catch (error) {
+    console.error(`Error fetching the family of game ${id}:`, error);
+    res.status(502).json({ error: 'Failed to fetch the game family' });
+  }
+};
+
 const FEATURED_COUNT = 40;
 
 // The list we last saved to the DB. igdb.getPopularGames() returns the same cached
