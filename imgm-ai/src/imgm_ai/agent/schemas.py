@@ -37,6 +37,19 @@ class GameCard(BaseModel):
     )
 
 
+class Mention(BaseModel):
+    """An honorable mention: a good game that didn't make the 5, shown small under the cards."""
+
+    game_id: int = Field(
+        description="The game's id, copied exactly from the verified list ('[id N]')."
+    )
+    title: str = Field(description="The game's title as the verified list shows it.")
+    label: str = Field(
+        description="The guide's short label for it, 2-5 words (e.g. 'Same challenge, other studio')."
+    )
+    why: str = Field(description="The guide's one sentence on why, in its own words.")
+
+
 class PlayedGame(BaseModel):
     """A game the player said they already played (or don't want)."""
 
@@ -49,6 +62,11 @@ class Recommendations(BaseModel):
 
     intro: str = Field(description="The guide's one-sentence intro.")
     games: list[GameCard] = Field(description="Exactly 5 games, Best Pick first.")
+    # Shown small under the cards; the check drops (never sends back) any that break a rule
+    mentions: list[Mention] = Field(
+        default_factory=list,
+        description="The answer's honorable mentions, in its order. Empty if it has none.",
+    )
     # "I already played the first two": remembered like "Not for me" (the format node
     # adds them to `rejected`), so they're replaced now and never suggested again
     played: list[PlayedGame] = Field(
@@ -77,6 +95,16 @@ class Recommendations(BaseModel):
             "Only if the player asked for short or shorter games (e.g. 'shorter ones', "
             "'something quick', 'I can finish this weekend'): the most hours a game may take "
             "to beat. Use their number if they gave one, otherwise 10. Otherwise null."
+        ),
+    )
+    # Read from the player's requests: the check node lets more of one series or studio
+    # through when that's what the player asked for
+    asked_for_series: bool = Field(
+        default=False,
+        description=(
+            "True only if the player asked for a game's series or its studio's games "
+            "(e.g. 'what else is in the Witcher series?', 'more FromSoftware games'). "
+            "Otherwise false."
         ),
     )
 

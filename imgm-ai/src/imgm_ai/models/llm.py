@@ -267,12 +267,21 @@ def gemini_access(tier: str, key: str | None) -> dict:
     return {"google_api_key": key}
 
 
-def get_model(prepare=None):
+PAID_TIMEOUT = 60  # seconds a paid (Vertex / paid key) model gets, unless the job sets less
+
+
+def get_model(prepare=None, timeout: float | None = None):
     """The model, ready for one job: on Gemini, the whole free → paid fallback chain.
 
     `prepare` adapts every model in the chain the same way, e.g.
     `lambda m: m.bind_tools(TOOLS)`. It has to happen to each model BEFORE they are
     chained: a fallback chain has no bind_tools / with_structured_output of its own.
+
+    `timeout`: the most seconds one model may take for this job before the next one
+    gets it. Jobs whose whole answer arrives at once (no streaming) and is short, like
+    the format node's cards, set less than PAID_TIMEOUT: a model Google holds without
+    answering then costs that long, not a minute (a format call once hung for 60s on
+    Vertex; its backup finished in 4.5s).
     """
     prepare = prepare or (lambda m: m)
     if not uses_gemini():
@@ -290,7 +299,10 @@ def get_model(prepare=None):
                     thinking_level="low",
                     # Free: a shorter wait and no retry, since another model is next.
                     # Paid: the last line of defence, so more patience.
-                    timeout=FREE_TIMEOUT if tier == "free" else 60,
+                    timeout=min(
+                        FREE_TIMEOUT if tier == "free" else PAID_TIMEOUT,
+                        timeout or PAID_TIMEOUT,
+                    ),
                     max_retries=0 if tier == "free" else 1,
                 )
             )

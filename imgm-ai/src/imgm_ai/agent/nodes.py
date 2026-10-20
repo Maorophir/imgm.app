@@ -23,7 +23,7 @@ from imgm_ai.agent.state import (
     fits_length,
     is_player_question,
 )
-from imgm_ai.agent.tools import TOOLS
+from imgm_ai.agent.tools import FAMILY_SECTIONS, TOOLS
 from imgm_ai.data.db import load_player_game_ids
 from imgm_ai.models.llm import get_model
 
@@ -61,6 +61,9 @@ answer now with the games you already verified with search_games. If fewer than
 5 of them fit, recommend the ones that do and say so honestly.
 </budget>"""
 MIN_POPULARITY = 10  # IGDB ratings + hype below this = practically unknown
+MAX_SERIES_PICKS = 1  # games from a named game's series (its sequels, prequels, spin-offs)
+MAX_FAMILY_PICKS = 3  # from its series and studio together: the other picks are discoveries
+MAX_MENTIONS = 4  # honorable mentions under the cards
 
 # Which game platforms each Tune it choice can play (backward compatibility)
 PLAYS_ON = {
@@ -70,8 +73,9 @@ PLAYS_ON = {
     "Nintendo Switch": {"Nintendo Switch"},
 }
 
-# The format node needs no tools: it only reshapes the answer into Recommendations
-formatter = get_model(lambda m: m.with_structured_output(Recommendations))
+# The format node needs no tools: it only reshapes the answer into Recommendations.
+# Normally ~5s, all at once (not streamed): past 25s the model is stuck, so the next takes over
+formatter = get_model(lambda m: m.with_structured_output(Recommendations), timeout=25)
 
 # The screen node: one small call that decides what a message needs.
 # include_raw: when the reply isn't the expected form (a small model may write just
@@ -82,7 +86,8 @@ formatter = get_model(lambda m: m.with_structured_output(Recommendations))
 screener = get_model(
     lambda m: m.with_structured_output(
         Screening, include_raw=True, **({"method": "function_calling"} if isinstance(m, ChatOllama) else {})
-    )
+    ),
+    timeout=15,  # a one-word decision, normally ~1s
 )
 FIND, CHAT_ROUTE, OFF_TOPIC = "find", "chat", "off_topic"
 DEFAULT_DECLINE = (
@@ -221,18 +226,48 @@ def model_context(messages: list) -> list:
     return context + messages[starts[-1] :]  # the current turn, untouched
 
 
-def verified_games(messages: list) -> dict[int, str]:
-    """Every game search_games returned in this conversation: {id: result line}.
+# The tools whose result lines ("- [id 478] The Witcher 2 (2011) · …") verify a game
+VERIFYING_TOOLS = {"search_games", "get_game_family"}
 
-    A game counts as verified only if it appeared in a search_games result.
+
+def verified_games(messages: list) -> dict[int, str]:
+    """Every game search_games or get_game_family returned in this conversation: {id: result line}.
+
+    A game counts as verified only if it appeared in one of their results (same line format).
     """
     games = {}
     for message in messages:
-        if isinstance(message, ToolMessage) and message.name == "search_games":
+        if isinstance(message, ToolMessage) and message.name in VERIFYING_TOOLS:
             for line in message.text.splitlines():
                 if match := re.match(r"- \[id (\d+)\]", line):
                     games[int(match.group(1))] = line
     return games
+
+
+def game_families(messages: list) -> list[dict]:
+    """The families get_game_family listed in this conversation, one per game it was asked
+    about: [{"of": "The Witcher 3: Wild Hunt", "series": {80, 478, …}, "studio": {1877}}].
+
+    Read from the tool's own headings (FAMILY_SECTIONS), so a game counts as "series" only
+    if it was listed under that game's series.
+    """
+    sections = {heading: key for key, heading in FAMILY_SECTIONS.items()}
+    families = []
+    for message in messages:
+        if not (isinstance(message, ToolMessage) and message.name == "get_game_family"):
+            continue
+        lines = message.text.splitlines()
+        title = re.match(r"The family of (.+?) \(", lines[0]) if lines else None
+        if not title:
+            continue  # "No game with id … in the catalog."
+        family = {"of": title.group(1), "series": set(), "studio": set()}
+        section = None
+        for line in lines[1:]:
+            section = sections.get(line, section)  # a heading starts a new section
+            if section in ("series", "studio") and (match := re.match(r"- \[id (\d+)\]", line)):
+                family[section].add(int(match.group(1)))
+        families.append(family)
+    return families
 
 
 def line_title(search_line: str) -> str:
@@ -263,7 +298,7 @@ def fix_game_ids(
     verified games repairs it without a model call; anything less (a DLC whose name
     merely starts the same) is left for the check to send back.
     """
-    for card in recommendations.games:
+    for card in [*recommendations.games, *recommendations.mentions]:
         if same_title(card.title, line_title(verified.get(card.game_id, ""))):
             continue
         matches = [
@@ -434,8 +469,40 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
                 f"{game.title} takes about {hours:g}h to beat, but the player wants games "
                 f"under {max_hours:g}h: replace it with a shorter one."
             )
+    # A named game's family: at most one game from its series, and at most 3 from its
+    # series and studio together, so the rest are discoveries (unless the player asked
+    # for the series or the studio itself)
+    if not (recommendations and recommendations.asked_for_series):
+        for family in game_families(state["messages"]):
+            series = [g.title for g in games if g.game_id in family["series"]]
+            kin = [g.title for g in games if g.game_id in family["series"] | family["studio"]]
+            if len(series) > MAX_SERIES_PICKS:
+                problems.append(
+                    f"{' and '.join(series)} are all from {family['of']}'s series: keep the "
+                    "best one and replace the others with games from elsewhere."
+                )
+            if len(kin) > MAX_FAMILY_PICKS:
+                problems.append(
+                    f"{len(kin)} picks ({', '.join(kin)}) are from {family['of']}'s series or "
+                    f"studio: keep at most {MAX_FAMILY_PICKS} and replace the rest with games "
+                    "from elsewhere."
+                )
     if sum(game.best_pick for game in games) != 1:
         problems.append("Mark exactly one game as the Best Pick.")
+
+    # Honorable mentions: only the ones that pass the same rules stay
+    cleaned = {}
+    if recommendations:
+        mentions = good_mentions(
+            recommendations,
+            verified,
+            played | rejected,
+            wanted_platforms,
+            lengths,
+            max_hours,
+            game_families(state["messages"]),
+        )
+        cleaned = {"recommendations": recommendations.model_copy(update={"mentions": mentions})}
 
     # Past the deadline, the answer stands as it is: a late answer beats no answer
     if (
@@ -454,7 +521,51 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
             "check_problems": problems,
             "fix_attempts": attempts + 1,
         }
-    return {"check_problems": problems}
+    return {"check_problems": problems, **cleaned}
+
+
+def good_mentions(
+    recommendations: Recommendations,
+    verified: dict[int, str],
+    unwanted: set[int],
+    platforms: list[str],
+    lengths: list[str],
+    max_hours: float | None,
+    families: list[dict],
+) -> list:
+    """The honorable mentions that pass the cards' rules, at most MAX_MENTIONS.
+
+    The rest are dropped quietly: a mention is an extra, not worth a fix round. A mention
+    can't repeat a card or another mention, and doesn't get past the series limit (a
+    second Witcher game can't come back as a mention).
+    """
+    taken = {card.game_id for card in recommendations.games}
+    kept = []
+    for mention in recommendations.mentions:
+        line = verified.get(mention.game_id, "")
+        hours = game_hours(line)
+        too_much_series = not recommendations.asked_for_series and any(
+            mention.game_id in family["series"]
+            and len(taken & family["series"]) >= MAX_SERIES_PICKS
+            for family in families
+        )
+        if (
+            not line
+            or not same_title(mention.title, line_title(line))
+            or mention.game_id in taken
+            or mention.game_id in unwanted
+            or (platforms and not plays_on(game_platforms(line), platforms))
+            or is_little_known(line)
+            or (hours and not fits_length(hours, lengths))
+            or (hours and max_hours and hours > max_hours)
+            or too_much_series
+        ):
+            continue
+        kept.append(mention)
+        taken.add(mention.game_id)
+        if len(kept) == MAX_MENTIONS:
+            break
+    return kept
 
 
 def route_after_check(state: RecommenderState) -> str:

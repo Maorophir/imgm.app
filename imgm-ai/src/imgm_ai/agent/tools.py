@@ -297,4 +297,52 @@ def search_web(query: str, messages: Annotated[list, InjectedState("messages")])
     )
 
 
-TOOLS = [get_my_taste, search_imgm_reviews, search_games, get_game_profile, search_web]
+# ── A game's family ──────────────────────────────────────
+# When the player names a game they love, its family comes first: its series, its
+# studio's games that play like it, and IGDB's similar games. Every game listed is
+# already verified, so these don't need search_games.
+
+# The section headings (the check node reads them to know which games are series)
+FAMILY_SECTIONS = {
+    "series": "Series (sequels, prequels and spin-offs; recommend at most ONE of these):",
+    "studio": "Same studio, same genre and game mode (check the themes: a different feel doesn't count):",
+    "similar": "Similar games (IGDB's list, ideas only: some are loose matches, so keep only games whose genres and themes fit what the player wants):",
+}
+
+
+def format_family_game(game: dict) -> str:
+    """A search_games line plus the game's themes, so the agent can tell a different feel
+    (Cyberpunk's science fiction vs The Witcher's fantasy)."""
+    themes = ", ".join(game.get("themes", [])[:3]) or "?"
+    return f"{format_search_result(game)} · themes: {themes}"
+
+
+@tool
+def get_game_family(game_id: int, config: RunnableConfig) -> str:
+    """The family of a game the player named: its series (sequels, prequels, spin-offs),
+    its studio's games that play like it, and similar games. Pass the id from search_games.
+    Every game listed is already verified (no search_games needed), with its platforms,
+    length and themes."""
+    # Which player this is for (hidden from the model): Express limits requests per player
+    user_id = config.get("configurable", {}).get("user_id")
+    family = imgm_api.get_game_family(game_id, user_id)
+    if not family:
+        return f"No game with id {game_id} in the catalog."
+
+    game = family["game"]
+    about = " · ".join(
+        [
+            game["developer"] or "?",
+            ", ".join(game["genres"]),
+            ", ".join(game["modes"]),
+            "themes: " + (", ".join(game["themes"]) or "?"),
+        ]
+    )
+    lines = [f"The family of {game['title']} ({about}). Every game below is verified."]
+    for key, heading in FAMILY_SECTIONS.items():
+        lines.append(heading)
+        lines += [format_family_game(g) for g in family[key]] or ["(none)"]
+    return "\n".join(lines)
+
+
+TOOLS = [get_my_taste, search_imgm_reviews, search_games, get_game_profile, search_web, get_game_family]

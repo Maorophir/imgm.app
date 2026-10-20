@@ -1,8 +1,9 @@
 /**
  * GuidePanel — the side panel. While the guide works it shows every game it is
  * considering (covers appear as they're found, and light up once checked); when
- * it's done, the final 5 take over, Best Pick first.
+ * it's done, the final 5 take over, Best Pick first, with any honorable mentions under them.
  */
+import HonorableMentions from "./HonorableMentions";
 import PickCard from "./PickCard";
 
 const ConsideringTile = ({ game }) => (
@@ -52,6 +53,7 @@ const GuidePanel = ({ turn, onNotForMe, disabled }) => {
             disabled={disabled}
           />
         ))}
+        <HonorableMentions mentions={turn.cards.mentions} />
       </div>
     );
   }
