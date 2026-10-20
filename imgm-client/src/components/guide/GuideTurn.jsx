@@ -171,7 +171,7 @@ const GuideTurn = ({
   turn,
   isLatest,
   running,
-  onNotForMe,
+  onSort,
   onAsk,
   onEdit,
   onRetry,
@@ -270,7 +270,7 @@ const GuideTurn = ({
             <div className="lg:hidden">
               <GuidePanel
                 turn={turn}
-                onNotForMe={onNotForMe}
+                onSort={onSort}
                 disabled={running}
               />
             </div>
