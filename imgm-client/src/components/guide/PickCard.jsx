@@ -28,9 +28,12 @@ export const ImgmBadge = ({ rating, reviewCount }) => {
       <RarityMark tier={rarity.key} />
       <span className="font-semibold">{rarity.label}</span>
       <span className="tabular-nums">{Number(rating).toFixed(1)}</span>
-      <span className="text-slate-400">
-        · {reviewCount} review{reviewCount === 1 ? '' : 's'}
-      </span>
+      {/* No count rather than a wrong "0 reviews" (answers saved before the AI service read the count right) */}
+      {reviewCount > 0 && (
+        <span className="text-slate-400">
+          · {reviewCount} review{reviewCount === 1 ? '' : 's'}
+        </span>
+      )}
     </span>
   );
 };

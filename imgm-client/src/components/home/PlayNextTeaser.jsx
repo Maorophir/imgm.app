@@ -1,9 +1,10 @@
 /**
  * PlayNextTeaser — under the hero's buttons, what Play Next is, at a glance: a player's
- * request in their own words and the 5 games it would pick, framed like Play Next's
- * own cards: the Best Pick in Legendary gold, then Epic and Rare. It rotates through a few very different requests (lib/homeShowcase.js:
- * big story games, cozy, co-op), so it's clear Play Next handles any mood. The whole
- * panel opens Play Next.
+ * request in their own words and the 5 games it would pick, each with its rank medal
+ * like Play Next's own cards (gold, silver, bronze, then a plain disc). The samples have
+ * no IMGM scores, so the covers get no score frame. It rotates through a few very
+ * different requests (lib/homeShowcase.js: big story games, cozy, co-op), so it's clear
+ * Play Next handles any mood. The whole panel opens Play Next.
  *
  * The rotation pauses while the pointer is over the panel or it has keyboard focus, and
  * doesn't run at all for people who ask their device for less motion.
@@ -24,11 +25,9 @@ import { useSession } from '../../lib/authClient';
 import { wakeGuide } from '../../lib/api';
 import { HOME_SHOWCASE } from '../../lib/homeShowcase';
 import { igdbImage } from '../../lib/igdbImage';
+import RankMedal from '../guide/RankMedal';
 
 const SAMPLES = HOME_SHOWCASE.playNext;
-// The picks' frames, like Play Next's own cards: #1 Legendary (the Best Pick), #2 Epic,
-// #3 Rare, the last two plain
-const RING = ['ring-rarity-legendary', 'ring-rarity-epic', 'ring-rarity-rare'];
 const ROTATE_EVERY = 4500; // ms per sample: long enough to read the request and see the covers
 
 const PlayNextTeaser = () => {
@@ -87,13 +86,15 @@ const PlayNextTeaser = () => {
           <ArrowRight className="w-4 h-4 shrink-0 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
           <ul className="flex shrink-0" aria-label="Its 5 picks">
             {picks.map((pick, i) => (
-              <li key={pick.title} className={i ? '-ml-3' : ''} style={{ zIndex: picks.length - i }}>
+              <li key={pick.title} className={`relative ${i ? '-ml-3' : ''}`} style={{ zIndex: picks.length - i }}>
                 <img
                   src={igdbImage(pick.cover, 't_cover_small')}
                   alt={pick.title}
                   title={pick.title}
-                  className={`w-10 aspect-[3/4] object-cover rounded-xs ring-2 ${RING[i] ?? 'ring-slate-950'}`}
+                  className="w-10 aspect-[3/4] object-cover rounded-xs ring-2 ring-slate-950"
                 />
+                {/* Bottom right: the next cover tucks under this one's left side, never its right */}
+                <RankMedal rank={i + 1} className="absolute -bottom-1.5 -right-1 w-4.5 h-4.5 text-[10px] ring-2 ring-slate-950" />
               </li>
             ))}
           </ul>
