@@ -16,6 +16,7 @@
  * to the next card). Esc or the close button leaves without sending anything.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, ChevronLeft, ChevronRight, Star, ThumbsDown, ThumbsUp, X } from 'lucide-react';
 import { PowerIcon } from '../Logo';
 import { getTopGames } from '../../lib/api';
@@ -340,7 +341,9 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
     />
   );
 
-  return (
+  // Into <body>: the Play Next page is `isolate`, which would keep the dialog under the
+  // site's sticky header (on phones the header covered its top)
+  return createPortal(
     <div
       role="dialog"
       aria-modal="true"
@@ -432,7 +435,8 @@ const SortYourPicks = ({ picks, onDone, onClose }) => {
           </footer>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
 
