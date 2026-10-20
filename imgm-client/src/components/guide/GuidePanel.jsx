@@ -1,8 +1,11 @@
 /**
  * GuidePanel — the side panel. While the guide works it shows every game it is
  * considering (covers appear as they're found, and light up once checked); when
- * it's done, the final 5 take over, Best Pick first.
+ * it's done, the final 5 take over, Best Pick first, with any honorable mentions under them.
  */
+import { ListChecks } from "lucide-react";
+import { GHOST_BUTTON_SM } from "../../lib/ui";
+import HonorableMentions from "./HonorableMentions";
 import PickCard from "./PickCard";
 
 const ConsideringTile = ({ game }) => (
@@ -20,7 +23,7 @@ const ConsideringTile = ({ game }) => (
   </div>
 );
 
-const GuidePanel = ({ turn, onNotForMe, disabled }) => {
+const GuidePanel = ({ turn, onSort, disabled }) => {
   // Nothing asked yet: a quiet preview of what will appear here
   if (!turn) {
     return (
@@ -48,10 +51,16 @@ const GuidePanel = ({ turn, onNotForMe, disabled }) => {
             key={pick.game_id}
             pick={pick}
             rank={i + 1}
-            onNotForMe={onNotForMe}
-            disabled={disabled}
           />
         ))}
+        {/* One screen to answer all 5 (played it, not for me, keep) instead of one search per card */}
+        {onSort && (
+          <button type="button" onClick={onSort} disabled={disabled} className={`${GHOST_BUTTON_SM} w-full`}>
+            <ListChecks className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> Sort your picks
+          </button>
+        )}
+        {/* With a brief in the chat, the mentions are named there; older answers list them here */}
+        {!turn.cards.brief?.length && <HonorableMentions mentions={turn.cards.mentions} />}
       </div>
     );
   }

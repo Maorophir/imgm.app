@@ -18,6 +18,7 @@ import { useGameGuide, MAX_QUESTIONS } from "../hooks/useGameGuide";
 import { getFeaturedGames, wakeGuide } from "../lib/api";
 import GuideTurn from "../components/guide/GuideTurn";
 import GuidePanel from "../components/guide/GuidePanel";
+import SortYourPicks from "../components/guide/SortYourPicks";
 import GuideComposer from "../components/guide/GuideComposer";
 import FindMyGame from "../components/guide/FindMyGame";
 import ChatHistory from "../components/guide/ChatHistory";
@@ -79,9 +80,9 @@ function PlayNextChat({ userId }) {
     prefs,
     setPrefs,
     ask,
-    notForMe,
     newChat,
   } = guide;
+  const [sorting, setSorting] = useState(false); // the "Sort your picks" screen is open
   const [historyOpen, setHistoryOpen] = useState(false); // smaller screens: the chats list
   const [lastAnswers, setLastAnswers] = useState(() => readLastAnswers(userId));
   const bottomRef = useRef(null);
@@ -97,10 +98,8 @@ function PlayNextChat({ userId }) {
   );
   // The chat's actions keep one identity while an answer streams in, so the earlier
   // turns (memo) don't re-render for every piece of text
-  const onNotForMe = useCallback(
-    (pick, reason) => notForMe(pick, preferences, reason),
-    [notForMe, preferences],
-  );
+  const onSort = useCallback(() => setSorting(true), []);
+  const closeSort = useCallback(() => setSorting(false), []);
   const onAsk = useCallback(
     (question) => ask(question, preferences),
     [ask, preferences],
@@ -254,7 +253,7 @@ function PlayNextChat({ userId }) {
               turn={turn}
               isLatest={turn === current}
               running={running}
-              onNotForMe={onNotForMe}
+              onSort={onSort}
               onAsk={onAsk}
               onEdit={onEdit}
               onRetry={guide.retryLast}
@@ -298,10 +297,21 @@ function PlayNextChat({ userId }) {
       <aside className="hidden lg:block min-h-0 overflow-y-auto pr-1">
         <GuidePanel
           turn={shownTurn}
-          onNotForMe={onNotForMe}
+          onSort={onSort}
           disabled={running}
         />
       </aside>
+
+      {sorting && cardGames && (
+        <SortYourPicks
+          picks={[...cardGames].sort((a, b) => b.best_pick - a.best_pick)}
+          onClose={closeSort}
+          onDone={(message) => {
+            setSorting(false);
+            onAsk(message);
+          }}
+        />
+      )}
     </div>
   );
 }

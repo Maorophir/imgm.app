@@ -48,3 +48,16 @@ def get_game(game_id: int, user_id: str | None = None) -> dict | None:
         return None
     response.raise_for_status()
     return response.json()
+
+
+def get_game_family(game_id: int, user_id: str | None = None) -> dict | None:
+    """A game's family through Express: its series, its studio's games that play like it,
+    and IGDB's similar games. Each game is shaped like a search result, plus game modes
+    and themes. None if IGDB doesn't know the game."""
+    response = httpx.get(
+        f"{API_URL}/api/games/{game_id}/family", headers=our_headers(user_id), timeout=15
+    )
+    if response.status_code == 404:
+        return None
+    response.raise_for_status()
+    return response.json()

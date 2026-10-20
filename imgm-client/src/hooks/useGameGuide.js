@@ -312,21 +312,6 @@ export function useGameGuide(userId) {
     [run],
   );
 
-  // "Not for me" or "Played it" on one card: the AI remembers it for the rest of the
-  // chat and swaps just that game
-  const notForMe = useCallback(
-    (pick, preferences = {}, reason = "not_for_me") =>
-      run(
-        reason === "played" ? `I already played ${pick.title}` : `Not for me: ${pick.title}`,
-        "not_for_me",
-        {
-          not_for_me: { game_id: pick.game_id, title: pick.title, reason },
-          preferences,
-        },
-      ),
-    [run],
-  );
-
   // The Stop button: the request is cancelled (Express and the AI service stop too)
   const stop = useCallback(() => {
     abortRef.current?.abort();
@@ -418,7 +403,6 @@ export function useGameGuide(userId) {
     chats,
     maxPins,
     ask,
-    notForMe,
     stop,
     editLast,
     retryLast,
