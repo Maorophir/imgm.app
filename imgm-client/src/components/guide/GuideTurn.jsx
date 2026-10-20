@@ -3,7 +3,9 @@
  *
  *   the player's question  a raised bubble on the right
  *   Play Next              the power-mark avatar ("digging…" while it works), its steps,
- *                          then the answer (the picks themselves are in the side panel)
+ *                          then the answer: its intro and the brief, shelves of small
+ *                          cards for the picks and honorable mentions (BriefShelves; the
+ *                          full pick cards are in the side panel)
  *   quick replies          under the latest answer: one tap asks a common follow-up
  *   edit                   the latest question can be edited and asked again (it
  *                          replaces the old one, in the AI's memory too)
@@ -15,6 +17,7 @@
  */
 import { memo, useState } from "react";
 import { ChevronDown } from "lucide-react";
+import BriefShelves from "./BriefShelves";
 import GuideTimeline from "./GuideTimeline";
 import GuidePanel from "./GuidePanel";
 import RichText from "./RichText";
@@ -171,7 +174,7 @@ const GuideTurn = ({
   turn,
   isLatest,
   running,
-  onNotForMe,
+  onSort,
   onAsk,
   onEdit,
   onRetry,
@@ -214,6 +217,7 @@ const GuideTurn = ({
               <p className="text-[17px] leading-relaxed text-white">
                 {turn.cards.intro}
               </p>
+              <BriefShelves cards={turn.cards} />
 
               {turn.cards.follow_up && (
                 <p className="mt-4 text-slate-300">{turn.cards.follow_up}</p>
@@ -270,7 +274,7 @@ const GuideTurn = ({
             <div className="lg:hidden">
               <GuidePanel
                 turn={turn}
-                onNotForMe={onNotForMe}
+                onSort={onSort}
                 disabled={running}
               />
             </div>

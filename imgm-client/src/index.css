@@ -235,6 +235,12 @@ body {
   /* The Legendary gilt: the only gradient in Noir besides the scrims over art.
      Use as background-image: var(--gradient-gilt) (or bg-(image:--gradient-gilt)). */
   --gradient-gilt: linear-gradient(100deg, #6e4f10 0%, #c8963a 16%, #f3dc9a 32%, #d9a94e 48%, #8a6418 64%, #e6c377 82%, #7a5812 100%);
+
+  /* Play Next's rank tabs (components/guide/RankTab.jsx): flat metal inks, no gradient,
+     with dark text on them */
+  --color-medal-gold: #dcb35c;
+  --color-medal-silver: #c6cad0;
+  --color-medal-bronze: #c98d5c;
 }
 
 /*
@@ -272,15 +278,48 @@ body {
   background: var(--rc);
 }
 .rarity-frame.is-epic { background: var(--color-rarity-epic); }
-/* Legendary (the Best Pick) wears the gilt */
+/* Legendary (a 10/10 IMGM score) wears the gilt */
 .rarity-frame.is-legendary {
   background: var(--gradient-gilt);
   background-size: 260% 260%;
   background-position: 50% 50%;
 }
 
+/* Sort your picks (components/guide/SortYourPicks.jsx): the 5 cards are dealt from a
+   face-down deck. They all start stacked in the middle (the deck: --deal-x/-y move
+   each one there, --deal-tilt makes the stack a little messy), slide to their places
+   one after another (--deal-i), then turn face up. Each card's back (.deal-back) shows
+   only while it's turned away. */
+.deal-card {
+  position: relative;
+  z-index: calc(10 - var(--deal-i));
+  transform-style: preserve-3d;
+  animation: deal 0.9s cubic-bezier(0.25, 0.8, 0.3, 1) both;
+  animation-delay: calc(var(--deal-i) * 120ms);
+}
+.deal-card > .deal-front { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.deal-back {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: rotateY(180deg);
+}
+@keyframes deal {
+  0% { transform: perspective(1400px) translate(var(--deal-x), var(--deal-y)) rotate(var(--deal-tilt)) rotateY(180deg); }
+  55% { transform: perspective(1400px) translate(0, 0) rotate(0deg) rotateY(180deg); }
+  100% { transform: perspective(1400px) translate(0, 0) rotate(0deg) rotateY(0deg); }
+}
+/* The choices under a card fade in once it has turned over */
+.deal-after {
+  animation: fadeIn 0.3s ease-out both;
+  animation-delay: calc(var(--deal-i) * 120ms + 750ms);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .card-flip-inner { transition: none; }
+  .deal-card, .deal-after { animation: none; }
+  .deal-back { display: none; }
 }
 
 /* "+5 XP" after a Game of the Week vote: pops in, floats up, fades out */

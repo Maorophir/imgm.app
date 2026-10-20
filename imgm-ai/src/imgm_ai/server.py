@@ -17,7 +17,7 @@ POST /guide/stream answers with Server-Sent Events (SSE), in this order:
     step     {id, state, label, detail}   a timeline entry: "running", then "done"
     games    {source, query, games}       games the agent is considering (side panel)
     token    {message_id, text}           the answer streaming in, word by word
-    cards    {intro, games, follow_up}    the final 5 picks, ready to show
+    cards    {intro, games, mentions, brief, follow_up}    the final 5 picks (+ honorable mentions and the chat's brief), ready to show
     done     {problems}                   the run finished
     error    {message, code?}             something broke (code "chat_full": start a new chat)
 """
@@ -132,6 +132,7 @@ def step_label(call: dict) -> str:
         "search_games": f"Checking {query}",
         "get_game_profile": "Reading what IMGM players think",
         "search_web": f"Searching the web for “{query}”",
+        "get_game_family": "Looking at its series and studio",
     }.get(call["name"], "Working")
 
 
@@ -151,6 +152,9 @@ def step_detail(tool: str, result: str) -> str:
             return "Not found"
         # "- [id 113112] Hades (2020) · Supergiant ..." → "Found Hades (2020)"
         return "Found " + hits[0].split("] ", 1)[1].split(" · ")[0]
+    if tool == "get_game_family":
+        return f"Found {len(hits)} related games" if hits else "No related games found"
+
     return result.splitlines()[0] if result else "Done"
 
 
@@ -169,7 +173,7 @@ def game_tile_from_imgm(game_id: int, user_id: str | None = None) -> dict:
         "year": (game.get("releaseDate") or "")[:4] or None,
         "platforms": game.get("platforms", []),
         "rating": rating,
-        "review_count": len(game.get("reviews", [])),
+        "review_count": (game.get("reviewStats") or {}).get("count", 0),
     }
 
 
@@ -398,8 +402,9 @@ def guide_events(request: GuideRequest, user_id: str | None):
                         )
 
         if recommendations:
-            # A card kept from an earlier turn has no tile from this run: look it up
-            for card in recommendations.games:
+            # A card kept from an earlier turn (or a mention from get_game_family, which
+            # shows no tiles) has no tile from this run: look it up
+            for card in [*recommendations.games, *recommendations.mentions]:
                 if not games.get(card.game_id, {}).get("cover"):
                     games[card.game_id] = {
                         **game_tile_from_imgm(card.game_id, user_id),
@@ -409,11 +414,17 @@ def guide_events(request: GuideRequest, user_id: str | None):
                 {**games.get(card.game_id, {}), **card.model_dump()}
                 for card in recommendations.games
             ]
+            mentions = [
+                {**games.get(m.game_id, {}), **m.model_dump()}
+                for m in recommendations.mentions
+            ]
             yield sse(
                 "cards",
                 {
                     "intro": recommendations.intro,
                     "games": cards,
+                    "mentions": mentions,
+                    "brief": [group.model_dump() for group in recommendations.brief],
                     "follow_up": recommendations.follow_up,
                 },
             )
