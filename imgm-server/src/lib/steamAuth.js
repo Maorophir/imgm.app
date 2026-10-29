@@ -5,6 +5,7 @@
  *
  *   POST /steam/link      a logged-in player starts connecting Steam → { url }
  *   POST /steam/sign-in   someone starts logging in with Steam → { url }
+ *   POST /steam/sign-up   someone new starts signing up with Steam → { url }
  *   GET  /steam/callback  Steam sends the player back here; always answers with a redirect
  *   POST /steam/unlink    disconnects Steam (and deletes the library imported from it)
  *
@@ -22,8 +23,11 @@
  *   - each note works once (its nonce is reserved before Steam is asked) and only fresh
  *   - its fields, keys and the SteamID64 are checked to the letter
  *
- * Steam never creates an IMGM account (it gives no email): logging in with Steam only
- * works for a player who connected it first, from a recent login with a confirmed email.
+ * Steam gives no email, so Steam alone never makes an IMGM account. Signing up with Steam
+ * keeps the Steam account for a while, and the player gives an email on /signup/steam;
+ * like an email sign-up, that email is confirmed later. Logging in with Steam works for
+ * a player who signed up that way, or connected it from a recent login with a confirmed
+ * email.
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
@@ -70,6 +74,9 @@ const NONCE_KEPT = 15 * 60 * 1000; // a used nonce is remembered for longer than
 // How long a trip to Steam may take (logging in there can need a Steam Guard code)
 const TRIP_MS = 10 * 60 * 1000;
 const TRIP_SECONDS = TRIP_MS / 1000;
+// How long a new player has, back from Steam, to give an email and finish signing up
+const SIGN_UP_MS = 30 * 60 * 1000;
+const SIGN_UP_SECONDS = SIGN_UP_MS / 1000;
 
 // Where a connection made from IMGM comes back to
 const LINK_RETURNS = ['/steam', '/steam/library', '/settings'];
@@ -254,6 +261,29 @@ export const steam = () => {
     return siteUrl(trip.returnTo);
   };
 
+  // The cookie that ties a sign-up waiting for its email to the browser back from Steam
+  const signUpCookie = (ctx) => ctx.context.createAuthCookie('steam_signup', { maxAge: SIGN_UP_SECONDS });
+
+  // A new player signing up with Steam: Steam only says which Steam account it is, so
+  // IMGM keeps that (a one-time record, for this browser only) while they give an email
+  // on /signup/steam. A Steam account that's already connected just logs in.
+  const startSignUp = async (ctx, trip, steamId) => {
+    const owner = await ctx.context.internalAdapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId });
+    if (owner) return logIn(ctx, trip, steamId);
+    const token = generateRandomString(32);
+    await ctx.context.internalAdapter.createVerificationValue({
+      identifier: `steam-signup:${token}`,
+      value: JSON.stringify({ steamId, returnTo: trip.returnTo }),
+      expiresAt: new Date(Date.now() + SIGN_UP_MS),
+    });
+    const cookie = signUpCookie(ctx);
+    await ctx.setSignedCookie(cookie.name, token, ctx.context.secret, cookie.attributes);
+    return siteUrl('/signup/steam', trip.returnTo !== '/' ? { redirect: trip.returnTo } : undefined);
+  };
+
+  // What each kind of trip does once Steam's answer has passed every check
+  const FINISH = { link: connect, 'sign-in': logIn, 'sign-up': startSignUp };
+
   // Steam's redirect back: every check, then connect or log in. Answers with an address.
   const finishTrip = async (ctx) => {
     const adapter = ctx.context.internalAdapter;
@@ -290,7 +320,11 @@ export const steam = () => {
     const failed = (code) =>
       trip.mode === 'link'
         ? siteUrl(trip.returnTo, { steam_error: code })
-        : siteUrl('/login', { steam_error: code, ...(trip.returnTo !== '/' && { redirect: trip.returnTo }) });
+        : siteUrl('/login', {
+          ...(trip.mode === 'sign-up' && { mode: 'signup' }), // back to the Sign up tab
+          steam_error: code,
+          ...(trip.returnTo !== '/' && { redirect: trip.returnTo }),
+        });
 
     const note = readSteamNote(query, callbackUrl(ctx, state));
     if (note.error) {
@@ -307,7 +341,7 @@ export const steam = () => {
     }
     if (!confirmed) return failed('invalid');
 
-    return trip.mode === 'link' ? connect(ctx, trip, note.steamId) : logIn(ctx, trip, note.steamId);
+    return FINISH[trip.mode](ctx, trip, note.steamId);
   };
 
   return {
@@ -335,6 +369,14 @@ export const steam = () => {
         '/steam/sign-in',
         { method: 'POST', body: z.object({ returnTo: z.string().max(512).optional() }), use: [formCsrfMiddleware], metadata: { noStore: true } },
         (ctx) => startTrip(ctx, { mode: 'sign-in', userId: null, returnTo: signInReturn(ctx.body.returnTo) })
+      ),
+
+      // Signing up with Steam (form-CSRF checked, like logging in). Steam's answer
+      // leads to /signup/steam, where the player gives an email.
+      steamSignUp: createAuthEndpoint(
+        '/steam/sign-up',
+        { method: 'POST', body: z.object({ returnTo: z.string().max(512).optional() }), use: [formCsrfMiddleware], metadata: { noStore: true } },
+        (ctx) => startTrip(ctx, { mode: 'sign-up', userId: null, returnTo: signInReturn(ctx.body.returnTo) })
       ),
 
       // Steam sends the player back here. Always a redirect to the website (never an
