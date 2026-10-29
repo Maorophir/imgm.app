@@ -6,6 +6,8 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./db.js";
 import { clientOrigins } from "./config.js";
 import { resetPasswordEmail, sendEmail, welcomeEmail, welcomeVerifyEmail } from "./email.js";
+import { steam } from "./steamAuth.js";
+import { disconnectSteam } from "./steamAccount.js";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000",
@@ -25,6 +27,11 @@ export const auth = betterAuth({
     },
     // A new password logs the account out everywhere else
     revokeSessionsOnPasswordReset: true,
+    // ...and disconnects Steam: getting an account back must also shut out a Steam
+    // account someone else may have connected to it (they can connect it again)
+    onPasswordReset: async ({ user }) => {
+      await disconnectSteam(user.id);
+    },
   },
   // Every new password must pass IMGM's rules (passwordRules.js): sign-up, change
   // password and "forgot your password?". The website shows them as a checklist; this
@@ -44,6 +51,8 @@ export const auth = betterAuth({
     },
   },
   trustedOrigins: clientOrigins,
+  // Connecting a Steam account and logging in with it (/api/auth/steam/*, steamAuth.js)
+  plugins: [steam()],
   // Email sign-ups get a welcome email with a "Confirm my email" button (logging in
   // doesn't wait for it; Settings shows the status and can send it again)
   emailVerification: {

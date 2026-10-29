@@ -32,6 +32,7 @@ import backlogRouter from './src/routes/backlog.js';
 import gotwRouter from './src/routes/gotw.js';
 import usersRouter from './src/routes/users.js';
 import guideRouter from './src/routes/guide.js';
+import steamRouter from './src/routes/steam.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/lib/auth.js';
 
@@ -50,6 +51,8 @@ app.use('/api/users', usersRouter);
 app.use('/api/gotw', gotwRouter);
 app.use('/api/backlog', backlogRouter);
 app.use('/api/feedback', feedbackRouter);
+// A connected Steam account's library (connecting itself is on the login server, /api/auth/steam)
+app.use('/api/steam', steamRouter);
 app.use('/api', sitemapRouter); // /api/sitemap.xml (imgm.app/sitemap.xml forwards here)
 // Always mounted: the routes themselves check who may use Play Next (everyone, or the beta list)
 app.use('/api/guide', guideRouter);

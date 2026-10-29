@@ -16,6 +16,7 @@ import { useEffect } from 'react';
 const SITE = 'https://imgm.app'; // the real address, also when testing locally
 const NOINDEX = new Set([
   '/backlog',
+  '/steam/library', // the games you own (the page explaining Steam, /steam, is public)
   '/profile',
   '/settings',
   '/search', // results pages (Google's advice: don't index your own search)

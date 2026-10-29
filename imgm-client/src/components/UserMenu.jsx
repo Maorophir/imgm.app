@@ -1,10 +1,10 @@
 /**
  * UserMenu — the logged-in player's chip in the navbar: avatar (with level) + gamer tag.
- * Clicking it opens a small dropdown: tier + XP bar, Backlog, Send feedback, Profile,
- * Log out. Closes on an outside click, on Esc, or after picking an item.
+ * Clicking it opens a small dropdown: tier + XP bar, Backlog, Steam library, Send
+ * feedback, Profile, Log out. Closes on an outside click, on Esc, or after picking an item.
  * Styled like the header's "Sign up": a ghost button with a control-grey edge.
  */
-import { Bookmark, ChevronDown, LogOut, MessageSquarePlus, User } from 'lucide-react';
+import { Bookmark, ChevronDown, Gamepad2, LogOut, MessageSquarePlus, User } from 'lucide-react';
 import { openFeedback } from './Feedback';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -101,6 +101,10 @@ function UserMenu({ user }) {
           <div role="separator" className="mb-1 h-px bg-slate-700" />
           <Link to="/backlog" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
             <Bookmark className={iconClass} strokeWidth={1.8} aria-hidden="true" /> Backlog
+          </Link>
+          {/* The games you own on Steam (that page explains connecting, if you haven't) */}
+          <Link to="/steam/library" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
+            <Gamepad2 className={iconClass} strokeWidth={1.8} aria-hidden="true" /> Steam library
           </Link>
           <button type="button" role="menuitem" onClick={() => { setOpen(false); openFeedback(); }} className={itemClass}>
             <MessageSquarePlus className={iconClass} strokeWidth={1.8} aria-hidden="true" /> Send feedback

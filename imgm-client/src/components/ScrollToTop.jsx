@@ -9,6 +9,8 @@
  *   - a new page (a link) opens at the top
  *   - a link with a section (/game/123#reviews) scrolls to that section, waiting
  *     briefly for it: it only appears once the page has loaded its data
+ *   - the same page changing only what its address remembers (a tab or a filter kept
+ *     in the query, replaced in place) stays where it is
  *   - Back/Forward (and a reload) return to where you were on that visit: every visit's
  *     position is remembered (by React Router's key for it, kept for the tab in
  *     sessionStorage) and restored once the page is tall enough, unless you start
@@ -84,6 +86,7 @@ const ScrollToTop = () => {
   const { pathname, hash, key } = useLocation();
   const navigationType = useNavigationType();
   const keyRef = useRef(key);
+  const pathRef = useRef(pathname); // the page on screen before this change
 
   // The browser's own restore runs too early for a page that loads its data: turn it off
   useEffect(() => {
@@ -113,6 +116,10 @@ const ScrollToTop = () => {
   }, []);
 
   useEffect(() => {
+    // The same page swapping its query in place (a library tab, a sort): no jump
+    const samePage = navigationType === 'REPLACE' && pathname === pathRef.current && !hash;
+    pathRef.current = pathname;
+    if (samePage) return undefined;
     // Back/Forward (or a reload): where you were on that visit, once the page is tall enough
     const target = navigationType === 'POP' ? readSaved()[key] : undefined;
     if (target !== undefined) {

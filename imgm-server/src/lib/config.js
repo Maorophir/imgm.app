@@ -46,6 +46,16 @@ export const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000
 export const internalApiKey = process.env.INTERNAL_API_KEY || null;
 
 /**
+ * Steam's Web API key (steamcommunity.com/dev/apikey, registered by IMGM's owner for
+ * imgm.app). It reads a connected player's library and Steam name. Optional: without it,
+ * connecting and logging in with Steam still work, and the library page says it isn't
+ * switched on yet. Server-only: never send it to the browser or put it in a URL.
+ */
+const rawSteamKey = (process.env.STEAM_API_KEY || '').trim();
+export const steamApiKey = /^[0-9A-F]{32}$/i.test(rawSteamKey) ? rawSteamKey : null;
+if (rawSteamKey && !steamApiKey) console.error('STEAM_API_KEY is malformed (expected 32 hex characters): Steam libraries stay off');
+
+/**
  * Play Next (the AI recommender) is OFF on the live site until PLAY_NEXT=on is set
  * on Render (together with AI_SERVICE_URL and INTERNAL_API_KEY). Locally it's on
  * because docker-compose sets AI_SERVICE_URL. Deliberately not tied to NODE_ENV

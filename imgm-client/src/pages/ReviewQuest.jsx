@@ -23,6 +23,10 @@
  *   - A game that isn't out yet can't be rated: the page shows its release date, Add
  *     to Backlog and the way back to the game page instead. A player who already has a
  *     review of it (its date was pushed back) can still edit or delete that review.
+ *   - From the Steam library (?from=steam&hours=240&platform=PC): starting the quest
+ *     fills in Steam's hours and platform on Your setup (only empty answers, once, and
+ *     never on the quick path or when editing a review, see startQuest), and Back on
+ *     the first screen and the done screen's way back return to the library.
  *
  * Noir: one flat panel of card stock over the game's art (no blur, no glow), the big
  * condensed headings, and lime only on the screen's one main action.
@@ -30,8 +34,8 @@
 import { reviewCardProps } from '../lib/reviewCard';
 import { ArrowBigUp, ArrowLeft, ArrowRight, BookmarkCheck, Check, Clapperboard, Combine, Drama, Gamepad2, ListChecks, Monitor, PenLine, Pencil, Scale, Star, Timer, Trash2, Zap } from 'lucide-react';
 import ArtIcon from '../components/ArtIcon';
-import { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { getGame, getMyReview, saveReview, deleteMyReview, setBacklogFinished } from '../lib/api';
 import { isUnreleased, releaseLabel } from '../lib/release';
 import { refreshMyProgress } from '../hooks/useMyProgress';
@@ -105,6 +109,14 @@ const LevelProgress = ({ before, after }) => {
 };
 
 
+
+// The Steam library's hours in the address (?hours=240): a whole number a review can
+// take (1 to 100,000), else nothing. Steam's minutes are rounded to hours by the library.
+const libraryHoursParam = (value) => {
+  if (!/^\d{1,6}$/.test(value ?? '')) return null;
+  const hours = Number(value);
+  return hours >= 1 && hours <= 100000 ? hours : null;
+};
 
 // Special screens that aren't part of the numbered quest
 const QUICK = 'quick';
@@ -277,6 +289,16 @@ const Quest = ({ id }) => {
   // 0–9 = a quest screen, or QUICK / DONE
   const [step, setStep] = useState(0);
 
+  // Came from the Steam library? Then its hours and platform for this game (the platform
+  // is checked against the game's own when it's used), filled in once (startQuest), and
+  // what that filled in, for the Setup screen's note
+  const [searchParams] = useSearchParams();
+  const fromSteam = searchParams.get('from') === 'steam';
+  const libraryHours = fromSteam ? libraryHoursParam(searchParams.get('hours')) : null;
+  const libraryPlatform = fromSteam ? searchParams.get('platform') : null;
+  const libraryApplied = useRef(false);
+  const [filledFromSteam, setFilledFromSteam] = useState(null); // { hoursPlayed?, platform? }
+
   // Posting
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState(null);
@@ -365,8 +387,28 @@ const Quest = ({ id }) => {
     setSaveError(null);
     setStep(next);
   };
+  // "Start the quest". From the Steam library, Steam's hours and platform go into Your
+  // setup first: once (so a cleared or skipped answer stays cleared), and only into
+  // answers that are still empty. Never on the quick path (it posts every answer, so it
+  // would post ones the player never saw), and never when editing a review (its answers
+  // are the player's own; Setup shows Steam's hours as a hint instead).
+  const startQuest = () => {
+    if (fromSteam && !isEditing && !libraryApplied.current) {
+      libraryApplied.current = true;
+      const fill = {};
+      if (answers.hoursPlayed == null && libraryHours != null) fill.hoursPlayed = libraryHours;
+      if (answers.platform == null && libraryPlatform && game.platforms?.includes(libraryPlatform)) fill.platform = libraryPlatform;
+      if (Object.keys(fill).length > 0) {
+        update(fill);
+        setFilledFromSteam(fill);
+      }
+    }
+    changeStep(1);
+  };
+  // Leaving the quest: back to the Steam library, if that's where the player came from
+  const leaveTo = fromSteam ? '/steam/library' : `/game/${id}`;
   const goBack = () => {
-    if (step === 0 || step === DONE) return navigate(`/game/${id}`); // leave the quest
+    if (step === 0 || step === DONE) return navigate(leaveTo); // leave the quest
     if (step === QUICK) return changeStep(0);
     changeStep(step - 1);
   };
@@ -398,6 +440,15 @@ const Quest = ({ id }) => {
   const earnedXp = STEPS.filter((s) => isAnswered(answers, s)).reduce((sum, s) => sum + s.xp, 0);
   const rarity = answers.rating ? getRarity(answers.rating) : null;
 
+  // What Your setup says about Steam: the answers the library filled in, while they're
+  // still as filled in, or (editing a review) the hours Steam has, when they differ
+  const keptFromSteam = Object.keys(filledFromSteam ?? {}).filter((field) => answers[field] === filledFromSteam[field]);
+  const steamNote = keptFromSteam.length > 0
+    ? `${keptFromSteam.length === 2 ? 'Hours and platform' : keptFromSteam[0] === 'hoursPlayed' ? 'Hours' : 'Platform'} filled in from your Steam library.`
+    : fromSteam && isEditing && libraryHours != null && answers.hoursPlayed !== libraryHours
+      ? `Your Steam library shows ${libraryHours.toLocaleString('en-US')} ${libraryHours === 1 ? 'hour' : 'hours'} for this game.`
+      : null;
+
   // A different screenshot behind every screen
   const backgrounds = questArt(game);
   const background = backgrounds[(isQuestScreen ? step : 0) % backgrounds.length];
@@ -424,7 +475,7 @@ const Quest = ({ id }) => {
         <div className="flex items-center justify-between gap-3 mb-5">
           <button type="button" onClick={goBack} className={`inline-flex items-center gap-1.5 whitespace-nowrap ${TEXT_BUTTON_SM}`}>
             <ArrowLeft className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
-            {step === DONE ? 'Game page' : 'Back'}
+            {step === DONE ? (fromSteam ? 'Steam library' : 'Game page') : 'Back'}
           </button>
           <p className="text-sm text-slate-400 truncate">
             {step === DONE ? 'Your review of' : isEditing ? 'Editing your review of' : 'Reviewing'}{' '}
@@ -478,7 +529,7 @@ const Quest = ({ id }) => {
               <h1 className={STEP_TITLE}>
                 <ArtIcon icon={current.art} className={STEP_ICON} />{current.title}
               </h1>
-              <current.Component answers={answers} update={update} game={game} />
+              <current.Component answers={answers} update={update} game={game} steamNote={current.key === 'setup' ? steamNote : null} />
             </>
           )}
 
@@ -586,7 +637,7 @@ const Quest = ({ id }) => {
                 <button
                   type="button"
                   disabled={!answers.rating}
-                  onClick={() => changeStep(1)}
+                  onClick={startQuest}
                   className={`${PRIMARY_BUTTON} w-full`}
                 >
                   <Gamepad2 className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />{isEditing ? 'Edit the quest' : 'Start the quest'}

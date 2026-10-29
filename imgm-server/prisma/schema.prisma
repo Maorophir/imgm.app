@@ -35,6 +35,9 @@ model User {
   backlog           BacklogItem[]
   feedback          Feedback[]
   accounts      Account[]
+  // A connected Steam account's imported library (see SteamLibrary below)
+  steamLibrary      SteamLibrary?
+  steamGames        SteamLibraryGame[]
   
   // Custom IMGM relations
   reviews       Review[]
@@ -72,6 +75,11 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   issuer                String?
+
+  // Better Auth looks a login up by its issuer + account id (a Google account, a SteamID64):
+  // one row per login, so a Steam account can never be connected to two players
+  @@unique([issuer, accountId])
+  @@index([userId])
 }
 
 model Verification {
@@ -372,4 +380,47 @@ model AccountDeletion {
   details   String?
   reviews   Int      // how many reviews the account had (how engaged they were)
   createdAt DateTime @default(now())
+}
+
+// -----------------------------------------------------------------------------
+// Steam: a player's connected Steam library (lib/steamAccount.js, routes/steam.js)
+// -----------------------------------------------------------------------------
+
+// What Steam says a game is, for IMGM: a Steam app (appid) and the IGDB game it's
+// reviewed as. The same for every player, so it's kept once and rechecked now and then.
+model SteamApp {
+  appid       Int       @id
+  gameId      Int?      // the IGDB id IMGM reviews (an edition -> its main game); null = not reviewable here
+  kind        String    // game | edition | dlc | bundle | other | none (IGDB doesn't know it)
+  title       String?
+  coverUrl    String?
+  releaseDate DateTime?
+  platforms   String[]  // as IMGM names them ('PC', 'Mac', ...)
+  checkedAt   DateTime  @default(now())
+
+  @@index([gameId])
+}
+
+// A player's library as Steam last sent it (only when they ask: connect, open, Refresh).
+// Disconnecting Steam or deleting the account deletes it.
+model SteamLibrary {
+  userId      String    @id
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  state       String    // ok | private (Steam shares no games) | empty
+  gameCount   Int       @default(0)
+  hoursHidden Boolean   @default(false) // Steam sent the games with every playtime at 0
+  personaName String?   // the Steam name (only with STEAM_API_KEY)
+  importedAt  DateTime  @default(now())
+}
+
+model SteamLibraryGame {
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appid        Int
+  name         String    // Steam's own title
+  minutes      Int       @default(0) // all-time playtime
+  minutes2Weeks Int      @default(0)
+  lastPlayedAt DateTime?
+
+  @@id([userId, appid])
 }

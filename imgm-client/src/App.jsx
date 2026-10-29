@@ -29,6 +29,8 @@ import ResetPassword from './pages/ResetPassword';
 import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
+import SteamLanding from './pages/SteamLanding';
+import SteamLibrary from './pages/SteamLibrary';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
 import { usePageTitle } from './hooks/usePageTitle';
 import { useSearchIndexing } from './hooks/useSearchIndexing';
@@ -72,6 +74,11 @@ const PAGES = {
     'Play Next: find your next game',
     'Answer a few questions and Play Next digs through your reviews and the IMGM community to pick 5 games you\'ll love, with a Best Pick.',
   ],
+  '/steam': [
+    'Connect your Steam library',
+    'Connect Steam to see every game you own on IMGM, with your hours. Rate one in about two minutes, and it becomes a card.',
+  ],
+  '/steam/library': ['Your Steam library'],
   '/backlog': ['Your Backlog'],
   '/profile': ['Your profile'],
   '/settings': ['Settings'],
@@ -121,6 +128,9 @@ function App() {
           <Route path="/u/:username" element={<PlayerProfile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/backlog" element={<Backlog />} />
+          {/* Steam: what connecting gives you (anyone), then your library (players) */}
+          <Route path="/steam" element={<SteamLanding />} />
+          <Route path="/steam/library" element={<SteamLibrary />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Auth />} />

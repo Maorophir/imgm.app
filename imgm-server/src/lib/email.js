@@ -132,3 +132,30 @@ export const welcomeEmail = (siteUrl) => ({
   text: ['Welcome to IMGM. Press start.', '', WHAT_TO_DO, '', `Press start: ${siteUrl}`, '', 'See you in the reviews,', 'IMGM'].join('\n'),
   html: emailFrame(`Welcome to IMGM. <span style="color:${LIME}">Press start.</span>`, WHAT_TO_DO, { url: siteUrl, start: true }),
 });
+
+/**
+ * After a Steam account is connected (lib/steamAuth.js): a heads-up, because whoever can
+ * log in to that Steam account can now log in to this IMGM account too. If it wasn't
+ * them, resetting the password gets the account back and disconnects Steam with it.
+ */
+export const steamConnectedEmail = (settingsUrl) => ({
+  subject: 'Steam is now connected to your IMGM account',
+  text: [
+    'Steam is connected',
+    '',
+    'A Steam account was just connected to your IMGM account. You can now log in with Steam, and rate games straight from your Steam library.',
+    '',
+    `To disconnect it, open Settings: ${settingsUrl}`,
+    '',
+    "Wasn't you? Reset your password from the login page: that also disconnects Steam.",
+    '',
+    'See you in the reviews,',
+    'IMGM',
+  ].join('\n'),
+  html: emailFrame(
+    'Steam is connected',
+    'A Steam account was just connected to your IMGM account. You can now log in with Steam, and rate games straight from your Steam library.',
+    { url: settingsUrl, label: 'Open Settings' },
+    "<strong style=\"color:#ffffff\">Wasn't you?</strong> Reset your password from the login page: that also disconnects Steam."
+  ),
+});

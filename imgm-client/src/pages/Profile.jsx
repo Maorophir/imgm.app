@@ -74,7 +74,7 @@ function Profile() {
         <Link
           to="/settings"
           aria-label="Settings"
-          title="Settings: gamer tag, password, account"
+          title="Settings: gamer tag, password, Steam, account"
           className="self-start sm:self-center w-11 h-11 grid place-items-center rounded-sm border border-slate-500 text-white hover:border-white transition-colors duration-120"
         >
           <Settings className="w-5 h-5" strokeWidth={1.8} aria-hidden="true" />

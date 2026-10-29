@@ -29,7 +29,7 @@ import RarityMark from '../components/RarityMark';
 const ROW_BUTTON =
   'inline-flex items-center justify-center gap-1.5 h-11 min-w-11 px-3 rounded-sm border border-slate-500 text-sm font-medium text-white hover:border-white hover:text-slate-50 transition-colors duration-120';
 
-const FROM = { play_next: 'Play Next', game_page: 'a game page', hall_of_fame: 'the Hall of Fame', gotw: 'Game of the Week' };
+const FROM = { play_next: 'Play Next', game_page: 'a game page', hall_of_fame: 'the Hall of Fame', gotw: 'Game of the Week', steam: 'your Steam library' };
 const LISTS = [
   { value: 'playing', label: 'Playing now' },
   { value: 'toPlay', label: 'To play' },

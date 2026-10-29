@@ -30,7 +30,7 @@ function ResetPassword() {
 
   if (done) {
     return (
-      <AuthCard title="Password changed" subtitle="You're all set. For your safety, other devices were logged out.">
+      <AuthCard title="Password changed" subtitle="You're all set. For your safety, other devices were logged out, and Steam was disconnected if you had connected it (you can connect it again in Settings).">
         <Link to="/login" className={buttonClass}>Log in</Link>
       </AuthCard>
     );

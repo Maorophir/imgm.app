@@ -11,7 +11,7 @@ import { prisma } from '../lib/db.js';
 import { clientOrigins } from '../lib/config.js';
 
 const router = Router();
-const PAGES = ['/', '/hall-of-fame', '/game-of-the-week', '/play-next', '/terms', '/privacy'];
+const PAGES = ['/', '/hall-of-fame', '/game-of-the-week', '/play-next', '/steam', '/terms', '/privacy'];
 
 router.get('/sitemap.xml', async (req, res) => {
   try {
