@@ -206,7 +206,7 @@ const FirstsCarousel = ({ games }) => {
 // most likely played, with the card each one would become:
 //   logged in  popular games in the genres they review most, minus the ones they've rated
 //   guests     the most played games of all time
-// avoidArt: the id of the game whose key art is already in the hero (it goes last in the
+// avoidArt: the ids of the games whose key art is already in the hero (they go last in the
 // carousel, so the page doesn't show the same picture twice in a row).
 export const ReviewPicks = ({ avoidArt }) => {
   const { data: session } = useSession();
@@ -222,7 +222,7 @@ export const ReviewPicks = ({ avoidArt }) => {
 
   const games = (picks?.games ?? []).slice(0, FIRSTS_COUNT);
   if (!picks || games.length === 0) return null;
-  const rank = (game) => (game.id === avoidArt ? 2 : game.artworks?.length ? 0 : 1);
+  const rank = (game) => (avoidArt?.includes(game.id) ? 2 : game.artworks?.length ? 0 : 1);
   const genres = (picks.genres ?? []).map(shortGenre);
 
   return (
