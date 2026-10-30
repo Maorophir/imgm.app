@@ -341,7 +341,7 @@ const AccountSettings = () => {
         <div>
           <p className={PANEL_LABEL}><KeyRound className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Password</p>
           {!account.hasPassword && (
-            <p className="text-sm text-slate-300 mt-2">You log in with {google ? 'Google' : 'another service'}, so your password is managed there, not on IMGM.</p>
+            <p className="text-sm text-slate-300 mt-2">You log in with {google ? 'Google' : steam ? 'Steam' : 'another service'}, so your password is managed there, not on IMGM.</p>
           )}
         </div>
         {account.hasPassword && <ChangePassword />}

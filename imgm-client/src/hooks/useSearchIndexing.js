@@ -21,6 +21,7 @@ const NOINDEX = new Set([
   '/settings',
   '/search', // results pages (Google's advice: don't index your own search)
   '/login',
+  '/signup/steam',
   '/welcome',
   '/forgot-password',
   '/reset-password',

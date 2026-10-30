@@ -167,6 +167,11 @@ export const deleteMyAccount = (body) => fetchJson('/api/users/me', { method: 'D
 // (see lib/steam.js goToSteam). returnTo is where Steam's answer lands on IMGM.
 export const startSteamConnect = (returnTo) => fetchJson('/api/auth/steam/link', { method: 'POST', body: { returnTo } });
 export const startSteamSignIn = (returnTo) => fetchJson('/api/auth/steam/sign-in', { method: 'POST', body: { returnTo } });
+export const startSteamSignUp = (returnTo) => fetchJson('/api/auth/steam/sign-up', { method: 'POST', body: { returnTo } });
+// Back from Steam to sign up: is it still waiting for an email ({ pending }), and the
+// email that finishes it (makes the account and logs in → { returnTo })
+export const getSteamSignUpPending = (signal) => fetchJson('/api/auth/steam/sign-up/pending', { signal });
+export const finishSteamSignUp = (email) => fetchJson('/api/auth/steam/sign-up/finish', { method: 'POST', body: { email } });
 // Disconnects Steam and deletes everything imported from it (reviews and the Backlog stay)
 export const disconnectSteam = () => fetchJson('/api/auth/steam/unlink', { method: 'POST', body: {} });
 // Your Steam connection: { connected, steamId, profileUrl, libraryEnabled, library }

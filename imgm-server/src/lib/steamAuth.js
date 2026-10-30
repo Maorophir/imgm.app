@@ -5,6 +5,9 @@
  *
  *   POST /steam/link      a logged-in player starts connecting Steam → { url }
  *   POST /steam/sign-in   someone starts logging in with Steam → { url }
+ *   POST /steam/sign-up   someone new starts signing up with Steam → { url }
+ *   GET  /steam/sign-up/pending  is a Steam sign-up waiting for an email? → { pending }
+ *   POST /steam/sign-up/finish   the email: makes the account and logs in → { returnTo }
  *   GET  /steam/callback  Steam sends the player back here; always answers with a redirect
  *   POST /steam/unlink    disconnects Steam (and deletes the library imported from it)
  *
@@ -22,8 +25,11 @@
  *   - each note works once (its nonce is reserved before Steam is asked) and only fresh
  *   - its fields, keys and the SteamID64 are checked to the letter
  *
- * Steam never creates an IMGM account (it gives no email): logging in with Steam only
- * works for a player who connected it first, from a recent login with a confirmed email.
+ * Steam gives no email, so Steam alone never makes an IMGM account. Signing up with Steam
+ * keeps the Steam account for a while, and the player gives an email on /signup/steam;
+ * like an email sign-up, that email is confirmed later. Logging in with Steam works for
+ * a player who signed up that way, or connected it from a recent login with a confirmed
+ * email; with a Steam account new to IMGM, it signs up instead.
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
@@ -31,6 +37,7 @@ import {
   APIError,
   createAuthEndpoint,
   createAuthMiddleware,
+  createEmailVerificationToken,
   formCsrfMiddleware,
   freshSessionMiddleware,
   getSessionFromCtx,
@@ -70,6 +77,9 @@ const NONCE_KEPT = 15 * 60 * 1000; // a used nonce is remembered for longer than
 // How long a trip to Steam may take (logging in there can need a Steam Guard code)
 const TRIP_MS = 10 * 60 * 1000;
 const TRIP_SECONDS = TRIP_MS / 1000;
+// How long a new player has, back from Steam, to give an email and finish signing up
+const SIGN_UP_MS = 30 * 60 * 1000;
+const SIGN_UP_SECONDS = SIGN_UP_MS / 1000;
 
 // Where a connection made from IMGM comes back to
 const LINK_RETURNS = ['/steam', '/steam/library', '/settings'];
@@ -247,12 +257,48 @@ export const steam = () => {
     const adapter = ctx.context.internalAdapter;
     const failed = (code) => siteUrl('/login', { steam_error: code, ...(trip.returnTo !== '/' && { redirect: trip.returnTo }) });
     const owner = await adapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId });
-    if (owner?.kind !== 'owned' || owner.account.providerId !== STEAM_PROVIDER) return failed('not_connected');
+    // A Steam account new to IMGM: logging in with it means signing up (an email next)
+    if (!owner) return startSignUp(ctx, trip, steamId);
+    if (owner.kind !== 'owned' || owner.account.providerId !== STEAM_PROVIDER) return failed('not_connected');
     const session = await adapter.createSession(owner.user.id);
     if (!session) return failed('failed');
     await setSessionCookie(ctx, { session, user: owner.user });
     return siteUrl(trip.returnTo);
   };
+
+  // The cookie that ties a sign-up waiting for its email to the browser back from Steam
+  const signUpCookie = (ctx) => ctx.context.createAuthCookie('steam_signup', { maxAge: SIGN_UP_SECONDS });
+
+  // A new player signing up with Steam: Steam only says which Steam account it is, so
+  // IMGM keeps that (a one-time record, for this browser only) while they give an email
+  // on /signup/steam. A Steam account that's already connected just logs in.
+  // (logIn and startSignUp hand over to each other only when the other one fits, so they
+  // never go round in circles)
+  const startSignUp = async (ctx, trip, steamId) => {
+    const owner = await ctx.context.internalAdapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId });
+    if (owner) return logIn(ctx, trip, steamId);
+    const token = generateRandomString(32);
+    await ctx.context.internalAdapter.createVerificationValue({
+      identifier: `steam-signup:${token}`,
+      value: JSON.stringify({ steamId, returnTo: trip.returnTo }),
+      expiresAt: new Date(Date.now() + SIGN_UP_MS),
+    });
+    const cookie = signUpCookie(ctx);
+    await ctx.setSignedCookie(cookie.name, token, ctx.context.secret, cookie.attributes);
+    return siteUrl('/signup/steam', trip.returnTo !== '/' ? { redirect: trip.returnTo } : undefined);
+  };
+
+  // The "Confirm my email" welcome an email sign-up gets (auth.js sends it), with the
+  // same one-time link; confirming lands on the website, like an email sign-up's
+  const sendConfirmEmail = async (ctx, user) => {
+    const { expiresIn, sendVerificationEmail } = ctx.context.options.emailVerification;
+    const token = await createEmailVerificationToken(ctx.context.secret, user.email, undefined, expiresIn);
+    const url = `${ctx.context.baseURL}/verify-email?token=${token}&callbackURL=${encodeURIComponent(siteUrl('/', { verified: 1 }))}`;
+    await sendVerificationEmail({ user, url, token }, ctx.request);
+  };
+
+  // What each kind of trip does once Steam's answer has passed every check
+  const FINISH = { link: connect, 'sign-in': logIn, 'sign-up': startSignUp };
 
   // Steam's redirect back: every check, then connect or log in. Answers with an address.
   const finishTrip = async (ctx) => {
@@ -290,7 +336,11 @@ export const steam = () => {
     const failed = (code) =>
       trip.mode === 'link'
         ? siteUrl(trip.returnTo, { steam_error: code })
-        : siteUrl('/login', { steam_error: code, ...(trip.returnTo !== '/' && { redirect: trip.returnTo }) });
+        : siteUrl('/login', {
+          ...(trip.mode === 'sign-up' && { mode: 'signup' }), // back to the Sign up tab
+          steam_error: code,
+          ...(trip.returnTo !== '/' && { redirect: trip.returnTo }),
+        });
 
     const note = readSteamNote(query, callbackUrl(ctx, state));
     if (note.error) {
@@ -307,7 +357,7 @@ export const steam = () => {
     }
     if (!confirmed) return failed('invalid');
 
-    return trip.mode === 'link' ? connect(ctx, trip, note.steamId) : logIn(ctx, trip, note.steamId);
+    return FINISH[trip.mode](ctx, trip, note.steamId);
   };
 
   return {
@@ -335,6 +385,76 @@ export const steam = () => {
         '/steam/sign-in',
         { method: 'POST', body: z.object({ returnTo: z.string().max(512).optional() }), use: [formCsrfMiddleware], metadata: { noStore: true } },
         (ctx) => startTrip(ctx, { mode: 'sign-in', userId: null, returnTo: signInReturn(ctx.body.returnTo) })
+      ),
+
+      // Signing up with Steam (form-CSRF checked, like logging in). Steam's answer
+      // leads to /signup/steam, where the player gives an email.
+      steamSignUp: createAuthEndpoint(
+        '/steam/sign-up',
+        { method: 'POST', body: z.object({ returnTo: z.string().max(512).optional() }), use: [formCsrfMiddleware], metadata: { noStore: true } },
+        (ctx) => startTrip(ctx, { mode: 'sign-up', userId: null, returnTo: signInReturn(ctx.body.returnTo) })
+      ),
+
+      // Is a Steam sign-up waiting for this browser's email? (/signup/steam shows the
+      // email form, or "start again" when it's gone)
+      steamSignUpPending: createAuthEndpoint(
+        '/steam/sign-up/pending',
+        { method: 'GET', metadata: { noStore: true } },
+        async (ctx) => {
+          const token = await ctx.getSignedCookie(signUpCookie(ctx).name, ctx.context.secret);
+          const record = typeof token === 'string' ? await ctx.context.internalAdapter.findVerificationValue(`steam-signup:${token}`) : null;
+          return ctx.json({ pending: Boolean(record && record.expiresAt > new Date()) });
+        }
+      ),
+
+      // Finishing a Steam sign-up with an email: makes the account with Steam connected,
+      // and logs in. Like an email sign-up, the email is confirmed later (the welcome
+      // email has the button), so nothing waits for it. Someone who signs up with
+      // another person's email loses Steam when the owner resets the password (auth.js).
+      steamSignUpFinish: createAuthEndpoint(
+        '/steam/sign-up/finish',
+        { method: 'POST', body: z.object({ email: z.email().max(254) }), use: [formCsrfMiddleware], metadata: { noStore: true } },
+        async (ctx) => {
+          const adapter = ctx.context.internalAdapter;
+          const cookie = signUpCookie(ctx);
+          const token = await ctx.getSignedCookie(cookie.name, ctx.context.secret);
+          const identifier = `steam-signup:${token}`;
+          // Taken now, so two tries at once can't both use it; put back below when only
+          // the email was the problem (they can try another)
+          const record = typeof token === 'string' ? await adapter.consumeVerificationValue(identifier) : null;
+          if (!record) {
+            expireCookie(ctx, cookie);
+            throw stepError('BAD_REQUEST', 'STEAM_SIGN_UP_EXPIRED', 'That took a little too long. Please sign up with Steam again.');
+          }
+          const { steamId, returnTo } = JSON.parse(record.value);
+          const email = ctx.body.email.toLowerCase();
+
+          if (await adapter.findUserByEmail(email)) {
+            await adapter.createVerificationValue({ identifier, value: record.value, expiresAt: record.expiresAt });
+            throw stepError('CONFLICT', 'EMAIL_TAKEN', 'That email already has an IMGM account. Log in, then connect Steam in Settings.');
+          }
+          expireCookie(ctx, cookie);
+          if (await adapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId })) {
+            throw stepError('CONFLICT', 'STEAM_TAKEN', 'That Steam account is already on IMGM. Log in with Steam.');
+          }
+
+          let user;
+          try {
+            // The account and its Steam login together (one transaction: never one without the other)
+            ({ user } = await adapter.createOAuthUser(
+              { email, name: email.split('@')[0], emailVerified: false }, // the same name an email sign-up gets
+              { providerId: STEAM_PROVIDER, issuer: STEAM_ISSUER, accountId: steamId }
+            ));
+          } catch {
+            // The same email or Steam account signed up a moment earlier (both are unique)
+            throw stepError('CONFLICT', 'STEAM_SIGN_UP_CLASH', 'That email or Steam account was just used to sign up. Try logging in.');
+          }
+          sendConfirmEmail(ctx, user).catch((error) => console.error('Steam sign-up confirm email failed:', error.message));
+
+          const session = await adapter.createSession(user.id);
+          await setSessionCookie(ctx, { session, user });
+          return ctx.json({ returnTo });
+        }
       ),
 
       // Steam sends the player back here. Always a redirect to the website (never an
