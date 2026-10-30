@@ -16,10 +16,10 @@
  * Each has the card's props (CollectibleCard), a review-shaped part the hero reads (the
  * score, the game, the checklist on the back; id null = a sample, so no Share or "Read
  * the review"), and for the heroes the band's backdrop. Pictures are IGDB addresses: an
- * official cover or artwork. A backdrop is an official screenshot (artLabel says so
- * under the hero): a wide, bright landscape with a small figure in it, the "wow" of the
- * first screen, and never the card's own picture. artPosition (CSS object-position)
- * picks which part of a backdrop shows, when the middle isn't the best part.
+ * official cover or artwork. Each backdrop is picked by hand: official key art, or an
+ * official screenshot where that looks better (artLabel says so under the hero).
+ * artPosition (CSS object-position) picks which part of a backdrop shows, when the
+ * middle isn't the best part.
  */
 const TODAY = new Date();
 
@@ -46,7 +46,7 @@ export const HOME_SHOWCASE = {
       band: {
         id: 305152,
         title: 'Clair Obscur: Expedition 33',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scsodz.jpg'],
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scsoe2.jpg'],
         artLabel: 'Screenshot',
         developer: 'Sandfall Interactive',
         releaseDate: '2025-04-24T00:00:00.000Z',
@@ -73,7 +73,7 @@ export const HOME_SHOWCASE = {
       band: {
         id: 119133,
         title: 'Elden Ring',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scagdp.jpg'],
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scagdm.jpg'],
         artLabel: 'Screenshot',
         developer: 'FromSoftware',
         releaseDate: '2022-02-25T00:00:00.000Z',
@@ -100,8 +100,8 @@ export const HOME_SHOWCASE = {
       band: {
         id: 347668,
         title: 'Resident Evil Requiem',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scx9r2.jpg'],
-        artLabel: 'Screenshot',
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3otk.jpg'],
+        artPosition: '50% 100%', // its logo sits at the top: keep it out from behind the words
         developer: 'Capcom',
         releaseDate: '2026-02-27T00:00:00.000Z',
       },
@@ -127,8 +127,7 @@ export const HOME_SHOWCASE = {
       band: {
         id: 1942,
         title: 'The Witcher 3: Wild Hunt',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/sctj8t.jpg'],
-        artLabel: 'Screenshot',
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3lzk.jpg'], // Geralt and Ciri: the cover's own picture, by the owner's choice
         developer: 'CD Projekt RED',
         releaseDate: '2015-05-19T00:00:00.000Z',
       },
@@ -181,8 +180,8 @@ export const HOME_SHOWCASE = {
       band: {
         id: 25076,
         title: 'Red Dead Redemption 2',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/dhw6ucx9laj5esv6rngn.jpg'],
-        artLabel: 'Screenshot',
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3qms.jpg'],
+        artPosition: '50% 100%', // its logo sits at the top: keep it out from behind the words
         developer: 'Rockstar Games',
         releaseDate: '2018-10-26T00:00:00.000Z',
       },
