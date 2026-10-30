@@ -41,6 +41,8 @@ const STEAM_PRIVACY_SETTINGS = 'https://steamcommunity.com/my/edit/settings';
 const OWN_WALL_MAX = 48;
 const OWN_WALL_MIN = 12;
 const NO_COVERS = [];
+// The hero card's carousel: at most this many games take turns on it
+const CARDS_MAX = 5;
 
 // A section's heading column beside its content (desktop), stacked on smaller screens
 const SECTION = `${WRAP} grid gap-y-10 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-x-12 xl:gap-x-16`;
@@ -99,10 +101,12 @@ function SteamLanding() {
     return () => controller.abort();
   }, []);
   const covers = useMemo(() => (featured ?? []).map((game) => game.coverUrl).filter(Boolean), [featured]);
-  const sample = useMemo(
-    () => featured?.find((game) => game.coverUrl && game.stores?.some((store) => store.key === 'steam')) ?? featured?.find((game) => game.coverUrl) ?? null,
-    [featured]
-  );
+  // The example cards: featured games that are on Steam (any featured game, if none are)
+  const samples = useMemo(() => {
+    const withCover = (featured ?? []).filter((game) => game.coverUrl);
+    const onSteam = withCover.filter((game) => game.stores?.some((store) => store.key === 'steam'));
+    return (onSteam.length > 0 ? onSteam : withCover).slice(0, CARDS_MAX);
+  }, [featured]);
 
   // The player's Steam connection. Kept with whose it is, so a different player logging
   // in on this tab never sees the last one's.
@@ -132,7 +136,10 @@ function SteamLanding() {
     return () => controller.abort();
   }, [userId, connected]);
   const games = library.userId === userId ? library.games : null;
-  const mine = games?.find((game) => game.myRating == null && game.minutes > 0 && game.coverUrl) ?? null;
+  const mine = useMemo(
+    () => (games ?? []).filter((game) => game.myRating == null && game.minutes > 0 && game.coverUrl).slice(0, CARDS_MAX),
+    [games]
+  );
 
   const ownCovers = useMemo(() => (games ?? []).map((game) => game.coverUrl).filter(Boolean).slice(0, OWN_WALL_MAX), [games]);
 
@@ -184,7 +191,7 @@ function SteamLanding() {
           </div>
 
           <div className="justify-self-center w-[min(280px,78%)] sm:w-[320px] lg:justify-self-stretch lg:w-auto">
-            <HeroCard mine={mine} sample={sample} waiting={cardWaiting} connected={connected} />
+            <HeroCard mine={mine} samples={samples} waiting={cardWaiting} connected={connected} />
           </div>
         </div>
       </section>

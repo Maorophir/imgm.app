@@ -29,7 +29,7 @@
 import { HOME_SHOWCASE } from '../lib/homeShowcase';
 import { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { getFeaturedGames, getGame, getRecentReviews } from '../lib/api';
+import { getFeaturedGames, getRecentReviews, getTopGames } from '../lib/api';
 import { WRAP, TEXT_BUTTON, TEXT_BUTTON_SM, SECTION_TITLE } from '../lib/ui';
 import { usePrefersReducedMotion } from '../hooks/usePrefersReducedMotion';
 import GameCard from '../components/GameCard';
@@ -41,6 +41,8 @@ import { FreshReviews, ReviewPicks } from '../components/home/FreshReviews';
 import GotwStrip from '../components/home/GotwStrip';
 
 const PAGE_SIZE = 10; // games per carousel page (2 rows on desktop)
+// The games whose key art the hero shows (Played these? puts them last)
+const HERO_GAME_IDS = HOME_SHOWCASE.heroes.map((slide) => slide.band.id);
 
 const Home = () => {
   // Featured games from IGDB (via our backend). null = still loading.
@@ -87,18 +89,19 @@ const Home = () => {
   const recent = reviews || [];
 
   // The showcase games' IMGM average and review count, for the captions under the
-  // cards: { 305152: { ratings: { imgm: 8.5 }, reviewCount: 32 } } (empty until loaded)
+  // cards: { 305152: { ratings: { imgm: 8.5 }, reviewCount: 32 } } (empty until loaded).
+  // They're top games, so one Hall of Fame request has them all (a game that has left
+  // it just shows its name).
   const [showcaseStats, setShowcaseStats] = useState({});
   useEffect(() => {
     const controller = new AbortController();
-    const ids = [HOME_SHOWCASE.hero.band.id, HOME_SHOWCASE.rarity.game.id];
-    Promise.all(ids.map((id) => getGame(id, controller.signal).catch(() => null))).then((found) =>
-      setShowcaseStats(
-        Object.fromEntries(
-          found.filter(Boolean).map((game) => [game.id, { ratings: game.ratings, reviewCount: game.reviewStats?.count ?? 0 }])
+    getTopGames({ sort: 'rank' }, controller.signal)
+      .then(({ games: top }) =>
+        setShowcaseStats(
+          Object.fromEntries(top.map((game) => [game.id, { ratings: { imgm: game.average }, reviewCount: game.reviewCount }]))
         )
       )
-    );
+      .catch(() => {}); // the captions just show the games' names
     return () => controller.abort();
   }, []);
 
@@ -159,12 +162,7 @@ const Home = () => {
 
       {/* The two big cards are a fixed showcase (lib/homeShowcase), not players' reviews;
           the captions under them carry their games' live IMGM numbers */}
-      <HomeHero
-        review={HOME_SHOWCASE.hero.review}
-        card={HOME_SHOWCASE.hero.card}
-        bandGame={{ ...HOME_SHOWCASE.hero.band, ...showcaseStats[HOME_SHOWCASE.hero.band.id] }}
-        onBrowse={browse}
-      />
+      <HomeHero slides={HOME_SHOWCASE.heroes} stats={showcaseStats} onBrowse={browse} />
 
       <RaritySection card={HOME_SHOWCASE.rarity.card} game={{ ...HOME_SHOWCASE.rarity.game, ...showcaseStats[HOME_SHOWCASE.rarity.game.id] }} />
 
@@ -238,7 +236,7 @@ const Home = () => {
           for next week's), and games waiting for their first review ── */}
       <FreshReviews reviews={freshReviews} />
       <GotwStrip />
-      <ReviewPicks avoidArt={HOME_SHOWCASE.hero.band.id} />
+      <ReviewPicks avoidArt={HERO_GAME_IDS} />
     </main>
   );
 };
