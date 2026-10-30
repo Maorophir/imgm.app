@@ -12,7 +12,7 @@ import { TEXT_LINK } from '../lib/ui';
 const Privacy = () => (
   <LegalPage
     title="Privacy Policy"
-    effective="October 18, 2026"
+    effective="October 30, 2026"
     intro="This policy explains what IMGM (I Am Gaming, imgm.app) collects about you, why, who helps us run the site, and the choices you have. We keep it as short and plain as we can."
   >
     <S title="1. Who we are">
@@ -21,8 +21,8 @@ const Privacy = () => (
 
     <S title="2. What we collect">
       <ul>
-        <li><strong className="text-white">Account:</strong> your email address and login (a password, stored only as a secure hash, or your Google account). If you sign in with Google, we get your name, email and Google picture; we never show your name or Google picture on IMGM.</li>
-        <li><strong className="text-white">Steam, if you connect it:</strong> your Steam ID (the public number Steam gives every account), your Steam name, the games you own on Steam, how long you've played each one (in all and in the last two weeks) and when you last played it. We use your Steam ID to let you log in with Steam. Steam never shares your Steam password, email address or payment details with us. We ask Steam for your games only when you connect Steam, open your Steam library on IMGM or refresh it.</li>
+        <li><strong className="text-white">Account:</strong> your email address and login (a password, stored only as a secure hash, your Google account, or your Steam account). If you sign up with Steam, you give us your email address yourself, because Steam doesn't share it. If you sign in with Google, we get your name, email and Google picture; we never show your name or Google picture on IMGM.</li>
+        <li><strong className="text-white">Steam, if you sign up with it or connect it:</strong> your Steam ID (the public number Steam gives every account), your Steam name, the games you own on Steam, how long you've played each one (in all and in the last two weeks) and when you last played it. We use your Steam ID to let you log in with Steam. Steam never shares your Steam password, email address or payment details with us. We ask Steam for your games only when you connect Steam, open your Steam library on IMGM or refresh it.</li>
         <li><strong className="text-white">Profile:</strong> your gamer tag and, if you add one, your profile picture.</li>
         <li><strong className="text-white">What you post and do:</strong> reviews and their answers, ratings, helpful votes, Game of the Week votes and nominations, your Backlog, Play Next chats and quest answers, and feedback you send.</li>
         <li><strong className="text-white">Technical:</strong> a login cookie, and your IP address, used briefly for security and to limit abuse (for example rate limits).</li>
@@ -35,7 +35,7 @@ const Privacy = () => (
         <li>To run your account and show your reviews, scores, XP, badges, votes and Backlog.</li>
         <li>To make the community features work: game scores, the Hall of Fame, Game of the Week, and AI summaries of what players think.</li>
         <li>To give you Play Next recommendations based on your answers and reviews.</li>
-        <li>If you connect Steam: to let you log in with it, and to show you your Steam library with your hours, so you can rate those games or add them to your Backlog.</li>
+        <li>If you sign up with Steam or connect it: to let you log in with it, and to show you your Steam library with your hours, so you can rate those games or add them to your Backlog.</li>
         <li>To keep IMGM safe and fair (stopping spam, abuse and fake votes) and to fix bugs.</li>
         <li>To send you account emails, like password resets. We don't send marketing emails.</li>
       </ul>
@@ -81,7 +81,7 @@ const Privacy = () => (
     </S>
 
     <S title="9. Cookies">
-      <p>IMGM uses only the cookies it needs to keep you logged in (and, while you log in with or connect Steam, a short-lived one that keeps that step safe). Your browser may also store a few settings for you (like your last Play Next answers). We don't use advertising or tracking cookies.</p>
+      <p>IMGM uses only the cookies it needs to keep you logged in (and, while you log in, sign up or connect with Steam, a short-lived one that keeps that step safe). Your browser may also store a few settings for you (like your last Play Next answers). We don't use advertising or tracking cookies.</p>
     </S>
 
     <S title="10. Children">

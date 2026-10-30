@@ -5,7 +5,6 @@
  * SMTP ports (25, 465, 587). Without RESEND_API_KEY (local development) nothing is
  * sent: the email is printed to the server log instead, link included.
  */
-import { clientOrigins } from './config.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const FROM = (process.env.EMAIL_FROM || 'IMGM <no-reply@imgm.app>').trim(); // a stray space after = must not break it
@@ -27,7 +26,9 @@ export const sendEmail = async ({ to, subject, html, text }) => {
 };
 
 const LIME = '#c6eb4e'; // the site's lime (--color-brand)
-const LOGO = `${clientOrigins[0]}/email-start.png`; // the power switch as a picture: mail apps don't show SVG
+// The power switch as a picture (mail apps don't show SVG), always from the live site:
+// a mail app loads it from the internet, so a test email from a laptop can't use localhost
+const LOGO = 'https://imgm.app/email-start.png';
 
 // Every email's top: the logo (power switch + IMGM) and what the letters stand for, and
 // a lime line across the card's top

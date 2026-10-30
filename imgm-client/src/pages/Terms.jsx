@@ -8,7 +8,7 @@ import { TEXT_LINK } from '../lib/ui';
 const Terms = () => (
   <LegalPage
     title="Terms of Use"
-    effective="October 18, 2026"
+    effective="October 30, 2026"
     intro="Welcome to IMGM (I Am Gaming, imgm.app). These terms are the rules for using the site. By creating an account or using IMGM, you agree to them. If you don't agree, please don't use IMGM."
   >
     <S title="1. Who can use IMGM">
@@ -20,7 +20,7 @@ const Terms = () => (
         <li>One account per person. Give accurate sign-up details.</li>
         <li>Your gamer tag and profile picture must not impersonate anyone, include hate or harassment, be sexual, or break anyone's rights.</li>
         <li>We may change or remove a gamer tag or picture that breaks these rules.</li>
-        <li>You can connect your own Steam account, to log in with it and see your Steam library on IMGM. Only connect a Steam account that's yours: anyone who can log in to it can log in to your IMGM account. You can disconnect it any time in your profile's settings.</li>
+        <li>You can sign up with, or connect, your own Steam account, to log in with it and see your Steam library on IMGM. Only connect a Steam account that's yours: anyone who can log in to it can log in to your IMGM account. You can disconnect it any time in your profile's settings.</li>
       </ul>
     </S>
 
