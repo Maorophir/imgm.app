@@ -7,6 +7,10 @@
  * sharing the games ({} : "Game details" is private, or a passing glitch) keeps the
  * stored games and only marks the library private, so one bad answer can't wipe it.
  *
+ * Games played through Steam Family Sharing aren't owned, so GetOwnedGames never lists
+ * them; Steam shows them only among the last two weeks' games. Each import adds those
+ * (shared) and keeps the ones seen before, so they build up, until the player owns one.
+ *
  * Which IGDB game each Steam app is lives in SteamApp, shared by every player: the
  * same app is the same game for everyone, so most imports need no IGDB request at all.
  * A match is checked again after 30 days, "IGDB doesn't know it" after 7 (IGDB links
@@ -15,7 +19,7 @@
 import { prisma } from '../lib/db.js';
 import { steamApiKey } from '../lib/config.js';
 import { STEAM_ISSUER, STEAM_PROVIDER, findSteamId, steamProfileUrl } from '../lib/steamAccount.js';
-import { SteamUnavailableError, getOwnedGames, getPersonaName } from './steamApi.js';
+import { SteamUnavailableError, getOwnedGames, getPersonaName, getRecentlyPlayedGames } from './steamApi.js';
 import * as igdb from './igdbService.js';
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -93,6 +97,17 @@ const readOwnedGames = (response) => {
   return { state: 'ok', games, hoursHidden };
 };
 
+// The games in GetRecentlyPlayedGames' `response` that the player doesn't own: played
+// through Steam Family Sharing. Anything unreadable is left out (they're only an extra).
+const readSharedGames = (response, ownedAppids) => {
+  const shared = new Map();
+  for (const raw of Array.isArray(response?.games) ? response.games : []) {
+    const game = readGame(raw);
+    if (game && !ownedAppids.has(game.appid)) shared.set(game.appid, { ...game, shared: true });
+  }
+  return shared;
+};
+
 const chunks = (rows, size) => Array.from({ length: Math.ceil(rows.length / size) }, (_, i) => rows.slice(i * size, (i + 1) * size));
 
 const isFresh = (app, now) => now - app.checkedAt.getTime() < (app.kind === 'none' ? NONE_FRESH_FOR : MATCH_FRESH_FOR);
@@ -137,17 +152,21 @@ const ensureSteamApps = async (appids) => {
  * Throws SteamUnavailableError (Steam down / busy / odd answer) or SteamNotConnectedError.
  *
  * steamId: the connected SteamID64, when the caller already looked it up.
- * fetchOwnedGames / fetchPersonaName: Steam's calls, replaceable (tests run without a key).
+ * fetchOwnedGames / fetchRecentGames / fetchPersonaName: Steam's calls, replaceable
+ * (tests run without a key).
  */
 export const importLibrary = async (
   userId,
-  { steamId, fetchOwnedGames = getOwnedGames, fetchPersonaName = getPersonaName } = {}
+  { steamId, fetchOwnedGames = getOwnedGames, fetchRecentGames = getRecentlyPlayedGames, fetchPersonaName = getPersonaName } = {}
 ) => {
   steamId ??= await findSteamId(userId);
   if (!steamId) throw new SteamNotConnectedError();
 
-  const [response, rawName] = await Promise.all([
+  const [response, recent, rawName] = await Promise.all([
     fetchOwnedGames(steamId),
+    Promise.resolve()
+      .then(() => fetchRecentGames(steamId))
+      .catch(() => null), // only an extra (shared games)
     Promise.resolve()
       .then(() => fetchPersonaName(steamId))
       .catch(() => null), // only a nicety
@@ -177,9 +196,19 @@ export const importLibrary = async (
         });
         return;
       }
-      const library = { state: owned.state, gameCount: owned.games.length, hoursHidden: owned.hoursHidden, importedAt, ...named };
+      // Shared games seen before stay (Steam lists them only while recently played), not
+      // recently played any more unless seen again now; one the player now owns is owned
+      const ownedAppids = new Set(owned.games.map((g) => g.appid));
+      const kept = await tx.steamLibraryGame.findMany({ where: { userId, shared: true } });
+      const shared = new Map(kept.filter((g) => !ownedAppids.has(g.appid)).map((g) => [g.appid, { ...g, minutes2Weeks: 0 }]));
+      for (const [appid, game] of readSharedGames(recent, ownedAppids)) shared.set(appid, game);
+      const games = [...owned.games, ...shared.values()];
+
+      // Owning nothing but playing shared games is still a library to show
+      const state = owned.state === 'empty' && games.length > 0 ? 'ok' : owned.state;
+      const library = { state, gameCount: games.length, hoursHidden: owned.hoursHidden, importedAt, ...named };
       await tx.steamLibraryGame.deleteMany({ where: { userId } });
-      for (const rows of chunks(owned.games, WRITE_CHUNK)) {
+      for (const rows of chunks(games, WRITE_CHUNK)) {
         await tx.steamLibraryGame.createMany({ data: rows.map((game) => ({ userId, ...game })) });
       }
       await tx.steamLibrary.upsert({ where: { userId }, create: { userId, ...library }, update: library });
@@ -187,10 +216,9 @@ export const importLibrary = async (
     { timeout: 30 * 1000 }
   );
 
-  // Private: the games kept from last time still need their matches checked
-  const appids = owned.state === 'private'
-    ? (await prisma.steamLibraryGame.findMany({ where: { userId }, select: { appid: true } })).map((g) => g.appid)
-    : owned.games.map((g) => g.appid);
+  // Every stored game needs its match checked: the owned and shared ones just written,
+  // or, when private, the ones kept from last time
+  const appids = (await prisma.steamLibraryGame.findMany({ where: { userId }, select: { appid: true } })).map((g) => g.appid);
   await ensureSteamApps(appids);
 
   const library = await prisma.steamLibrary.findUnique({ where: { userId }, select: { state: true, gameCount: true, hoursHidden: true } });
@@ -227,7 +255,7 @@ export const buildLibrary = async (userId, { steamId } = {}) => {
   for (const game of owned) {
     const app = appsById.get(game.appid);
     if (!app?.gameId) {
-      others.push({ appid: game.appid, name: game.name, minutes: game.minutes, kind: app?.kind ?? 'none' });
+      others.push({ appid: game.appid, name: game.name, minutes: game.minutes, kind: app?.kind ?? 'none', shared: game.shared });
       continue;
     }
     const entry = byGame.get(app.gameId);
@@ -241,9 +269,11 @@ export const buildLibrary = async (userId, { steamId } = {}) => {
         minutes: game.minutes,
         minutes2Weeks: game.minutes2Weeks,
         lastPlayedAt: game.lastPlayedAt,
+        shared: game.shared, // played through Steam Family Sharing, not owned
       });
       continue;
     }
+    entry.shared &&= game.shared; // owned as any of its Steam apps = owned
     entry.minutes = Math.min(entry.minutes + game.minutes, INT_MAX);
     entry.minutes2Weeks = Math.max(entry.minutes2Weeks, game.minutes2Weeks);
     if (game.lastPlayedAt && (!entry.lastPlayedAt || game.lastPlayedAt > entry.lastPlayedAt)) entry.lastPlayedAt = game.lastPlayedAt;
