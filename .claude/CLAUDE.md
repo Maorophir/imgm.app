@@ -31,6 +31,7 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
   - Signing up: Steam gives no email, so `/signup/steam` asks for one. The account is made at once and the email confirmed later, like an email sign-up. "Log in with Steam" with a Steam account new to IMGM signs up instead.
   - The library: `services/steamApi.js` + `services/steamLibrary.js`, needs `STEAM_API_KEY` (Render has it). Family Sharing games never appear in GetOwnedGames; GetRecentlyPlayedGames (last 2 weeks) shows them, so each import keeps them as `SteamLibraryGame.shared` ("Shared with you").
   - Pages: `/steam` (public), `/steam/library`, `/signup/steam`; Settings connects and disconnects.
+  - Logging in or signing up with Steam never lands on a Steam page (`signInReturn` sends those home; other "come back to" pages are kept). Only Connect Steam returns to the library (the user's call, 2026-10-30).
 
 ## Run locally
 - `docker compose up -d` starts Postgres (`imgm-postgres`, user `imgm_user`, db `imgm_db`), the server on :5000 and the client on :5173.

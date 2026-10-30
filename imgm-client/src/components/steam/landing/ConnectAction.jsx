@@ -4,8 +4,8 @@
  *
  *   loading        a quiet placeholder the size of the button (no jump when it's known)
  *   guest          "Sign up with Steam" (Steam's sign-in page, then an email on
- *                  /signup/steam, and on to their library), and a link to log in for
- *                  players who already have an account (back here after)
+ *                  /signup/steam, then home: the Steam pages are for Connect only), and
+ *                  a link to log in for players who already have an account (back here after)
  *   ready          signed in, Steam not connected: "Connect Steam" sends the player to
  *                  Steam's own sign-in page, and Steam's answer lands on their library
  *   connected      "Open your library", who they're connected as, and where to manage it
@@ -66,12 +66,12 @@ const ConnectAction = ({ state, status, onRefresh, className = '' }) => {
     }
   };
 
-  // A visitor signs up with Steam, and lands on their library once they have a gamer tag
+  // A visitor signs up with Steam, and lands home once they have a gamer tag
   const signUp = async () => {
     setBusy(true);
     setProblem(null);
     try {
-      goToSteam(await startSteamSignUp(RETURN_TO)); // busy until the page is gone
+      goToSteam(await startSteamSignUp('/')); // busy until the page is gone
     } catch (error) {
       setBusy(false);
       setProblem({ code: null, text: steamStartError(error) });

@@ -83,10 +83,13 @@ const SIGN_UP_SECONDS = SIGN_UP_MS / 1000;
 
 // Where a connection made from IMGM comes back to
 const LINK_RETURNS = ['/steam', '/steam/library', '/settings'];
-// Where a Steam login may land: a path on IMGM (one slash, then printable characters,
-// no backslash), never another site
+// Where a Steam login or sign-up may land: a path on IMGM (one slash, then printable
+// characters, no backslash), never another site. Never the Steam pages either: they're
+// for connecting Steam (Connect lands there), so logging in with it goes home.
 const SIGN_IN_RETURN = /^\/(?![/\\])[\x21-\x7e]{0,511}$/;
-const signInReturn = (path) => (typeof path === 'string' && SIGN_IN_RETURN.test(path) && !path.includes('\\') ? path : '/');
+const STEAM_PAGE = /^\/steam(?:[/?#]|$)/;
+const signInReturn = (path) =>
+  typeof path === 'string' && SIGN_IN_RETURN.test(path) && !path.includes('\\') && !STEAM_PAGE.test(path) ? path : '/';
 
 const sha256 = (text) => createHash('sha256').update(text).digest('hex');
 
