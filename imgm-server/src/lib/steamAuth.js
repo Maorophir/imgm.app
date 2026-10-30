@@ -29,7 +29,7 @@
  * keeps the Steam account for a while, and the player gives an email on /signup/steam;
  * like an email sign-up, that email is confirmed later. Logging in with Steam works for
  * a player who signed up that way, or connected it from a recent login with a confirmed
- * email.
+ * email; with a Steam account new to IMGM, it signs up instead.
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
 import { z } from 'zod';
@@ -257,7 +257,9 @@ export const steam = () => {
     const adapter = ctx.context.internalAdapter;
     const failed = (code) => siteUrl('/login', { steam_error: code, ...(trip.returnTo !== '/' && { redirect: trip.returnTo }) });
     const owner = await adapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId });
-    if (owner?.kind !== 'owned' || owner.account.providerId !== STEAM_PROVIDER) return failed('not_connected');
+    // A Steam account new to IMGM: logging in with it means signing up (an email next)
+    if (!owner) return startSignUp(ctx, trip, steamId);
+    if (owner.kind !== 'owned' || owner.account.providerId !== STEAM_PROVIDER) return failed('not_connected');
     const session = await adapter.createSession(owner.user.id);
     if (!session) return failed('failed');
     await setSessionCookie(ctx, { session, user: owner.user });
@@ -270,6 +272,8 @@ export const steam = () => {
   // A new player signing up with Steam: Steam only says which Steam account it is, so
   // IMGM keeps that (a one-time record, for this browser only) while they give an email
   // on /signup/steam. A Steam account that's already connected just logs in.
+  // (logIn and startSignUp hand over to each other only when the other one fits, so they
+  // never go round in circles)
   const startSignUp = async (ctx, trip, steamId) => {
     const owner = await ctx.context.internalAdapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId });
     if (owner) return logIn(ctx, trip, steamId);

@@ -7,13 +7,12 @@
  * Email and password, or Google (in a popup). New players go on to choose a gamer
  * tag (/welcome). Behind the card, real popular games' covers drift by, dimmed.
  *
- * Log in also offers Steam, for players who have connected it in Settings: the whole
- * page goes to Steam's own sign-in page (not a popup), and Steam's answer comes back
- * through IMGM's server, straight to ?redirect (logged in), or here with
- * ?steam_error=<code> (that Steam account isn't connected yet, they cancelled…). The
+ * Both tabs also offer Steam: the whole page goes to Steam's own sign-in page (not a
+ * popup), and Steam's answer comes back through IMGM's server, straight to ?redirect
+ * (logged in), or here with ?steam_error=<code> (they cancelled, it took too long…). The
  * code is read once, shown in the site's words (only known codes have any), and
- * cleared from the address. Sign up has no Steam: Steam shares no email, so it can't
- * make an account.
+ * cleared from the address. A Steam account new to IMGM goes on to /signup/steam for an
+ * email (Steam shares none), from either tab.
  *
  * Noir: a flat card of card stock (no frosted glass), a Big Shoulders heading, the
  * lime "Log in" (or "Sign up") as the page's one main action, Google's own dark
@@ -22,7 +21,7 @@
 import { useState, useEffect } from 'react';
 import { signIn, signUp, authClient, useSession } from '../lib/authClient';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { getFeaturedGames, startSteamSignIn } from '../lib/api';
+import { getFeaturedGames, startSteamSignIn, startSteamSignUp } from '../lib/api';
 import { safeRedirect } from '../lib/safeRedirect';
 import { goToSteam, steamErrorMessage, steamStartError } from '../lib/steam';
 import { passwordProblems } from '../lib/passwordRules';
@@ -155,14 +154,15 @@ function Auth() {
     }
   };
 
-  // Log in with Steam: IMGM's server makes the address of Steam's sign-in page (and
-  // remembers where to go after), then the whole page goes there. It only works for a
-  // Steam account already connected to an IMGM account; Steam says which one it is.
-  const handleSteamSignIn = async () => {
+  // Log in or sign up with Steam: IMGM's server makes the address of Steam's sign-in
+  // page (and remembers where to go after), then the whole page goes there. Steam says
+  // which Steam account it is: a connected one logs in, a new one signs up.
+  const handleSteam = async () => {
     setError('');
     setSteamBusy(true);
     try {
-      goToSteam(await startSteamSignIn(redirectTo)); // the button stays busy until the page is gone
+      const start = isLogin ? startSteamSignIn : startSteamSignUp;
+      goToSteam(await start(redirectTo)); // the button stays busy until the page is gone
     } catch (err) {
       setError(steamStartError(err));
       setSteamBusy(false);
@@ -274,21 +274,17 @@ function Auth() {
           Continue with Google
         </button>
 
-        {/* Steam, for logging in only (it can't make an account): a plain dark button in
-            the same family as Google's, in IMGM's own greys, with words and no logo */}
-        {isLogin && (
-          <>
-            <button
-              type="button"
-              onClick={handleSteamSignIn}
-              disabled={steamBusy}
-              className="mt-3 w-full h-11 flex items-center justify-center bg-slate-950 border border-slate-500 text-white hover:border-white font-medium px-4 rounded-sm transition-colors duration-120 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-slate-500"
-            >
-              {steamBusy ? 'Opening Steam…' : 'Log in with Steam'}
-            </button>
-            <p className="mt-2 text-center text-xs text-slate-400">Works once you've connected Steam in Settings.</p>
-          </>
-        )}
+        {/* Steam: a plain dark button in the same family as Google's, in IMGM's own
+            greys, with words and no logo */}
+        <button
+          type="button"
+          onClick={handleSteam}
+          disabled={steamBusy}
+          className="mt-3 w-full h-11 flex items-center justify-center bg-slate-950 border border-slate-500 text-white hover:border-white font-medium px-4 rounded-sm transition-colors duration-120 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-slate-500"
+        >
+          {steamBusy ? 'Opening Steam…' : isLogin ? 'Log in with Steam' : 'Sign up with Steam'}
+        </button>
+        {!isLogin && <p className="mt-2 text-center text-xs text-slate-400">Steam doesn't share your email, so we'll ask for it next.</p>}
 
         {/* Signing up (or in with Google, which can create an account) means agreeing */}
         <p className="mt-4 text-center text-xs text-slate-400">

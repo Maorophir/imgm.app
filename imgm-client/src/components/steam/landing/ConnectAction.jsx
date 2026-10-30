@@ -3,9 +3,9 @@
  * What it offers depends on who is looking:
  *
  *   loading        a quiet placeholder the size of the button (no jump when it's known)
- *   guest          "Log in to connect Steam" (back here after), and a link to sign up:
- *                  Steam can't make an IMGM account (it shares no email), so a visitor
- *                  needs one first
+ *   guest          "Sign up with Steam" (Steam's sign-in page, then an email on
+ *                  /signup/steam, and on to their library), and a link to log in for
+ *                  players who already have an account (back here after)
  *   ready          signed in, Steam not connected: "Connect Steam" sends the player to
  *                  Steam's own sign-in page, and Steam's answer lands on their library
  *   connected      "Open your library", who they're connected as, and where to manage it
@@ -25,7 +25,7 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BadgeCheck } from 'lucide-react';
 import { signOut } from '../../../lib/authClient';
-import { startSteamConnect } from '../../../lib/api';
+import { startSteamConnect, startSteamSignUp } from '../../../lib/api';
 import { goToSteam, steamStartError } from '../../../lib/steam';
 import { GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../../../lib/ui';
 
@@ -66,6 +66,18 @@ const ConnectAction = ({ state, status, onRefresh, className = '' }) => {
     }
   };
 
+  // A visitor signs up with Steam, and lands on their library once they have a gamer tag
+  const signUp = async () => {
+    setBusy(true);
+    setProblem(null);
+    try {
+      goToSteam(await startSteamSignUp(RETURN_TO)); // busy until the page is gone
+    } catch (error) {
+      setBusy(false);
+      setProblem({ code: null, text: steamStartError(error) });
+    }
+  };
+
   // Connecting needs a recent login: log out, then log in again and come straight back
   const logInAgain = async () => {
     await signOut().catch(() => {});
@@ -86,17 +98,18 @@ const ConnectAction = ({ state, status, onRefresh, className = '' }) => {
       <div className={className}>
         <div className="flex flex-col items-stretch sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-7 sm:gap-y-3">
           {/* Logged out, this is the page's main action: the one lime button */}
-          <Link to="/login?redirect=%2Fsteam" className={PRIMARY_BUTTON}>
-            Log in to connect Steam
-          </Link>
+          <button type="button" onClick={signUp} disabled={busy} className={PRIMARY_BUTTON}>
+            {busy ? 'Opening Steam…' : 'Sign up with Steam'}
+          </button>
           <p className="self-center text-base text-slate-300">
-            New here?{' '}
-            <Link to="/login?mode=signup&redirect=%2Fsteam" className={SIDE_LINK}>
-              Sign up
+            Already on IMGM?{' '}
+            <Link to="/login?redirect=%2Fsteam" className={SIDE_LINK}>
+              Log in
             </Link>
           </p>
         </div>
-        <p className="mt-3 text-sm text-slate-400">Steam connects to a free IMGM account, so you need one first.</p>
+        <p className="mt-3 text-sm text-slate-400">A free IMGM account. Steam doesn't share your email, so we'll ask for it next.</p>
+        {problem && <p role="alert" className="mt-3 text-sm text-red-200">{problem.text}</p>}
       </div>
     );
   }

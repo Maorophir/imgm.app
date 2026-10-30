@@ -31,6 +31,7 @@ import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
 import SteamLanding from './pages/SteamLanding';
 import SteamLibrary from './pages/SteamLibrary';
+import SteamSignUp from './pages/SteamSignUp';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
 import { usePageTitle } from './hooks/usePageTitle';
 import { useSearchIndexing } from './hooks/useSearchIndexing';
@@ -87,6 +88,7 @@ const PAGES = {
   '/privacy': ['Privacy Policy', 'What IMGM collects, why, and how to delete your account and data.'],
   '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, collect a card for every rating, and get picks from Play Next.'],
   '/welcome': ['Welcome'],
+  '/signup/steam': ['Sign up with Steam'],
 };
 function RouteTitle() {
   const { pathname } = useLocation();
@@ -134,6 +136,8 @@ function App() {
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Auth />} />
+          {/* Back from Steam to sign up: the email step */}
+          <Route path="/signup/steam" element={<SteamSignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
