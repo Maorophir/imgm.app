@@ -32,6 +32,7 @@ import GameGuide from './pages/GameGuide';
 import SteamLanding from './pages/SteamLanding';
 import SteamLibrary from './pages/SteamLibrary';
 import SteamSignUp from './pages/SteamSignUp';
+import Discover from './pages/Discover';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
 import { usePageTitle } from './hooks/usePageTitle';
 import { useSearchIndexing } from './hooks/useSearchIndexing';
@@ -89,6 +90,7 @@ const PAGES = {
   '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, collect a card for every rating, and get picks from Play Next.'],
   '/welcome': ['Welcome'],
   '/signup/steam': ['Sign up with Steam'],
+  '/discover': ['Discover new games'],
 };
 function RouteTitle() {
   const { pathname } = useLocation();
@@ -133,6 +135,8 @@ function App() {
           {/* Steam: what connecting gives you (anyone), then your library (players) */}
           <Route path="/steam" element={<SteamLanding />} />
           <Route path="/steam/library" element={<SteamLibrary />} />
+          {/* Discover: a feed of new games, one per screen (a demo for now) */}
+          <Route path="/discover" element={<Discover />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Auth />} />
