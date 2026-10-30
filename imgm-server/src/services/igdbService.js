@@ -467,6 +467,62 @@ export const getPopularGames = async (limit = 10) => {
 };
 
 // ---------------------------------------------------------------------------
+// Discover: the feeds to scroll through, one game per screen, each with a trailer.
+// IGDB's own popularity rankings (popularity_primitives) choose and order them, so
+// the games people care about come first, not the hundreds of tiny releases a week.
+// ---------------------------------------------------------------------------
+
+const POPULARITY = { visits: 1, wantToPlay: 2, mostWishlistedUpcoming: 10 }; // IGDB /popularity_types
+const DAY_S = 24 * 60 * 60;
+const DISCOVER_RANKED = 500; // how far down each ranking to look (IGDB's most per request)
+const DISCOVER_LIMIT = 40;
+const DISCOVER_TTL = 6 * 60 * 60 * 1000;
+const discoverCache = new Map(); // feed -> { expiresAt, results }
+
+const DISCOVER_FEEDS = {
+  // Out in the last 90 days, most visited first
+  new: { rankings: [POPULARITY.visits], window: (now) => `first_release_date > ${now - 90 * DAY_S} & first_release_date <= ${now}` },
+  // Out in the next year, most wanted first (two rankings: the wishlist one misses some
+  // giants, like GTA VI). Each card says when it's out, so the feed leads with the hype.
+  soon: {
+    rankings: [POPULARITY.mostWishlistedUpcoming, POPULARITY.wantToPlay],
+    window: (now) => `first_release_date > ${now} & first_release_date < ${now + 365 * DAY_S}`,
+  },
+  // Out in the last 2 years (so not Minecraft or Roblox), most visited right now
+  trending: { rankings: [POPULARITY.visits], window: (now) => `first_release_date > ${now - 730 * DAY_S} & first_release_date <= ${now}` },
+};
+export const DISCOVER_FEED_NAMES = Object.keys(DISCOVER_FEEDS);
+
+// The game ids at the top of one of IGDB's popularity rankings, most popular first
+const topOfRanking = async (type) =>
+  (await igdbRequest('popularity_primitives', `fields game_id; where popularity_type = ${type}; sort value desc; limit ${DISCOVER_RANKED};`))
+    .map((p) => p.game_id);
+
+export const getDiscoverGames = async (feed) => {
+  const cached = discoverCache.get(feed);
+  if (cached && Date.now() < cached.expiresAt) return cached.results;
+
+  const { rankings, window } = DISCOVER_FEEDS[feed];
+  // A game's place is its best one across the rankings (the top of each comes first)
+  const rank = new Map();
+  for (const ranking of await Promise.all(rankings.map(topOfRanking))) {
+    ranking.forEach((id, i) => rank.set(id, Math.min(i, rank.get(id) ?? Infinity)));
+  }
+  const ids = [...rank.keys()];
+  const now = Math.floor(Date.now() / 1000);
+  // Main games, remakes and remasters, with a cover and a trailer to play
+  const body = `${GAME_FIELDS} where id = (${ids.join(',')}) & ${window(now)} & game_type = (0,8,9) & cover != null & videos != null; limit 500;`;
+  const raw = ids.length ? await igdbRequest('games', body) : [];
+  const results = raw
+    .sort((a, b) => rank.get(a.id) - rank.get(b.id))
+    .slice(0, DISCOVER_LIMIT)
+    .map(mapIgdbGame);
+
+  discoverCache.set(feed, { expiresAt: Date.now() + DISCOVER_TTL, results });
+  return results;
+};
+
+// ---------------------------------------------------------------------------
 // A game's family, for Play Next: "games like X" usually starts with X's own family
 // ---------------------------------------------------------------------------
 

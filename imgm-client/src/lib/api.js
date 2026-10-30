@@ -40,6 +40,8 @@ export const searchGames = (query, signal) =>
   fetchJson(`/api/games/search?q=${encodeURIComponent(query)}`, { signal });
 
 export const getFeaturedGames = (signal) => fetchJson('/api/games/featured', { signal });
+// Discover's feeds, one game per screen with its trailer: 'new' | 'soon' | 'trending'
+export const getDiscoverGames = (feed, signal) => fetchJson(`/api/games/discover?feed=${feed}`, { signal });
 // Games to get the player reviewing: popular ones in their favourite genres they haven't
 // rated (logged in), else the most played games of all time. { personal, genres, games }
 export const getReviewPicks = (signal) => fetchJson('/api/games/review-picks', { signal });

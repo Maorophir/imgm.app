@@ -32,6 +32,9 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
   - The library: `services/steamApi.js` + `services/steamLibrary.js`, needs `STEAM_API_KEY` (Render has it). Family Sharing games never appear in GetOwnedGames; GetRecentlyPlayedGames (last 2 weeks) shows them, so each import keeps them as `SteamLibraryGame.shared` ("Shared with you").
   - Pages: `/steam` (public), `/steam/library`, `/signup/steam`; Settings connects and disconnects.
   - Logging in or signing up with Steam never lands on a Steam page (`signInReturn` sends those home; other "come back to" pages are kept). Only Connect Steam returns to the library (the user's call, 2026-10-30).
+- **Discover** (`/discover`, started 2026-10-30): a TikTok-style feed of games, one per screen, so visitors who don't review still have something to do (most leave after a look).
+  - `GET /api/games/discover?feed=new|soon|trending` (`getDiscoverGames` in `igdbService.js`, cached 6 hours): IGDB's popularity rankings (`popularity_primitives`) choose and order the games, so big games come first, not the hundreds of small releases a week. New = the last 90 days by visits; Coming soon = the next year by "Most Wishlisted Upcoming" and "Want to Play" (a game's best place in either; the wishlist one alone misses GTA VI); Trending = the last 2 years by visits. Main games, remakes and remasters, with a trailer.
+  - `pages/Discover.jsx`: the trailer of the game on screen plays muted edge to edge (a YouTube embed scaled to cover the slide, using cqw/cqh); the others show their key art. IGDB dates a game known only by its year as 31 December: the page says "Coming 2027".
 
 ## Run locally
 - `docker compose up -d` starts Postgres (`imgm-postgres`, user `imgm_user`, db `imgm_db`), the server on :5000 and the client on :5173.

@@ -150,6 +150,31 @@ export const getFeaturedGames = async (req, res) => {
   }
 };
 
+// The last list of each Discover feed saved to the DB (saved again only when it changes)
+const lastSavedDiscover = new Map();
+
+// GET /api/games/discover?feed=new|soon|trending — Discover's feeds, one game per
+// screen: each with its trailer, and its IMGM rating like the featured games
+export const getDiscoverGames = async (req, res) => {
+  const feed = req.query.feed ?? 'new';
+  if (!igdb.DISCOVER_FEED_NAMES.includes(feed)) return res.status(400).json({ error: 'Unknown feed' });
+  try {
+    const games = await igdb.getDiscoverGames(feed);
+    // Saved in the background, like the featured games, so their pages load from the DB
+    if (lastSavedDiscover.get(feed) !== games) {
+      lastSavedDiscover.set(feed, games);
+      Promise.all(games.map((game) => upsertGame(game).catch((error) => console.error(`Error caching Discover game ${game.id}:`, error))));
+    }
+    const list = await withImgmRatings(games);
+    // The same list for every visitor: the CDN can answer while this server sleeps
+    cacheAtEdge(res);
+    res.json(list);
+  } catch (error) {
+    console.error(`Error fetching the Discover feed ${feed}:`, error);
+    res.status(502).json({ error: 'Failed to fetch games' });
+  }
+};
+
 // IGDB refreshes running right now, by game id: a busy game page starts one refresh,
 // not one per visitor
 const refreshing = new Map();
