@@ -32,6 +32,7 @@
  * email; with a Steam account new to IMGM, it signs up instead.
  */
 import { createHash, timingSafeEqual } from 'node:crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import { z } from 'zod';
 import {
   APIError,
@@ -192,27 +193,48 @@ export const readSteamAnswer = (text) => {
   return fields.get('ns') === OPENID_NS && fields.get('is_valid') === 'true';
 };
 
-// Asks Steam itself whether it wrote the note (at the fixed address, following no redirect)
-const confirmWithSteam = async (query) => {
+// Steam's firewall sometimes turns away a request from a data centre's shared address
+// (Render's) with a 403 before reading it, though the same request from a home
+// connection always gets through. So the check says who is asking, and a turned-away
+// try is tried again a moment later: Steam never read it, so asking again is safe.
+const CHECK_TRIES = 3;
+const CHECK_RETRY_STATUSES = new Set([403, 429, 500, 502, 503, 504]);
+const CHECK_HEADERS = {
+  'Content-Type': 'application/x-www-form-urlencoded',
+  Accept: 'text/plain',
+  'User-Agent': 'Mozilla/5.0 (compatible; IMGM/1.0; +https://imgm.app)',
+};
+
+// Asks Steam itself whether it wrote the note (at the fixed address, following no redirect).
+// Exported for tests.
+export const confirmWithSteam = async (query) => {
   const body = new URLSearchParams();
   for (const key of NOTE_KEYS) body.set(key, query.get(key));
   body.set('openid.mode', 'check_authentication');
-  const response = await fetch(STEAM_LOGIN, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'text/plain' },
-    body,
-    redirect: 'manual',
-    signal: AbortSignal.timeout(10_000),
-  });
-  // Why Steam said no goes to the log (its answer is only ns + is_valid: nothing secret)
-  if (response.status !== 200) {
-    console.warn(`Steam login refused: Steam's check answered ${response.status}`);
-    return false;
+  for (let attempt = 1; ; attempt++) {
+    const response = await fetch(STEAM_LOGIN, {
+      method: 'POST',
+      headers: CHECK_HEADERS,
+      body,
+      redirect: 'manual',
+      signal: AbortSignal.timeout(6_000), // three tries still end well inside a page load
+    });
+    if (response.status === 200) {
+      // Why Steam said no goes to the log (its answer is only ns + is_valid: nothing secret)
+      const text = await response.text();
+      const valid = text.length <= 4096 && readSteamAnswer(text);
+      if (!valid) console.warn(`Steam login refused: Steam's check said ${JSON.stringify(text.slice(0, 200))}`);
+      else if (attempt > 1) console.warn(`Steam login check got through on try ${attempt} of ${CHECK_TRIES}`);
+      return valid;
+    }
+    response.body?.cancel().catch(() => {});
+    console.warn(`Steam login check: Steam answered ${response.status} (try ${attempt} of ${CHECK_TRIES})`);
+    if (attempt >= CHECK_TRIES || !CHECK_RETRY_STATUSES.has(response.status)) {
+      console.warn(`Steam login refused: Steam's check answered ${response.status}`);
+      return false;
+    }
+    await delay(400 * attempt);
   }
-  const text = await response.text();
-  const valid = text.length <= 4096 && readSteamAnswer(text);
-  if (!valid) console.warn(`Steam login refused: Steam's check said ${JSON.stringify(text.slice(0, 200))}`);
-  return valid;
 };
 
 /* ── The plugin ─────────────────────────────────────────────────────────────── */
