@@ -22,7 +22,7 @@
 - Privacy and Terms cover all of it (effective October 30, 2026). Emails load the logo from imgm.app.
 
 ## Known issues
-- **Steam sign-up failed once in production** with "Steam couldn't confirm it was you" (the `invalid` error), then worked after the hotfix, which only added logging: probably a one-off (a slow start, an expired or reused answer). If it comes back, Render's `Steam login refused: <why>` line names the check. Vercel's `/api` rewrite was checked: it passes `%2B` and `%3D` through unchanged.
+- **Steam login failed now and then in production** with "Steam couldn't confirm it was you": Render's log said `Steam login refused: Steam's check answered 403`. Steam's firewall turns away Render's shared address at times (from a home connection the same request always gets 200, with or without a User-Agent). **`hotfix/steam-check-retry`** sends a named User-Agent and tries the check up to 3 times. If Render's logs still show `Steam answered 403 (try 3 of 3)`, the next step is sending the check from another server.
 - **After Sort**, the model sometimes makes a new game the Best Pick, although the follow-up rule says to keep the kept picks' order. No code check for it yet.
 - **Which family game the model picks varies:** for It Takes Two the tool returns Split Fiction and A Way Out, and some answers pick only A Way Out.
 - **Locally**, the free Gemini key often times out or runs out of quota, so answers can take 70–150s before Vertex takes over. Production has no free key (~20–40s).
