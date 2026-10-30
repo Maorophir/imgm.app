@@ -7,8 +7,8 @@
  *                edge slides the other way, so the card seems to have thickness.
  *   The tilt     the card leans toward the pointer (or a finger dragging across it),
  *                up to about 12 degrees, on a stiff spring that settles quickly.
- *   Legendary    only a perfect 10 also gets a soft glare that follows the pointer,
- *                and its gilt (frame and edge) shifts as it tilts.
+ *   The glare    every card gets a soft light that follows the pointer, gone at rest.
+ *   Legendary    only a perfect 10's gilt (frame and edge) shifts as it tilts.
  *   The flip     with flipped={true} the card turns over in 3D to show `back`.
  *
  * People who ask their device for less motion get a card that stays still, and the
@@ -19,7 +19,7 @@
  *   back       optional: its back, e.g. <CardBack />. Without it the card never turns
  *   flipped    true shows the back (the page owns the "Flip" button)
  *   tier       the card's RARITIES key ('junk' … 'legendary'): the edge colour, and
- *              the glare and moving gilt for 'legendary'
+ *              the moving gilt for 'legendary'
  *   rest       the card's resting angle in degrees (default -2.5; 0 for straight)
  *   tilt       false keeps the card still (for small cards in a grid); default true
  *   maxTilt    the most it leans, in degrees (default 12)
@@ -204,8 +204,8 @@ const CardStage = ({
                 }}
               />
               <div className="relative">{front}</div>
-              {/* Legendary only: a soft light where the pointer is, gone at rest */}
-              {legendary && (
+              {/* A soft light where the pointer is, gone at rest */}
+              {!reduced && (
                 <span
                   aria-hidden="true"
                   className="absolute inset-0 rounded-[4.76%/3.41%] pointer-events-none mix-blend-soft-light"
