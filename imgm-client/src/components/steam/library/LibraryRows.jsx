@@ -9,6 +9,7 @@
  *               save   (Not played) Add to Backlog, and Played it? Rate it for a game
  *                      played somewhere else (nothing filled in: Steam knows nothing of it)
  *             A game that isn't out yet says when it's out and offers only the Backlog.
+ *             A game played through Steam Family Sharing (not owned) says "Shared with you".
  *   OtherRow  a Steam app IMGM can't rate: its Steam name and hours, a plain link to its
  *             Steam store page, and a search on IMGM (it may be listed under another name)
  */
@@ -63,7 +64,11 @@ export const GameRow = ({ game, action, showHours, hoursHidden }) => {
   const notOut = isUnreleased(game.releaseDate);
   // IGDB dates are midnight UTC, so the year is read in UTC (not the visitor's time zone)
   const year = game.releaseDate && !notOut ? new Date(game.releaseDate).getUTCFullYear() : null;
-  const meta = [notOut ? releaseLabel(game.releaseDate) : year, showHours && game.minutes2Weeks > 0 && 'Played recently']
+  const meta = [
+    notOut ? releaseLabel(game.releaseDate) : year,
+    showHours && game.minutes2Weeks > 0 && 'Played recently',
+    game.shared && 'Shared with you',
+  ]
     .filter(Boolean)
     .join(' · ');
   const page = `/game/${game.gameId}`;
@@ -107,12 +112,13 @@ const KINDS = { dlc: 'DLC', bundle: 'Bundle' };
 export const OtherRow = ({ app, showHours }) => {
   const store = steamStoreUrl(app.appid);
   const name = app.name || `Steam app ${app.appid}`;
+  const meta = [KINDS[app.kind], app.shared && 'Shared with you'].filter(Boolean).join(' · ');
   return (
     <li className={ROW}>
       {showHours && <Hours minutes={app.minutes} />}
       <div className="min-w-0 flex-1 flex flex-col gap-1">
         <p className="font-medium text-white text-lg leading-tight truncate">{name}</p>
-        {KINDS[app.kind] && <p className="text-sm text-slate-400">{KINDS[app.kind]}</p>}
+        {meta && <p className="text-sm text-slate-400">{meta}</p>}
         <p className="flex flex-wrap items-center gap-x-5 text-sm">
           {store && (
             <a href={store} target="_blank" rel="noopener noreferrer" className={ROW_LINK}>

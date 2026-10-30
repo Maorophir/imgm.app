@@ -16,7 +16,8 @@ import { questLink } from './libraryData';
 
 const RatedCard = ({ game, hoursHidden }) => {
   const rarity = getRarity(game.myRating);
-  const hours = !hoursHidden && game.minutes > 0 ? `${hoursLabel(game.minutes)} on Steam` : null;
+  // A Family Sharing game says so: those hours were played on someone else's copy
+  const hours = !hoursHidden && game.minutes > 0 ? `${hoursLabel(game.minutes)} on Steam${game.shared ? ', shared' : ''}` : null;
   return (
     // The keyboard outline goes around the whole card, like the profile's cards
     <li className="relative min-w-0 animate-fade-in has-[.card-link:focus-visible]:outline-2 has-[.card-link:focus-visible]:outline-offset-4 has-[.card-link:focus-visible]:outline-white">

@@ -421,6 +421,9 @@ model SteamLibraryGame {
   minutes      Int       @default(0) // all-time playtime
   minutes2Weeks Int      @default(0)
   lastPlayedAt DateTime?
+  // Not owned: played through Steam Family Sharing. Steam lists a shared game only
+  // among the recently played, so it's kept from import to import once seen.
+  shared       Boolean   @default(false)
 
   @@id([userId, appid])
 }

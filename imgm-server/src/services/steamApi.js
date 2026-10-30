@@ -1,9 +1,11 @@
 /**
- * Steam Web API: the two calls IMGM makes, only when a player asks for their library
+ * Steam Web API: the calls IMGM makes, only when a player asks for their library
  * (connecting Steam, or Refresh), never in the background (Steam's API terms).
  *
- *   GetOwnedGames        the games a player owns, with playtime in minutes
- *   GetPlayerSummaries   just their Steam name (optional: a failure is ignored)
+ *   GetOwnedGames            the games a player owns, with playtime in minutes
+ *   GetRecentlyPlayedGames   the last two weeks' games, owned or not: the only place a
+ *                            Family Sharing game shows up (optional: a failure is ignored)
+ *   GetPlayerSummaries       just their Steam name (optional: a failure is ignored)
  *
  * The key (STEAM_API_KEY) goes in the x-webapi-key header, never in the address, so it
  * can't end up in a proxy's or a log's list of URLs, and it is never logged. Redirects
@@ -97,6 +99,20 @@ export const getOwnedGames = async (steamId) => {
     { steamid: steamId, include_appinfo: 'true', include_played_free_games: 'true', skip_unvetted_apps: 'false' },
     { timeout: OWNED_TIMEOUT, retry: true }
   );
+};
+
+// The games the player played in the last two weeks, as Steam sends them ({ games }, or
+// {} when Steam doesn't share them), or null. Unlike GetOwnedGames, it lists games played
+// through Steam Family Sharing too. Never throws: those are only an extra.
+export const getRecentlyPlayedGames = async (steamId) => {
+  if (!steamApiKey) return null;
+  try {
+    checkSteamId(steamId);
+    return await steamGet('/IPlayerService/GetRecentlyPlayedGames/v1/', { steamid: steamId, count: '0' }, { timeout: SUMMARY_TIMEOUT, retry: false });
+  } catch (error) {
+    console.error('Steam recently played lookup failed:', error.message);
+    return null;
+  }
 };
 
 // The player's Steam name as Steam has it (anything the player typed: steamLibrary.js
