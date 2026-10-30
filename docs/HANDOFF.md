@@ -1,9 +1,9 @@
 # Handoff (2026-10-30, after the Steam release)
 
 ## Where things are
-- **The Steam release is live.** `main` = **23a49c5** (Vercel + Render), deployed 2026-10-30. Render has `STEAM_API_KEY`. Cloud Run `imgm-ai` is unchanged, still on revision **imgm-ai-00008**.
+- **The Steam release is live.** `main` = **b357bb4** (Vercel + Render) = `development`, deployed 2026-10-30: the Steam release (23a49c5), a logging hotfix (03b97f8) and "Steam login lands home" (b357bb4). Render has `STEAM_API_KEY`. Cloud Run `imgm-ai` is unchanged, still on revision **imgm-ai-00008**.
 - **Hotfix released** (`main` 03b97f8): Steam login refusals are logged with their reason (`Steam login refused: <why>` in Render's logs).
-- **`feature/steam-login-lands-home`**: logging in or signing up with Steam lands home, never on a Steam page (logging out on the Steam library used to bring a Steam login back there). Waiting to be merged and released.
+- **Steam login lands home** (released b357bb4): logging in or signing up with Steam lands home, never on a Steam page (logging out on the Steam library used to bring a Steam login back there). Checked live with a cancelled login.
 - Play Next is open to every player. The site as a whole is a public beta.
 - The laptop is up to date. **The desktop needs** `git pull`, then `prisma migrate deploy` + `prisma generate` in `imgm-server` (2 new migrations: `steam_library`, `steam_shared_games`), a `STEAM_API_KEY` in its `imgm-server/.env`, and a restart of `imgm-server` and `imgm-client`.
 
@@ -23,13 +23,12 @@
 - Shared Steam games played before connecting (and not in the last two weeks) can't be fetched: Steam's Families API needs a user token.
 
 ## Next
-1. **Release `feature/steam-login-lands-home`.**
-2. **Tell roiegold** that Steam can now create accounts (his code said it never would).
-3. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
-4. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
+1. **Tell roiegold** that Steam can now create accounts (his code said it never would).
+2. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
+3. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
    - Earlier test: 36/36 accuracy, ~0.25s vs Gemini's 0.6–1s.
    - Plan: pin `typesafe-sdk` 0.7.5, keep a Gemini fallback, add `TYPESAFE_API_KEY` as a Cloud Run secret (`--set-secrets`), and add TypeSafe to the Privacy Policy.
-5. Optional, ask first: delete merged branches (GitHub `feature/sort-your-picks`, `feature/steam-connect`; local `feature/steam-signup`, `feature/steam-family-games`, and the desktop's `feature/play-next-polish`).
+4. Optional, ask first: delete merged branches (GitHub `feature/sort-your-picks`, `feature/steam-connect`; local `feature/steam-signup`, `feature/steam-family-games`, `feature/steam-login-lands-home`, `hotfix/steam-callback-logs`, and the desktop's `feature/play-next-polish`).
 
 ## How to release (see .claude/CLAUDE.md → Releasing)
 `development` → `main` push for the site and server; Cloud Run redeploy from a `git archive` of `main` for the AI service (project `gen-lang-client-0029420490`, `europe-west3`); then the smoke test on imgm.app.
