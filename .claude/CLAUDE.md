@@ -26,6 +26,11 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
   - Gemini runs as a fallback chain: free key → Vertex → paid key. A model that fails is skipped for a while.
   - Production has no free key: Vertex first, then the paid key.
   - Each job sets its own timeout. Format is 25s and screen is 15s, because a non-streamed call can hang until its timeout (one Vertex format call hung for 60s).
+- **Steam** (built by roiegold, sign-up and family games added 2026-10-30):
+  - `imgm-server/src/lib/steamAuth.js` is a Better Auth plugin for Steam's OpenID 2.0, at `/api/auth/steam/*`: connect (`/link`), log in (`/sign-in`), sign up (`/sign-up`, then `/sign-up/pending` + `/sign-up/finish`), `/callback`, `/unlink`. Every check on Steam's answer is there; a refused one logs `Steam login refused: <why>` (never the answer itself).
+  - Signing up: Steam gives no email, so `/signup/steam` asks for one. The account is made at once and the email confirmed later, like an email sign-up. "Log in with Steam" with a Steam account new to IMGM signs up instead.
+  - The library: `services/steamApi.js` + `services/steamLibrary.js`, needs `STEAM_API_KEY` (Render has it). Family Sharing games never appear in GetOwnedGames; GetRecentlyPlayedGames (last 2 weeks) shows them, so each import keeps them as `SteamLibraryGame.shared` ("Shared with you").
+  - Pages: `/steam` (public), `/steam/library`, `/signup/steam`; Settings connects and disconnects.
 
 ## Run locally
 - `docker compose up -d` starts Postgres (`imgm-postgres`, user `imgm_user`, db `imgm_db`), the server on :5000 and the client on :5173.
@@ -48,6 +53,9 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
 - New migration: `docker exec imgm-server npx prisma migrate dev --name <name>`.
   - The files are created as root. Before git can touch them, run `docker exec imgm-server chown -R <uid>:<gid> prisma/migrations/<dir>`.
 - Agent traces without the web page: `uv run python -c ...` with `graph.invoke(new_turn(question), {"configurable": {"thread_id": ...}})`.
+- Docker Compose services are `db`, `server`, `client` (containers `imgm-postgres`, `imgm-server`, `imgm-client`): `docker compose restart server client`.
+- Steam's login can't be done by Claude. To test what comes after it, write a `steam-signup:<token>` Verification row and a signed `better-auth.steam_signup` cookie (`<token>.<HMAC-SHA256 base64 with the secret>`), from a script run inside `imgm-server`.
+- The laptop's `imgm-server/.env` has a real Resend key, so local emails are really sent: use `delivered+<tag>@resend.dev` addresses.
 - Test accounts use `@example.test` and are deleted by exact email afterwards: `docker exec imgm-postgres psql -U imgm_user -d imgm_db -tAc "delete from \"User\" where email='x@example.test'"`.
 - Browser checks: Playwright, run from a scratch folder, not the repo.
 
@@ -94,4 +102,7 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
   - The game the player named is never recommended.
 - **Sort your picks** (one screen, then ONE replacement search) replaced the per-card Played it / Not for me buttons, which each started their own search.
 - **The chat brief** (grouped picks + honorable mentions) is built by the formatter in its existing call, so it adds no extra latency. Mentions are filtered quietly and never sent back, so they never cost a fix round.
+- **Steam sign-up doesn't wait for the email to be confirmed** (the user's call: the same as email sign-up). Someone who signs up with another person's email loses Steam when the real owner resets the password, because **a password reset disconnects Steam** (roiegold's rule, kept on purpose).
+- **No Valve "Sign in through Steam" image button:** Valve only requests it; the site uses a plain Noir button with words, no Steam logo.
+- **Shared Steam games come only from the last two weeks:** Steam's Families API needs a user token that OpenID sign-in doesn't give, so older shared games can't be fetched (the player can still rate them from search).
 - **A draft fixed by the check must read as the first answer:** the player never saw the draft, so the answer can't say "I kept…" or "I swapped…".

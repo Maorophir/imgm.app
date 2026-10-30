@@ -136,23 +136,37 @@ export const freshNonce = (nonce, now = Date.now()) => {
 
 /**
  * Steam's note, read without trusting anything in it yet: { steamId } when it is
- * well formed and made for `expectedReturnTo`, else { error: 'cancelled' | 'invalid' }.
- * It still has to be confirmed by Steam (confirmWithSteam).
+ * well formed and made for `expectedReturnTo`, else { error: 'cancelled' | 'invalid' }
+ * (an invalid one says `why`, for the server's log: never the note itself). It still has
+ * to be confirmed by Steam (confirmWithSteam).
  */
 export const readSteamNote = (query, expectedReturnTo, now = Date.now()) => {
   if (query.get('openid.mode') === 'cancel') return { error: 'cancelled' };
   for (const key of query.keys()) {
-    if (key.startsWith('openid.') && !NOTE_KEYS.includes(key)) return { error: 'invalid' };
+    if (key.startsWith('openid.') && !NOTE_KEYS.includes(key)) return { error: 'invalid', why: `unexpected field ${key.slice(0, 40)}` };
   }
-  if (!NOTE_KEYS.every((key) => PRINTABLE.test(query.get(key) ?? ''))) return { error: 'invalid' };
+  const unreadable = NOTE_KEYS.find((key) => !PRINTABLE.test(query.get(key) ?? ''));
+  if (unreadable) return { error: 'invalid', why: `missing or unprintable ${unreadable}` };
   const field = (key) => query.get(`openid.${key}`);
-  if (field('ns') !== OPENID_NS || field('mode') !== 'id_res' || field('op_endpoint') !== STEAM_LOGIN) return { error: 'invalid' };
-  if (field('signed') !== SIGNED_FIELDS || !BASE64.test(field('sig'))) return { error: 'invalid' };
+  if (field('ns') !== OPENID_NS || field('mode') !== 'id_res' || field('op_endpoint') !== STEAM_LOGIN) return { error: 'invalid', why: 'not a Steam OpenID answer' };
+  if (field('signed') !== SIGNED_FIELDS) return { error: 'invalid', why: `signed list ${field('signed').slice(0, 120)}` };
+  if (!BASE64.test(field('sig'))) return { error: 'invalid', why: 'signature not base64' };
   // Made for this trip and this site: Steam signs any return address it's given
-  if (field('return_to') !== expectedReturnTo) return { error: 'invalid' };
-  if (field('claimed_id') !== field('identity')) return { error: 'invalid' };
+  if (field('return_to') !== expectedReturnTo) {
+    // The address without its ?state (a one-time secret)
+    const where = (url) => {
+      const parsed = URL.parse(url);
+      return parsed ? `${parsed.origin}${parsed.pathname}` : 'unreadable';
+    };
+    return { error: 'invalid', why: `return address ${where(field('return_to'))}, expected ${where(expectedReturnTo)}` };
+  }
+  if (field('claimed_id') !== field('identity')) return { error: 'invalid', why: 'claimed_id is not identity' };
   const steamId = steamIdFrom(field('claimed_id'));
-  if (!steamId || !freshNonce(field('response_nonce'), now)) return { error: 'invalid' };
+  if (!steamId) return { error: 'invalid', why: 'not a SteamID64' };
+  if (!freshNonce(field('response_nonce'), now)) {
+    const stamp = Date.parse(field('response_nonce').slice(0, 20));
+    return { error: 'invalid', why: `nonce not fresh (${Number.isNaN(stamp) ? 'unreadable time' : `${Math.round((now - stamp) / 1000)}s old`})` };
+  }
   return { steamId, nonce: field('response_nonce') };
 };
 
@@ -187,9 +201,15 @@ const confirmWithSteam = async (query) => {
     redirect: 'manual',
     signal: AbortSignal.timeout(10_000),
   });
-  if (response.status !== 200) return false;
+  // Why Steam said no goes to the log (its answer is only ns + is_valid: nothing secret)
+  if (response.status !== 200) {
+    console.warn(`Steam login refused: Steam's check answered ${response.status}`);
+    return false;
+  }
   const text = await response.text();
-  return text.length <= 4096 && readSteamAnswer(text);
+  const valid = text.length <= 4096 && readSteamAnswer(text);
+  if (!valid) console.warn(`Steam login refused: Steam's check said ${JSON.stringify(text.slice(0, 200))}`);
+  return valid;
 };
 
 /* ── The plugin ─────────────────────────────────────────────────────────────── */
@@ -310,7 +330,10 @@ export const steam = () => {
     expireCookie(ctx, cookie);
 
     const query = readCallbackQuery(new URL(ctx.request?.url ?? 'http://invalid/').search);
-    if (!query) return siteUrl('/login', { steam_error: 'invalid' });
+    if (!query) {
+      console.warn('Steam login refused: a repeated field in the address');
+      return siteUrl('/login', { steam_error: 'invalid' });
+    }
     const state = query.get('state');
     // A used nonce is burned on every path, so a note seen anywhere can't be tried again
     const nonce = query.get('openid.response_nonce');
@@ -344,10 +367,14 @@ export const steam = () => {
 
     const note = readSteamNote(query, callbackUrl(ctx, state));
     if (note.error) {
+      if (note.why) console.warn(`Steam login refused: ${note.why}`);
       await burnNonce();
       return failed(note.error);
     }
-    if (!(await burnNonce())) return failed('invalid'); // this note was already used
+    if (!(await burnNonce())) {
+      console.warn('Steam login refused: this answer was already used');
+      return failed('invalid');
+    }
     let confirmed;
     try {
       confirmed = await confirmWithSteam(query);
