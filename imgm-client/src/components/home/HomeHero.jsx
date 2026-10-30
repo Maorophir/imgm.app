@@ -31,8 +31,8 @@
  *
  * Layout: one grid, so the card can sit across the band, sized so the card is seen
  * without scrolling. On desktop the title spans the top, the words sit left and the
- * card stands in its own column from beside the title down, hanging a little over the
- * band's bottom edge; the card and its buttons fit a 1280×800 screen. The band's last
+ * card stands in its own column from beside the title down, with Flip and the dots
+ * under it on the band's bottom edge; the card and its buttons fit a 1280×800 screen. The band's last
  * row only needs to hold the Play Next panel, which floats under the words. On tablets and phones it all stacks: title, words, then the
  * card centred over the band, with its buttons and the caption below. Phones keep
  * "Browse games" for the end of the hero, so the card's title, score and art are on
@@ -166,11 +166,11 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
     // Columns: a gutter, the words, the card, a gutter (desktop); a gutter, everything,
     // a gutter (tablets, phones). Rows: title, words, a gap the card reaches into, the
     // band, then the buttons and the caption (and on phones, "Browse games").
-    // Desktop: the words column's width plus the card's 400px (360px on small laptops)
+    // Desktop: the words column's width plus the card's 330px (300px on small laptops)
     // makes the same width as the page's other sections, so the edges line up.
     <section
       aria-labelledby="home-title"
-      className="grid pt-5 grid-cols-[16px_minmax(0,1fr)_16px] grid-rows-[auto_auto_88px_300px_auto_auto_auto] sm:pt-8 sm:grid-cols-[24px_minmax(0,1fr)_24px] sm:grid-rows-[auto_auto_104px_360px_auto_auto] lg:pt-10 lg:grid-cols-[minmax(32px,1fr)_minmax(0,880px)_360px_minmax(32px,1fr)] lg:grid-rows-[auto_auto_32px_260px_auto] lg:short:grid-rows-[auto_auto_32px_260px_auto] xl:grid-cols-[minmax(48px,1fr)_minmax(0,944px)_400px_minmax(48px,1fr)] xl:grid-rows-[auto_auto_32px_256px_auto] xl:short:grid-rows-[auto_auto_32px_256px_auto]"
+      className="grid pt-5 grid-cols-[16px_minmax(0,1fr)_16px] grid-rows-[auto_auto_88px_300px_auto_auto_auto] sm:pt-8 sm:grid-cols-[24px_minmax(0,1fr)_24px] sm:grid-rows-[auto_auto_104px_360px_auto_auto] lg:pt-10 lg:grid-cols-[minmax(32px,1fr)_minmax(0,940px)_300px_minmax(32px,1fr)] lg:grid-rows-[auto_auto_32px_260px_auto] lg:short:grid-rows-[auto_auto_32px_260px_auto] xl:grid-cols-[minmax(48px,1fr)_minmax(0,1014px)_330px_minmax(48px,1fr)] xl:grid-rows-[auto_auto_32px_256px_auto] xl:short:grid-rows-[auto_auto_32px_256px_auto]"
     >
       {/* The logo's headline: heavy ivory capitals, one lime full stop. The page's h1 (its
           main headline for search engines). One line everywhere: it is about 5.4em
@@ -210,7 +210,7 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
       </div>
 
       {/* ── The card, standing over the band and hanging past its bottom edge ── */}
-      <div {...hold} className="col-start-2 row-start-3 row-end-5 self-end justify-self-center relative z-3 min-w-0 w-[min(300px,100%)] -mb-12 sm:w-[min(340px,100%)] sm:-mb-14 lg:col-start-3 lg:row-start-1 lg:justify-self-stretch lg:w-auto lg:-mb-4">
+      <div {...hold} className="col-start-2 row-start-3 row-end-5 self-end justify-self-center relative z-3 min-w-0 w-[min(260px,100%)] -mb-12 sm:w-[min(300px,100%)] sm:-mb-14 lg:col-start-3 lg:row-start-1 lg:justify-self-stretch lg:w-auto lg:mb-[96px]">
         {review ? (
           <CardStage
             tier={rarity.key}
@@ -248,8 +248,8 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
         ))}
       </div>
 
-      {/* ── What you can do with the card: under it ── */}
-      <div {...hold} className={`col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:pt-9 ${sample ? '' : 'lg:justify-start'}`}>
+      {/* ── What you can do with the card: under it (desktop: on the art's bottom edge) ── */}
+      <div {...hold} className={`col-start-2 row-start-5 lg:col-start-3 lg:row-start-4 lg:self-end relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:pt-0 ${sample ? '' : 'lg:justify-start'}`}>
         {review ? (
           <>
             {!sample && (
@@ -270,10 +270,16 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
               <span>{flipped ? 'Flip back' : 'Flip'}</span>
               <FlipIcon flipped={flipped} />
             </button>
-            {/* One dot per card: the shown one is a longer ivory bar (lime is the page's
-                one main action), and each is a 44px tap target */}
+            {/* A showcase card only turns over (the caption links to its game) */}
+            {!sample && (
+              <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
+                Read the review
+              </Link>
+            )}
+            {/* One dot per card, on their own line under Flip: the shown one is a longer
+                ivory bar (lime is the page's one main action), and each is a 44px tap target */}
             {count > 1 && (
-              <span className="flex">
+              <span className={`basis-full flex justify-center ${sample ? '' : 'lg:justify-start'}`}>
                 {slides.map((item, i) => (
                   <button
                     key={item.band.id}
@@ -291,12 +297,6 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
                   </button>
                 ))}
               </span>
-            )}
-            {/* A showcase card only turns over (the caption links to its game) */}
-            {!sample && (
-              <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
-                Read the review
-              </Link>
             )}
           </>
         ) : null}
