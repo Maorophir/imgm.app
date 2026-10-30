@@ -1,11 +1,11 @@
 # Handoff (2026-10-30, after the Steam release)
 
 ## Where things are
-- **The Steam release is live.** `main` = **03bfc4b** (Vercel + Render) = `development`, deployed 2026-10-30: the Steam release (23a49c5), a logging hotfix (03b97f8), "Steam login lands home" (b357bb4) and the two carousels (03bfc4b). Render has `STEAM_API_KEY`. Cloud Run `imgm-ai` is unchanged, still on revision **imgm-ai-00008**.
+- **The Steam release is live.** `main` = **b6720dd** (Vercel + Render) = `development`, deployed 2026-10-30: the Steam release (23a49c5), a logging hotfix (03b97f8), "Steam login lands home" (b357bb4), the two carousels (03bfc4b), and the home hero + the checklist's new look + the glare on every card (b6720dd). Render has `STEAM_API_KEY`. Cloud Run `imgm-ai` is unchanged, still on revision **imgm-ai-00008**.
 - **Hotfix released** (`main` 03b97f8): Steam login refusals are logged with their reason (`Steam login refused: <why>` in Render's logs).
 - **Steam login lands home** (released b357bb4): logging in or signing up with Steam lands home, never on a Steam page (logging out on the Steam library used to bring a Steam login back there). Checked live with a cancelled login.
 - **Home hero carousel** (released 03bfc4b): the home page's hero card takes turns between 6 hand-picked games, hot new and all-time best alternating (`lib/homeShowcase.js` → `heroes`: Clair Obscur, Elden Ring, Resident Evil Requiem, The Witcher 3, Ghost of Yōtei, Red Dead Redemption 2), each with its own score, quote, checklist and backdrop. A backdrop is never the card's own picture: where IGDB's key art is the cover over again (Clair Obscur, Elden Ring, Ghost of Yōtei) it's an official screenshot (`artLabel`), and `artPosition` keeps a logo out from behind the words (RE Requiem, Red Dead 2); the user wants full control over the first thing visitors see, so never live data). Every 6s it turns over to IMGM's back and the key art fades to the next game; it waits on hover, focus, Flip or a hidden tab; dots pick one. The captions' IMGM numbers now come from one Hall of Fame request.
-- **`feature/home-hero-band-top`** (not released), four changes:
+- **Home hero, checklist and glare** (released b6720dd), four changes:
   - The home hero's backdrop starts right under the navbar (behind the big title too, no black strip). Backdrops: Clair Obscur and Elden Ring screenshots, RE Requiem and Red Dead 2 key art, The Witcher 3 Geralt and Ciri (the cover's own picture: the user's choice), Ghost of Yōtei's lookout screenshot (the user's favourite; a try at landscapes for all six was rolled back).
   - The card is smaller (300px, 330px from 1280px wide; phones 260, tablets 300); on desktop it starts beside the title, with Flip under it and the dots on their own line under Flip, on the art's bottom edge; all of it fits 1280×800 and 768px-tall laptops. The art's last row is 256–260px: just enough for the Play Next panel that floats under the words.
   - **The checklist's new look (B4), across the site:** card backs (`CardChecklist`: "The verdict", small-caps categories, ivory answers, a `ChecklistMeter` bar under each) and the review quest's checklist (no tick boxes: the picked answer takes its colour, a meter by each category). The colours are IMGM's rarity ladder (`checklistColor` in questOptions.js): a scale climbs Junk grey → Legendary gold, neutral categories are grey.
@@ -30,13 +30,12 @@
 - Shared Steam games played before connecting (and not in the last two weeks) can't be fetched: Steam's Families API needs a user token.
 
 ## Next
-1. **Release `feature/home-hero-band-top`** (the hero, the backdrops, B4 and the glare). The checklist options were drawn on https://claude.ai/artifact/7qmqkpkJwkewZodXoULQzC: A spec sheet, B meters, C stat block, D pips, B in colour (B2 rarity ladder, B3 one colour per row) and D in colour (D2 pips, D3 pips and answers). The user's pick: **B4**, B3's layout (answers in ivory) with B2's bars (each segment its rarity colour; difficulty and length light one grey step). Built. The home quotes are Claude's drafts: the user may edit them in `lib/homeShowcase.js`.
-2. **Tell roiegold** that Steam can now create accounts (his code said it never would).
-3. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
-4. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
+1. **Tell roiegold** that Steam can now create accounts (his code said it never would).
+2. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
+3. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
    - Earlier test: 36/36 accuracy, ~0.25s vs Gemini's 0.6–1s.
    - Plan: pin `typesafe-sdk` 0.7.5, keep a Gemini fallback, add `TYPESAFE_API_KEY` as a Cloud Run secret (`--set-secrets`), and add TypeSafe to the Privacy Policy.
-5. Optional, ask first: delete merged branches (GitHub `feature/sort-your-picks`, `feature/steam-connect`; local `feature/steam-signup`, `feature/steam-family-games`, `feature/steam-login-lands-home`, `feature/steam-hero-carousel`, `feature/home-hero-carousel`, `hotfix/steam-callback-logs`, and the desktop's `feature/play-next-polish`).
+4. Optional, ask first: delete merged branches (GitHub `feature/sort-your-picks`, `feature/steam-connect`; local `feature/steam-signup`, `feature/steam-family-games`, `feature/steam-login-lands-home`, `feature/steam-hero-carousel`, `feature/home-hero-carousel`, `feature/home-hero-band-top`, `hotfix/steam-callback-logs`, and the desktop's `feature/play-next-polish`).
 
 ## How to release (see .claude/CLAUDE.md → Releasing)
 `development` → `main` push for the site and server; Cloud Run redeploy from a `git archive` of `main` for the AI service (project `gen-lang-client-0029420490`, `europe-west3`); then the smoke test on imgm.app.
