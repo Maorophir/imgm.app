@@ -1,28 +1,34 @@
-# Handoff (2026-10-20, after the release)
+# Handoff (2026-10-30, after the Steam release)
 
 ## Where things are
-- **Everything is released.** `main` = `development` content at **3f7a4b1** (Vercel + Render), and Cloud Run `imgm-ai` is on revision **imgm-ai-00008** (100% of traffic).
-- **Play Next is open to every player** (Render `PLAY_NEXT=on`; `/api/guide/access` says `enabled: true` to logged-out visitors). It is no longer a closed beta. The site as a whole is still a public beta.
-- The production smoke test passed (2026-10-20): a real answer in 40s with Split Fiction, shelves + spotlight, the deal, Sort your picks → Replace in 20s, no "0 reviews", no page errors. The test account was deleted.
+- **The Steam release is live.** `main` = **23a49c5** (Vercel + Render), deployed 2026-10-30. Render has `STEAM_API_KEY`. Cloud Run `imgm-ai` is unchanged, still on revision **imgm-ai-00008**.
+- **The hotfix `hotfix/steam-callback-logs`** (Steam login refusals logged with their reason, and these docs) is waiting to be released, then merged into `development`.
+- Play Next is open to every player. The site as a whole is a public beta.
+- The laptop is up to date. **The desktop needs** `git pull`, then `prisma migrate deploy` + `prisma generate` in `imgm-server` (2 new migrations: `steam_library`, `steam_shared_games`), a `STEAM_API_KEY` in its `imgm-server/.env`, and a restart of `imgm-server` and `imgm-client`.
 
-## What this release shipped
-- **Agent:** the `get_game_family` tool, series/studio caps, never the named game, honorable mentions, the brief groups, per-job model timeouts, fixed drafts read as first answers, and the right review count on cards looked up from Express (`reviewStats.count`).
-- **Side panel:** Sort your picks above the picks; every pick framed by its IMGM score's rarity (gilt for a 10/10, plain when unrated); its rank as a flat corner tab (1ST gold, 2ND silver, 3RD bronze, then plain).
-- **Sort your picks:** the cards are dealt from a face-down IMGM deck and flip over (a tap skips it; off for reduced motion); titles fit one box so the art lines up; the dialog renders into `<body>` so the header can't cover it on phones.
-- **Chat:** the brief is shelves of small framed covers (picks with rank tabs, mentions tagged), tap for details (why, score, Backlog, Open game); small shelves sit side by side; "If you only play one" is a featured card.
-- **Home teaser:** rank tabs instead of the old Legendary/Epic/Rare rings.
+## What the Steam release shipped
+- **Connect Steam and log in with it** (roiegold, `feature/steam-connect`): a Better Auth plugin for Steam's OpenID sign-in (`imgm-server/src/lib/steamAuth.js`), connecting from Settings, an email when Steam is connected, a password reset disconnects Steam.
+- **The Steam page** (`/steam`) and **the Steam library** (`/steam/library`): every game you own, matched to IGDB, with your hours; Rate it opens the quest with the hours and PC filled in; Backlog for unplayed games.
+- **Sign up with Steam:** on the Sign up tab and as the Steam page's main button. Steam gives no email, so `/signup/steam` asks for one; the account is made at once and the email is confirmed later, like an email sign-up. "Log in with Steam" with a Steam account new to IMGM signs up instead of failing.
+- **Family Sharing games:** each library import also asks Steam for the last two weeks' games and keeps the ones you don't own, marked "Shared with you".
+- Privacy and Terms cover all of it (effective October 30, 2026). Emails load the logo from imgm.app.
 
 ## Known issues
+- **Steam sign-up fails in production** with "Steam couldn't confirm it was you" (the `invalid` error), although it works locally. Checked: Vercel's `/api` rewrite passes `%2B` and `%3D` through unchanged. Not checked yet: whether Steam answers Render's `check_authentication` request, and the nonce and return-address checks on Render. The hotfix logs which check fails (`Steam login refused: <why>` in Render's logs).
 - **After Sort**, the model sometimes makes a new game the Best Pick, although the follow-up rule says to keep the kept picks' order. No code check for it yet.
 - **Which family game the model picks varies:** for It Takes Two the tool returns Split Fiction and A Way Out, and some answers pick only A Way Out.
 - **Locally**, the free Gemini key often times out or runs out of quota, so answers can take 70–150s before Vertex takes over. Production has no free key (~20–40s).
 - **Old saved chats** keep a wrong "0 reviews" in their data; the badge now hides a 0 count.
+- Shared Steam games played before connecting (and not in the last two weeks) can't be fetched: Steam's Families API needs a user token.
 
 ## Next
-- **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
-  - Earlier test: 36/36 accuracy, ~0.25s vs Gemini's 0.6–1s.
-  - Plan: pin `typesafe-sdk` 0.7.5, keep a Gemini fallback, add `TYPESAFE_API_KEY` as a Cloud Run secret (`--set-secrets`), and add TypeSafe to the Privacy Policy.
-- Optional, ask first: delete the merged GitHub branch `feature/sort-your-picks`, and the merged local branch `feature/play-next-polish` (never pushed).
+1. **Fix Steam sign-up in production:** release the hotfix, try "Sign up with Steam" on imgm.app, read Render's log line, fix the cause.
+2. **Tell roiegold** that Steam can now create accounts (his code said it never would).
+3. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
+4. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
+   - Earlier test: 36/36 accuracy, ~0.25s vs Gemini's 0.6–1s.
+   - Plan: pin `typesafe-sdk` 0.7.5, keep a Gemini fallback, add `TYPESAFE_API_KEY` as a Cloud Run secret (`--set-secrets`), and add TypeSafe to the Privacy Policy.
+5. Optional, ask first: delete merged branches (GitHub `feature/sort-your-picks`, `feature/steam-connect`; local `feature/steam-signup`, `feature/steam-family-games`, and the desktop's `feature/play-next-polish`).
 
 ## How to release (see .claude/CLAUDE.md → Releasing)
 `development` → `main` push for the site and server; Cloud Run redeploy from a `git archive` of `main` for the AI service (project `gen-lang-client-0029420490`, `europe-west3`); then the smoke test on imgm.app.
