@@ -42,7 +42,8 @@
  *             review { id, rating, game, checklist } (id null = a sample: no Share or
  *             "Read the review"), card (CollectibleCard props, with its quote), band
  *             (the game whose key art fills the band: { id, title, artworks, developer,
- *             releaseDate })
+ *             releaseDate, artLabel: 'Screenshot' when it isn't key art, artPosition:
+ *             which part of the picture shows, when not the usual 50% 35%) })
  *   stats     the games' live IMGM numbers by id ({ ratings: { imgm }, reviewCount })
  *   onBrowse  click handler for "Browse games" (scrolls to the featured games)
  */
@@ -236,6 +237,7 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
             fetchPriority="high"
             decoding="async"
             className="absolute inset-0 w-full h-full object-cover object-[50%_35%] animate-fade-in"
+            style={bandGame.artPosition ? { objectPosition: bandGame.artPosition } : undefined}
           />
         )}
         {BAND_SHADES.map((shade) => (
@@ -301,7 +303,7 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
       {bandGame && (
         <div className="col-start-2 row-start-6 lg:row-start-5 min-w-0 flex flex-wrap items-center justify-between gap-x-8 pt-2 lg:pt-3 lg:pr-12 xl:pr-16">
           <GameVerdictLink game={bandGame} />
-          <p className="flex items-center min-h-11 text-sm text-slate-400">Key art · {artCredit}</p>
+          <p className="flex items-center min-h-11 text-sm text-slate-400">{bandGame.artLabel ?? 'Key art'} · {artCredit}</p>
         </div>
       )}
 

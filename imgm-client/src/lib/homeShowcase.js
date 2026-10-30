@@ -5,8 +5,9 @@
  * You": a sample of the card a player gets for a review.
  *
  *   heroes    the cards over the band of key art at the top, taking turns (a carousel):
- *             top games from the Hall of Fame, picked by hand, each with its own score,
- *             words, checklist (the card's back) and key art. The first one shows first.
+ *             all-time greats and hot new games, alternating, picked by hand, each with
+ *             its own score, words, checklist (the card's back) and backdrop. The first
+ *             one shows first.
  *   rarity    the card beside "Your score sets the rarity": an Epic 8
  *   playNext  the samples under the hero's buttons that show what Play Next does: a
  *             request in a player's words and 5 games it would pick, Best Pick first.
@@ -14,8 +15,11 @@
  *
  * Each has the card's props (CollectibleCard), a review-shaped part the hero reads (the
  * score, the game, the checklist on the back; id null = a sample, so no Share or "Read
- * the review"), and for the heroes the band's key art. Pictures are IGDB addresses: an
- * official cover or artwork, never a screenshot.
+ * the review"), and for the heroes the band's backdrop. Pictures are IGDB addresses: an
+ * official cover or artwork. A backdrop is never the card's own picture: when a game's
+ * key art is its cover over again, it's an official screenshot instead (artLabel says
+ * so under the hero). artPosition (CSS object-position) picks which part of a backdrop shows,
+ * when the middle isn't the best part.
  */
 const TODAY = new Date();
 
@@ -26,10 +30,7 @@ export const HOME_SHOWCASE = {
         id: null,
         rating: 10,
         game: { id: 305152, title: 'Clair Obscur: Expedition 33' },
-        checklist: {
-          graphics: 'reality', gameplay: 'one_more', audio: 'eargasm', story: 'tears',
-          difficulty: 'learn_master', grind: 'optional', gameLength: 'long', bugs: 'minor', worthPrice: 'full',
-        },
+        checklist: { graphics: 'reality', gameplay: 'one_more', audio: 'eargasm', story: 'tears', difficulty: 'learn_master', grind: 'optional', gameLength: 'long', bugs: 'minor', worthPrice: 'full' },
       },
       card: {
         title: 'Clair Obscur: Expedition 33',
@@ -39,13 +40,14 @@ export const HOME_SHOWCASE = {
         credit: 'Cover · Sandfall Interactive',
         reviewer: 'You',
         date: TODAY,
-        quote: "The best turn-based combat I've played in years. Parrying turned every fight into a rhythm game and I was hooked.",
+        quote: 'The best turn-based combat I\'ve played in years. Parrying turned every fight into a rhythm game and I was hooked.',
         badges: ['deep_diver'],
       },
       band: {
         id: 305152,
         title: 'Clair Obscur: Expedition 33',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3lza.jpg'],
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scsoe2.jpg'],
+        artLabel: 'Screenshot', // the key art is the cover's own picture, so a screenshot
         developer: 'Sandfall Interactive',
         releaseDate: '2025-04-24T00:00:00.000Z',
       },
@@ -53,41 +55,9 @@ export const HOME_SHOWCASE = {
     {
       review: {
         id: null,
-        rating: 9,
-        game: { id: 75235, title: 'Ghost of Tsushima' },
-        checklist: {
-          graphics: 'screenshot', gameplay: 'great', audio: 'repeat', story: 'good',
-          difficulty: 'learn_master', grind: 'average', gameLength: 'long', bugs: 'none', worthPrice: 'full',
-        },
-      },
-      card: {
-        title: 'Ghost of Tsushima',
-        score: 9,
-        coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co2crj.jpg',
-        meta: 'Action RPG · 2020',
-        credit: 'Cover · Sucker Punch Productions',
-        reviewer: 'You',
-        date: TODAY,
-        quote: 'Follow the wind and every field turns into a painting. The standoffs never got old. One point off for the same camps over and over.',
-        badges: [],
-      },
-      band: {
-        id: 75235,
-        title: 'Ghost of Tsushima',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar4u6z.jpg'],
-        developer: 'Sucker Punch Productions',
-        releaseDate: '2020-07-17T00:00:00.000Z',
-      },
-    },
-    {
-      review: {
-        id: null,
         rating: 10,
         game: { id: 119133, title: 'Elden Ring' },
-        checklist: {
-          graphics: 'screenshot', gameplay: 'one_more', audio: 'eargasm', story: 'lore',
-          difficulty: 'dark_souls', grind: 'optional', gameLength: 'infinity', bugs: 'minor', worthPrice: 'full',
-        },
+        checklist: { graphics: 'screenshot', gameplay: 'one_more', audio: 'eargasm', story: 'lore', difficulty: 'dark_souls', grind: 'optional', gameLength: 'infinity', bugs: 'minor', worthPrice: 'full' },
       },
       card: {
         title: 'Elden Ring',
@@ -103,7 +73,8 @@ export const HOME_SHOWCASE = {
       band: {
         id: 119133,
         title: 'Elden Ring',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar1481.jpg'],
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scagdm.jpg'],
+        artLabel: 'Screenshot', // the key art is the cover's own picture, so a screenshot
         developer: 'FromSoftware',
         releaseDate: '2022-02-25T00:00:00.000Z',
       },
@@ -112,11 +83,35 @@ export const HOME_SHOWCASE = {
       review: {
         id: null,
         rating: 9,
+        game: { id: 347668, title: 'Resident Evil Requiem' },
+        checklist: { graphics: 'reality', gameplay: 'great', audio: 'good', story: 'good', difficulty: 'hard', grind: 'none', gameLength: 'average', bugs: 'none', worthPrice: 'full' },
+      },
+      card: {
+        title: 'Resident Evil Requiem',
+        score: 9,
+        coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/cobmj0.jpg',
+        meta: 'Survival horror · 2026',
+        credit: 'Cover · Capcom',
+        reviewer: 'You',
+        date: TODAY,
+        quote: 'Grace has me hiding in closets, Leon has me kicking down doors, and the tension never lets up. One point off for a rushed ending.',
+        badges: [],
+      },
+      band: {
+        id: 347668,
+        title: 'Resident Evil Requiem',
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3otk.jpg'],
+        artPosition: '50% 100%', // its logo sits at the top: keep it out from behind the words
+        developer: 'Capcom',
+        releaseDate: '2026-02-27T00:00:00.000Z',
+      },
+    },
+    {
+      review: {
+        id: null,
+        rating: 9,
         game: { id: 1942, title: 'The Witcher 3: Wild Hunt' },
-        checklist: {
-          graphics: 'pretty', gameplay: 'good', audio: 'repeat', story: 'life',
-          difficulty: 'easy', grind: 'optional', gameLength: 'infinity', bugs: 'minor', worthPrice: 'full',
-        },
+        checklist: { graphics: 'pretty', gameplay: 'good', audio: 'repeat', story: 'life', difficulty: 'easy', grind: 'optional', gameLength: 'infinity', bugs: 'minor', worthPrice: 'full' },
       },
       card: {
         title: 'The Witcher 3: Wild Hunt',
@@ -126,13 +121,13 @@ export const HOME_SHOWCASE = {
         credit: 'Cover · CD Projekt RED',
         reviewer: 'You',
         date: TODAY,
-        quote: "The side quests beat most games' main story, and Gwent ate forty of my hours. The combat feels stiff, so one point off.",
+        quote: 'The side quests beat most games\' main story, and Gwent ate forty of my hours. The combat feels stiff, so one point off.',
         badges: ['veteran'],
       },
       band: {
         id: 1942,
         title: 'The Witcher 3: Wild Hunt',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3lzk.jpg'],
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3lzi.jpg'],
         developer: 'CD Projekt RED',
         releaseDate: '2015-05-19T00:00:00.000Z',
       },
@@ -140,30 +135,55 @@ export const HOME_SHOWCASE = {
     {
       review: {
         id: null,
-        rating: 8,
-        game: { id: 135243, title: 'It Takes Two' },
-        checklist: {
-          graphics: 'pretty', gameplay: 'great', audio: 'good', story: 'average',
-          difficulty: 'easy', grind: 'none', gameLength: 'average', bugs: 'none', worthPrice: 'full',
-        },
+        rating: 9,
+        game: { id: 317627, title: 'Ghost of Yōtei' },
+        checklist: { graphics: 'screenshot', gameplay: 'great', audio: 'repeat', story: 'tears', difficulty: 'learn_master', grind: 'average', gameLength: 'long', bugs: 'minor', worthPrice: 'full' },
       },
       card: {
-        title: 'It Takes Two',
-        score: 8,
-        coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/cob22v.jpg',
-        meta: 'Co-op platformer · 2021',
-        credit: 'Cover · Hazelight Studios',
+        title: 'Ghost of Yōtei',
+        score: 9,
+        coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co9coo.jpg',
+        meta: 'Action RPG · 2025',
+        credit: 'Cover · Sucker Punch Productions',
         reviewer: 'You',
         date: TODAY,
-        quote: 'Every level is a brand new game, and we laughed the whole way through. The marriage story drags, or it would be a 10.',
+        quote: 'Every view of Ezo looks like a painting, and Atsu\'s revenge hits hard. One point off for side quests that start to feel the same.',
         badges: [],
       },
       band: {
-        id: 135243,
-        title: 'It Takes Two',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar4mbg.jpg'],
-        developer: 'Hazelight Studios',
-        releaseDate: '2021-03-25T00:00:00.000Z',
+        id: 317627,
+        title: 'Ghost of Yōtei',
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scwk6i.jpg'],
+        artLabel: 'Screenshot', // the key art is the cover's own picture, so a screenshot
+        developer: 'Sucker Punch Productions',
+        releaseDate: '2025-10-02T00:00:00.000Z',
+      },
+    },
+    {
+      review: {
+        id: null,
+        rating: 10,
+        game: { id: 25076, title: 'Red Dead Redemption 2' },
+        checklist: { graphics: 'reality', gameplay: 'good', audio: 'eargasm', story: 'life', difficulty: 'easy', grind: 'optional', gameLength: 'infinity', bugs: 'minor', worthPrice: 'full' },
+      },
+      card: {
+        title: 'Red Dead Redemption 2',
+        score: 10,
+        coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1q1f.jpg',
+        meta: 'Open world · 2018',
+        credit: 'Cover · Rockstar Games',
+        reviewer: 'You',
+        date: TODAY,
+        quote: 'Arthur Morgan\'s story broke me. I spent whole evenings just riding, hunting and talking to strangers, and I\'d do it all again.',
+        badges: ['veteran'],
+      },
+      band: {
+        id: 25076,
+        title: 'Red Dead Redemption 2',
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3qms.jpg'],
+        artPosition: '50% 100%', // its logo sits at the top: keep it out from behind the words
+        developer: 'Rockstar Games',
+        releaseDate: '2018-10-26T00:00:00.000Z',
       },
     },
   ],
