@@ -22,17 +22,18 @@
  *                while its back is shown, and while the tab is hidden; the dots pick a
  *                game. People who ask for less motion get no turning by itself.
  *
- * The key art is the hero's backdrop: edge to edge, from the promise down to under the
- * card, fading in from the page above (the big title stays on the plain page) and out
- * into it below, darkened so the words over it stay readable.
+ * The key art is the hero's backdrop: edge to edge, from right under the navbar (behind
+ * the big title too, no black strip between) down to under the card, fading out into
+ * the page below, darkened so the words over it stay readable.
  *
  * The band always shows the shown card's own game, and the caption under it names that
  * game with its live IMGM numbers. With no cards to show, the card lies face down.
  *
  * Layout: one grid, so the card can sit across the band, sized so the card is seen
  * without scrolling. On desktop the title spans the top, the words sit left and the
- * card stands in its own column, hanging over the band's bottom edge; the whole card
- * fits a 1280×800 screen. On tablets and phones it all stacks: title, words, then the
+ * card stands in its own column from beside the title down, with Flip and the dots
+ * under it on the band's bottom edge; the card and its buttons fit a 1280×800 screen. The band's last
+ * row only needs to hold the Play Next panel, which floats under the words. On tablets and phones it all stacks: title, words, then the
  * card centred over the band, with its buttons and the caption below. Phones keep
  * "Browse games" for the end of the hero, so the card's title, score and art are on
  * the first screen.
@@ -62,17 +63,19 @@ import PlayNextTeaser from './PlayNextTeaser';
 import FlipIcon from '../reviewCard/FlipIcon';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 
-// The key art behind the hero ("the band"): from the promise (row 2) down to the row
-// the card hangs off (row 4), whose height steps down with the screen (see the
+// The key art behind the hero ("the band"): from the top of the hero (its negative
+// margin cancels the section's top padding, so the art meets the navbar) down to the
+// row the card stands in (row 4), whose height steps down with the screen (see the
 // section's classes); short laptop screens (850px tall or less: 1280×800, 1366×768) get
-// a lower one, so the card still ends inside the first screen. It starts a little under
-// the top of row 2, and fades in from the page there and out into it at the bottom.
-const BAND = 'col-span-full row-start-2 row-end-5 mt-10 sm:mt-14 lg:mt-12 relative z-1 overflow-hidden';
+// a lower one, so the card still ends inside the first screen. It fades out into the
+// page at the bottom.
+const BAND = 'col-span-full row-start-1 row-end-5 -mt-5 sm:-mt-8 lg:-mt-10 relative z-1 overflow-hidden';
 // The shades over the art: phones and tablets darken it evenly (the words run across
 // it); desktop darkens the left, under the words, and leaves the right to the art
 const BAND_SHADES = [
   'bg-slate-950/45 lg:bg-transparent lg:bg-gradient-to-r lg:from-slate-950/85 lg:via-slate-950/40 lg:to-slate-950/5',
-  'bg-gradient-to-b from-slate-950 via-transparent via-35% to-transparent',
+  // A light shade at the top, for the title: the art still shows right up to the navbar
+  'bg-gradient-to-b from-slate-950/55 via-transparent via-30% to-transparent',
   'bg-gradient-to-t from-slate-950 via-transparent via-30% to-transparent',
 ];
 
@@ -163,11 +166,11 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
     // Columns: a gutter, the words, the card, a gutter (desktop); a gutter, everything,
     // a gutter (tablets, phones). Rows: title, words, a gap the card reaches into, the
     // band, then the buttons and the caption (and on phones, "Browse games").
-    // Desktop: the words column's width plus the card's 400px (360px on small laptops)
+    // Desktop: the words column's width plus the card's 330px (300px on small laptops)
     // makes the same width as the page's other sections, so the edges line up.
     <section
       aria-labelledby="home-title"
-      className="grid pt-5 grid-cols-[16px_minmax(0,1fr)_16px] grid-rows-[auto_auto_88px_300px_auto_auto_auto] sm:pt-8 sm:grid-cols-[24px_minmax(0,1fr)_24px] sm:grid-rows-[auto_auto_104px_360px_auto_auto] lg:pt-10 lg:grid-cols-[minmax(32px,1fr)_minmax(0,880px)_360px_minmax(32px,1fr)] lg:grid-rows-[auto_auto_32px_340px_auto] lg:short:grid-rows-[auto_auto_32px_260px_auto] xl:grid-cols-[minmax(48px,1fr)_minmax(0,944px)_400px_minmax(48px,1fr)] xl:grid-rows-[auto_auto_32px_380px_auto] xl:short:grid-rows-[auto_auto_32px_256px_auto]"
+      className="grid pt-5 grid-cols-[16px_minmax(0,1fr)_16px] grid-rows-[auto_auto_88px_300px_auto_auto_auto] sm:pt-8 sm:grid-cols-[24px_minmax(0,1fr)_24px] sm:grid-rows-[auto_auto_104px_360px_auto_auto] lg:pt-10 lg:grid-cols-[minmax(32px,1fr)_minmax(0,940px)_300px_minmax(32px,1fr)] lg:grid-rows-[auto_auto_32px_260px_auto] lg:short:grid-rows-[auto_auto_32px_260px_auto] xl:grid-cols-[minmax(48px,1fr)_minmax(0,1014px)_330px_minmax(48px,1fr)] xl:grid-rows-[auto_auto_32px_256px_auto] xl:short:grid-rows-[auto_auto_32px_256px_auto]"
     >
       {/* The logo's headline: heavy ivory capitals, one lime full stop. The page's h1 (its
           main headline for search engines). One line everywhere: it is about 5.4em
@@ -207,7 +210,7 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
       </div>
 
       {/* ── The card, standing over the band and hanging past its bottom edge ── */}
-      <div {...hold} className="col-start-2 row-start-3 row-end-5 self-end justify-self-center relative z-3 min-w-0 w-[min(300px,100%)] -mb-12 sm:w-[min(340px,100%)] sm:-mb-14 lg:col-start-3 lg:row-start-2 lg:justify-self-stretch lg:w-auto lg:-mb-12 xl:-mb-14">
+      <div {...hold} className="col-start-2 row-start-3 row-end-5 self-end justify-self-center relative z-3 min-w-0 w-[min(260px,100%)] -mb-12 sm:w-[min(300px,100%)] sm:-mb-14 lg:col-start-3 lg:row-start-1 lg:justify-self-stretch lg:w-auto lg:mb-[96px]">
         {review ? (
           <CardStage
             tier={rarity.key}
@@ -245,8 +248,8 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
         ))}
       </div>
 
-      {/* ── What you can do with the card: under it ── */}
-      <div {...hold} className={`col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:pt-[68px] xl:pt-[76px] ${sample ? '' : 'lg:justify-start'}`}>
+      {/* ── What you can do with the card: under it (desktop: on the art's bottom edge) ── */}
+      <div {...hold} className={`col-start-2 row-start-5 lg:col-start-3 lg:row-start-4 lg:self-end relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:pt-0 ${sample ? '' : 'lg:justify-start'}`}>
         {review ? (
           <>
             {!sample && (
@@ -267,10 +270,16 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
               <span>{flipped ? 'Flip back' : 'Flip'}</span>
               <FlipIcon flipped={flipped} />
             </button>
-            {/* One dot per card: the shown one is a longer ivory bar (lime is the page's
-                one main action), and each is a 44px tap target */}
+            {/* A showcase card only turns over (the caption links to its game) */}
+            {!sample && (
+              <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
+                Read the review
+              </Link>
+            )}
+            {/* One dot per card, on their own line under Flip: the shown one is a longer
+                ivory bar (lime is the page's one main action), and each is a 44px tap target */}
             {count > 1 && (
-              <span className="flex">
+              <span className={`basis-full flex justify-center ${sample ? '' : 'lg:justify-start'}`}>
                 {slides.map((item, i) => (
                   <button
                     key={item.band.id}
@@ -288,12 +297,6 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
                   </button>
                 ))}
               </span>
-            )}
-            {/* A showcase card only turns over (the caption links to its game) */}
-            {!sample && (
-              <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
-                Read the review
-              </Link>
             )}
           </>
         ) : null}

@@ -209,16 +209,21 @@ export const CHECKLIST = [
   },
 ];
 
-// Colour of a ticked checklist answer, from its position in the ladder.
-// Scales go red (worst) → yellow → green (best); neutral categories are always blue.
-// Used by the quest's checklist and by the back of the review card.
-export const NA_COLOR = { solid: 'rgb(100 116 139)', soft: 'rgb(100 116 139 / 0.15)' }; // slate-500
+// Colour of a checklist answer, from its position on its scale: IMGM's rarity ladder,
+// worst → best (Junk grey … Legendary gold), so a great answer reads like a great card.
+// Neutral categories (no better or worse: difficulty, length…) are grey, N/A a dimmer
+// grey. Used by the quest's checklist and by the back of the review card (ChecklistMeter).
+const LADDER = ['junk', 'common', 'uncommon', 'rare', 'epic', 'legendary'];
+const ink = (token) => ({ solid: `var(--color-${token})`, soft: `color-mix(in srgb, var(--color-${token}) 15%, transparent)` });
+export const NA_COLOR = ink('slate-500');
+const NEUTRAL_COLOR = ink('slate-400');
 
 export const checklistColor = (category, index) => {
   if (index === 'na') return NA_COLOR;
-  if (category.kind === 'neutral') return { solid: 'rgb(96 165 250)', soft: 'rgb(96 165 250 / 0.15)' };
-  const hue = Math.round((index / (category.options.length - 1)) * 130); // 0 = red … 130 = green
-  return { solid: `hsl(${hue} 75% 58%)`, soft: `hsl(${hue} 75% 58% / 0.15)` };
+  if (category.kind === 'neutral') return NEUTRAL_COLOR;
+  // The first step of a scale is Junk, the last Legendary, the rest spread between
+  const step = Math.round((index / Math.max(category.options.length - 1, 1)) * (LADDER.length - 1));
+  return ink(`rarity-${LADDER[step]}`);
 };
 
 // XP per quest screen: every easy screen +10, the written review +50

@@ -16,10 +16,10 @@
  * Each has the card's props (CollectibleCard), a review-shaped part the hero reads (the
  * score, the game, the checklist on the back; id null = a sample, so no Share or "Read
  * the review"), and for the heroes the band's backdrop. Pictures are IGDB addresses: an
- * official cover or artwork. A backdrop is never the card's own picture: when a game's
- * key art is its cover over again, it's an official screenshot instead (artLabel says
- * so under the hero). artPosition (CSS object-position) picks which part of a backdrop shows,
- * when the middle isn't the best part.
+ * official cover or artwork. Each backdrop is picked by hand: official key art, or an
+ * official screenshot where that looks better (artLabel says so under the hero).
+ * artPosition (CSS object-position) picks which part of a backdrop shows, when the
+ * middle isn't the best part.
  */
 const TODAY = new Date();
 
@@ -47,7 +47,7 @@ export const HOME_SHOWCASE = {
         id: 305152,
         title: 'Clair Obscur: Expedition 33',
         artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scsoe2.jpg'],
-        artLabel: 'Screenshot', // the key art is the cover's own picture, so a screenshot
+        artLabel: 'Screenshot',
         developer: 'Sandfall Interactive',
         releaseDate: '2025-04-24T00:00:00.000Z',
       },
@@ -74,7 +74,7 @@ export const HOME_SHOWCASE = {
         id: 119133,
         title: 'Elden Ring',
         artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scagdm.jpg'],
-        artLabel: 'Screenshot', // the key art is the cover's own picture, so a screenshot
+        artLabel: 'Screenshot',
         developer: 'FromSoftware',
         releaseDate: '2022-02-25T00:00:00.000Z',
       },
@@ -127,7 +127,7 @@ export const HOME_SHOWCASE = {
       band: {
         id: 1942,
         title: 'The Witcher 3: Wild Hunt',
-        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3lzi.jpg'],
+        artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/ar3lzk.jpg'], // Geralt and Ciri: the cover's own picture, by the owner's choice
         developer: 'CD Projekt RED',
         releaseDate: '2015-05-19T00:00:00.000Z',
       },
@@ -154,7 +154,7 @@ export const HOME_SHOWCASE = {
         id: 317627,
         title: 'Ghost of Yōtei',
         artworks: ['https://images.igdb.com/igdb/image/upload/t_1080p/scwk6i.jpg'],
-        artLabel: 'Screenshot', // the key art is the cover's own picture, so a screenshot
+        artLabel: 'Screenshot',
         developer: 'Sucker Punch Productions',
         releaseDate: '2025-10-02T00:00:00.000Z',
       },

@@ -1,10 +1,12 @@
 /**
  * ⑤ The checklist — the fun, Steam-meme-style part of the quest.
  * One page, many categories, every one optional. Options read left → right,
- * worst → best (or less → more for neutral ones); tap again to un-tick.
+ * worst → best (or less → more for neutral ones); tap again to un-pick.
+ * The picked answer takes its colour on the rarity ladder, and a meter by the
+ * category's name shows its place on the scale, as the card's back will print it.
  */
-import { Check } from 'lucide-react';
 import ArtIcon from '../../ArtIcon';
+import ChecklistMeter from '../../reviewCard/ChecklistMeter';
 import { CHECKLIST, checklistColor } from '../questOptions';
 
 const CheckChip = ({ label, checked, color, onClick }) => (
@@ -13,19 +15,11 @@ const CheckChip = ({ label, checked, color, onClick }) => (
     role="checkbox"
     aria-checked={checked}
     onClick={onClick}
-    className={`inline-flex items-center gap-2 min-h-11 pl-2.5 pr-3 py-1.5 rounded-sm border text-sm text-left transition-colors duration-120 ${
-      checked ? 'text-white font-medium' : 'border-slate-500 text-white hover:border-white'
+    className={`inline-flex items-center min-h-11 px-3 py-1.5 rounded-sm border text-sm text-left transition-colors duration-120 ${
+      checked ? 'text-white font-medium' : 'border-slate-600 text-slate-200 hover:border-white hover:text-white'
     }`}
     style={checked ? { borderColor: color.solid, background: color.soft } : undefined}
   >
-    {/* The tick box — ☐ / ☑ like the classic Steam review checklists */}
-    <span
-      aria-hidden="true"
-      className="w-4 h-4 shrink-0 rounded-xs border flex items-center justify-center"
-      style={checked ? { borderColor: color.solid, background: color.solid, color: '#100f0d' } : { borderColor: '#6b645a' }}
-    >
-      {checked && <Check className="w-3 h-3" strokeWidth={3} />}
-    </span>
     {label}
   </button>
 );
@@ -37,15 +31,19 @@ const ChecklistStep = ({ answers, update }) => {
   return (
     <div className="flex flex-col gap-6">
       <p className="text-slate-400 text-sm -mb-1">
-        Tick what fits. Answer as many or as few as you like.
+        Pick what fits. Answer as many or as few as you like.
         <span className="ml-2 font-medium tabular-nums text-white">{ticked}/{categories.length}</span>
       </p>
 
-      {categories.map((category) => (
+      {categories.map((category) => {
+        const value = answers[category.field];
+        const picked = category.na && value === category.na.value ? 'na' : category.options.findIndex((o) => o.value === value);
+        return (
         <section key={category.field} aria-label={category.title}>
-          {/* The category's name on a hairline, e.g. "Graphics" */}
+          {/* The category's name on a hairline, e.g. "Graphics", and the answer's meter */}
           <h2 className="flex items-center gap-2 pt-3 mb-2.5 border-t border-slate-700 text-sm font-medium text-white">
             <ArtIcon icon={category.art} className="w-4 h-4 text-slate-400" />{category.title}
+            <ChecklistMeter category={category} index={picked === -1 ? null : picked} className="ml-auto w-20 sm:w-28 gap-[3px]" segmentClassName="h-1" />
           </h2>
           <div className="flex flex-wrap gap-2">
             {category.options.map((option, index) => {
@@ -76,7 +74,8 @@ const ChecklistStep = ({ answers, update }) => {
             )}
           </div>
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 };
