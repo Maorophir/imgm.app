@@ -12,21 +12,22 @@
  *                featured games.
  *   Play Next    under that, a small panel with a sample request and its 5 picks, so a
  *                visitor knows at once what Play Next is (one line on phones)
- *   The card     a recent review with the player's words (the Home page picks it: the
- *                owner's pinned one, else the best one with words to quote) as a trading
- *                card in its share edition (the words and the IMGM mark on the card), standing on a game's key art. It tilts
- *                toward the pointer, turns over (to the reviewer's checklist, like a
- *                game page's card, or to the shared IMGM back if there's none), and
- *                its link can be shared.
+ *   The card     hand-picked top games (lib/homeShowcase), taking turns: each a trading
+ *                card in its share edition (the words and the IMGM mark on the card),
+ *                standing on its game's key art. It tilts toward the pointer and turns
+ *                over (to its checklist, like a game page's card) with Flip.
+ *   The carousel every 6 seconds the card turns over to IMGM's back and comes up as the
+ *                next game, and the key art behind it fades to that game's. It waits
+ *                while the pointer or keyboard focus is on the card or its buttons,
+ *                while its back is shown, and while the tab is hidden; the dots pick a
+ *                game. People who ask for less motion get no turning by itself.
  *
  * The key art is the hero's backdrop: edge to edge, from the promise down to under the
  * card, fading in from the page above (the big title stays on the plain page) and out
  * into it below, darkened so the words over it stay readable.
  *
- * Everything on it is real. The band shows the card's own game (its key art comes with
- * the review); only when that game has no art does it show a featured game's art, and
- * then the caption under it names that game. With no review to show yet, the card lies
- * face down and invites the first one.
+ * The band always shows the shown card's own game, and the caption under it names that
+ * game with its live IMGM numbers. With no cards to show, the card lies face down.
  *
  * Layout: one grid, so the card can sit across the band, sized so the card is seen
  * without scrolling. On desktop the title spans the top, the words sit left and the
@@ -37,16 +38,15 @@
  * the first screen.
  *
  * Props:
- *   review    the review on show ({ id, rating, author, createdAt, game }), or null
- *   card      its CollectibleCard props, with its quote (built by the Home page)
- *   loading   true while the recent reviews are still on their way
- *   failed    true when the recent reviews couldn't be loaded: the card stays face
- *             down, without the "no cards yet" line (that wouldn't be true)
- *   bandGame  the game whose key art fills the band ({ title, artworks, developer,
- *             releaseDate, ratings, reviewCount }), or null
+ *   slides    the cards, in order ([{ review, card, band }], lib/homeShowcase heroes):
+ *             review { id, rating, game, checklist } (id null = a sample: no Share or
+ *             "Read the review"), card (CollectibleCard props, with its quote), band
+ *             (the game whose key art fills the band: { id, title, artworks, developer,
+ *             releaseDate })
+ *   stats     the games' live IMGM numbers by id ({ ratings: { imgm }, reviewCount })
  *   onBrowse  click handler for "Browse games" (scrolls to the featured games)
  */
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import CardStage from '../CardStage';
 import CollectibleCard, { CardBack, ChecklistBack } from '../CollectibleCard';
@@ -59,6 +59,7 @@ import { artSrcSet } from '../../lib/igdbImage';
 import { TEXT_LINK, TEXT_BUTTON, PRIMARY_BUTTON } from '../../lib/ui';
 import PlayNextTeaser from './PlayNextTeaser';
 import FlipIcon from '../reviewCard/FlipIcon';
+import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 
 // The key art behind the hero ("the band"): from the promise (row 2) down to the row
 // the card hangs off (row 4), whose height steps down with the screen (see the
@@ -74,15 +75,78 @@ const BAND_SHADES = [
   'bg-gradient-to-t from-slate-950 via-transparent via-30% to-transparent',
 ];
 
+// How long each card shows (time to read its words), and how long turning over takes
+// (the flip's 0.7s in index.css)
+const SHOW_MS = 6000;
+const TURN_MS = 700;
+
 // "Browse games": a real link to the section (it works without the scroll, and in a
 // new tab), but the page scrolls itself: a plain #link would count as a new page
 const BROWSE = `items-center justify-center min-h-11 text-base font-medium text-white ${TEXT_LINK}`;
 
-const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
+const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
+  const count = slides.length;
+  const [shown, setShown] = useState(0);
   // Showing the card's back ("Flip"): the reviewer's checklist if they filled
   // one in, otherwise the back every IMGM card shares
   const [flipped, setFlipped] = useState(false);
+  const [turning, setTurning] = useState(false); // on IMGM's back, between two games
+  const [held, setHeld] = useState(false); // the pointer or focus is on the card or its buttons
+  const reduced = usePrefersReducedMotion();
+  const turnTimer = useRef(null);
+
+  const slide = slides[shown] ?? null;
+  const review = slide?.review ?? null;
+  const card = slide?.card ?? null;
+  const bandGame = slide ? { ...slide.band, ...stats[slide.band.id] } : null;
   const ticks = review?.checklist ? tickedChecklist(review.checklist) : [];
+
+  // Turns the card over to IMGM's back, and brings it up as card `next`
+  const goTo = (next) => {
+    clearTimeout(turnTimer.current);
+    setFlipped(false);
+    if (reduced) {
+      setShown(next);
+      return;
+    }
+    setTurning(true);
+    turnTimer.current = setTimeout(() => {
+      setShown(next);
+      setTurning(false);
+    }, TURN_MS);
+  };
+  useEffect(() => () => clearTimeout(turnTimer.current), []);
+
+  // The carousel turning by itself: never for less motion, and not while it's held or
+  // its back is being read
+  useEffect(() => {
+    if (count < 2 || reduced || held || flipped) return undefined;
+    const timer = setInterval(() => {
+      if (document.visibilityState === 'visible') goTo((shown + 1) % count);
+    }, SHOW_MS);
+    return () => clearInterval(timer);
+    // goTo only reads what's listed here
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [count, reduced, held, flipped, shown]);
+
+  // The next card's cover and key art load ahead, so it never turns up blank
+  useEffect(() => {
+    const next = slides[(shown + 1) % count];
+    if (!next || count < 2) return;
+    new Image().src = next.card.coverUrl;
+    const art = new Image();
+    art.sizes = '100vw';
+    art.srcset = artSrcSet(next.band.artworks[0]);
+    art.src = next.band.artworks[0];
+  }, [slides, shown, count]);
+
+  // The card and its buttons hold the carousel still while they're in use
+  const hold = {
+    onPointerEnter: () => setHeld(true),
+    onPointerLeave: () => setHeld(false),
+    onFocus: () => setHeld(true),
+    onBlur: () => setHeld(false),
+  };
 
   const rarity = review ? getRarity(review.rating) : null;
   // Opens the game page right at this review. A showcase card (id null) is a sample, not
@@ -142,14 +206,15 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       </div>
 
       {/* ── The card, standing over the band and hanging past its bottom edge ── */}
-      <div className="col-start-2 row-start-3 row-end-5 self-end justify-self-center relative z-3 min-w-0 w-[min(300px,100%)] -mb-12 sm:w-[min(340px,100%)] sm:-mb-14 lg:col-start-3 lg:row-start-2 lg:justify-self-stretch lg:w-auto lg:-mb-12 xl:-mb-14">
+      <div {...hold} className="col-start-2 row-start-3 row-end-5 self-end justify-self-center relative z-3 min-w-0 w-[min(300px,100%)] -mb-12 sm:w-[min(340px,100%)] sm:-mb-14 lg:col-start-3 lg:row-start-2 lg:justify-self-stretch lg:w-auto lg:-mb-12 xl:-mb-14">
         {review ? (
           <CardStage
             tier={rarity.key}
-            flipped={flipped}
+            flipped={flipped || turning}
             // The share edition: the player's words and the IMGM mark on the card itself
             front={<CollectibleCard {...card} edition="share" />}
-            back={ticks.length > 0 ? <ChecklistBack score={review.rating} ticks={ticks} name={card.reviewer} /> : <CardBack />}
+            // Between two games it's IMGM's back; Flip shows the checklist
+            back={!turning && ticks.length > 0 ? <ChecklistBack score={review.rating} ticks={ticks} name={card.reviewer} /> : <CardBack />}
           />
         ) : (
           // Still loading, or nothing to show: a card face down (never a made-up one)
@@ -163,13 +228,14 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       <div className={BAND}>
         {bandGame && (
           <img
+            key={bandGame.artworks[0]} // a new game's art fades in
             src={bandGame.artworks[0]}
             srcSet={artSrcSet(bandGame.artworks[0])}
             sizes="100vw"
             alt={`${bandGame.title} key art`}
             fetchPriority="high"
             decoding="async"
-            className="absolute inset-0 w-full h-full object-cover object-[50%_35%]"
+            className="absolute inset-0 w-full h-full object-cover object-[50%_35%] animate-fade-in"
           />
         )}
         {BAND_SHADES.map((shade) => (
@@ -178,7 +244,7 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
       </div>
 
       {/* ── What you can do with the card: under it ── */}
-      <div className={`col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:pt-[68px] xl:pt-[76px] ${sample ? '' : 'lg:justify-start'}`}>
+      <div {...hold} className={`col-start-2 row-start-5 lg:col-start-3 relative z-6 min-w-0 flex flex-wrap items-center justify-center gap-x-5 pt-[60px] sm:gap-x-6 sm:pt-[72px] lg:pt-[68px] xl:pt-[76px] ${sample ? '' : 'lg:justify-start'}`}>
         {review ? (
           <>
             {!sample && (
@@ -199,6 +265,28 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
               <span>{flipped ? 'Flip back' : 'Flip'}</span>
               <FlipIcon flipped={flipped} />
             </button>
+            {/* One dot per card: the shown one is a longer ivory bar (lime is the page's
+                one main action), and each is a 44px tap target */}
+            {count > 1 && (
+              <span className="flex">
+                {slides.map((item, i) => (
+                  <button
+                    key={item.band.id}
+                    type="button"
+                    onClick={() => i !== shown && goTo(i)}
+                    aria-label={`Show ${item.card.title}`}
+                    aria-current={i === shown ? 'true' : undefined}
+                    className="group grid place-items-center h-11 w-7"
+                  >
+                    <span
+                      className={`block h-1 rounded-full transition-all duration-300 ${
+                        i === shown ? 'w-5 bg-white' : 'w-2 bg-slate-600 group-hover:bg-slate-400'
+                      }`}
+                    />
+                  </button>
+                ))}
+              </span>
+            )}
             {/* A showcase card only turns over (the caption links to its game) */}
             {!sample && (
               <Link to={reviewLink} className={`inline-flex items-center h-11 text-base font-medium text-white ${TEXT_LINK}`}>
@@ -206,13 +294,7 @@ const HomeHero = ({ review, card, loading, failed, bandGame, onBrowse }) => {
               </Link>
             )}
           </>
-        ) : (
-          !loading && !failed && (
-            <p className="max-w-[340px] text-center text-sm text-slate-400 lg:text-left">
-              No cards to show yet. Review a game you played, and yours could be the one up here.
-            </p>
-          )
-        )}
+        ) : null}
       </div>
 
       {/* ── The caption: whose art the band is, and that game's IMGM verdict ── */}

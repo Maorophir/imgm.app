@@ -4,6 +4,7 @@
 - **The Steam release is live.** `main` = **b357bb4** (Vercel + Render) = `development`, deployed 2026-10-30: the Steam release (23a49c5), a logging hotfix (03b97f8) and "Steam login lands home" (b357bb4). Render has `STEAM_API_KEY`. Cloud Run `imgm-ai` is unchanged, still on revision **imgm-ai-00008**.
 - **Hotfix released** (`main` 03b97f8): Steam login refusals are logged with their reason (`Steam login refused: <why>` in Render's logs).
 - **Steam login lands home** (released b357bb4): logging in or signing up with Steam lands home, never on a Steam page (logging out on the Steam library used to bring a Steam login back there). Checked live with a cancelled login.
+- **`feature/home-hero-carousel`** (not released, built on `feature/steam-hero-carousel`): the home page's hero card takes turns between 5 hand-picked top games (`lib/homeShowcase.js` → `heroes`: Clair Obscur, Ghost of Tsushima, Elden Ring, The Witcher 3, It Takes Two, each with its own score, quote, checklist and key art; the user wants full control over the first thing visitors see, so never live data). Every 6s it turns over to IMGM's back and the key art fades to the next game; it waits on hover, focus, Flip or a hidden tab; dots pick one. The captions' IMGM numbers now come from one Hall of Fame request.
 - **`feature/steam-hero-carousel`** (not released): the Steam page's card takes turns between up to 5 games (featured Steam games for visitors, your 5 most played unrated games once connected), turning over to IMGM's back every 5s; dots pick one; it waits on hover, focus or a hidden tab, and never turns by itself for reduced motion.
 - Play Next is open to every player. The site as a whole is a public beta.
 - The laptop is up to date. **The desktop needs** `git pull`, then `prisma migrate deploy` + `prisma generate` in `imgm-server` (2 new migrations: `steam_library`, `steam_shared_games`), a `STEAM_API_KEY` in its `imgm-server/.env`, and a restart of `imgm-server` and `imgm-client`.
@@ -24,7 +25,7 @@
 - Shared Steam games played before connecting (and not in the last two weeks) can't be fetched: Steam's Families API needs a user token.
 
 ## Next
-1. **Release the Steam page carousel** (`feature/steam-hero-carousel`).
+1. **Release the two carousels** (`feature/home-hero-carousel`, which holds the Steam page one too). The home quotes and scores are Claude's drafts: the user may edit them in `lib/homeShowcase.js`.
 2. **Tell roiegold** that Steam can now create accounts (his code said it never would).
 3. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
 4. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
