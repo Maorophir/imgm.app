@@ -2,7 +2,8 @@
 
 ## Where things are
 - **The Steam release is live.** `main` = **23a49c5** (Vercel + Render), deployed 2026-10-30. Render has `STEAM_API_KEY`. Cloud Run `imgm-ai` is unchanged, still on revision **imgm-ai-00008**.
-- **The hotfix `hotfix/steam-callback-logs`** (Steam login refusals logged with their reason, and these docs) is waiting to be released, then merged into `development`.
+- **Hotfix released** (`main` 03b97f8): Steam login refusals are logged with their reason (`Steam login refused: <why>` in Render's logs).
+- **`feature/steam-login-lands-home`**: logging in or signing up with Steam lands home, never on a Steam page (logging out on the Steam library used to bring a Steam login back there). Waiting to be merged and released.
 - Play Next is open to every player. The site as a whole is a public beta.
 - The laptop is up to date. **The desktop needs** `git pull`, then `prisma migrate deploy` + `prisma generate` in `imgm-server` (2 new migrations: `steam_library`, `steam_shared_games`), a `STEAM_API_KEY` in its `imgm-server/.env`, and a restart of `imgm-server` and `imgm-client`.
 
@@ -14,7 +15,7 @@
 - Privacy and Terms cover all of it (effective October 30, 2026). Emails load the logo from imgm.app.
 
 ## Known issues
-- **Steam sign-up fails in production** with "Steam couldn't confirm it was you" (the `invalid` error), although it works locally. Checked: Vercel's `/api` rewrite passes `%2B` and `%3D` through unchanged. Not checked yet: whether Steam answers Render's `check_authentication` request, and the nonce and return-address checks on Render. The hotfix logs which check fails (`Steam login refused: <why>` in Render's logs).
+- **Steam sign-up failed once in production** with "Steam couldn't confirm it was you" (the `invalid` error), then worked after the hotfix, which only added logging: probably a one-off (a slow start, an expired or reused answer). If it comes back, Render's `Steam login refused: <why>` line names the check. Vercel's `/api` rewrite was checked: it passes `%2B` and `%3D` through unchanged.
 - **After Sort**, the model sometimes makes a new game the Best Pick, although the follow-up rule says to keep the kept picks' order. No code check for it yet.
 - **Which family game the model picks varies:** for It Takes Two the tool returns Split Fiction and A Way Out, and some answers pick only A Way Out.
 - **Locally**, the free Gemini key often times out or runs out of quota, so answers can take 70–150s before Vertex takes over. Production has no free key (~20–40s).
@@ -22,7 +23,7 @@
 - Shared Steam games played before connecting (and not in the last two weeks) can't be fetched: Steam's Families API needs a user token.
 
 ## Next
-1. **Fix Steam sign-up in production:** release the hotfix, try "Sign up with Steam" on imgm.app, read Render's log line, fix the cause.
+1. **Release `feature/steam-login-lands-home`.**
 2. **Tell roiegold** that Steam can now create accounts (his code said it never would).
 3. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
 4. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
