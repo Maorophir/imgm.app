@@ -29,6 +29,9 @@ import ResetPassword from './pages/ResetPassword';
 import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
+import SteamLanding from './pages/SteamLanding';
+import SteamLibrary from './pages/SteamLibrary';
+import SteamSignUp from './pages/SteamSignUp';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
 import { usePageTitle } from './hooks/usePageTitle';
 import { useSearchIndexing } from './hooks/useSearchIndexing';
@@ -72,6 +75,11 @@ const PAGES = {
     'Play Next: find your next game',
     'Answer a few questions and Play Next digs through your reviews and the IMGM community to pick 5 games you\'ll love, with a Best Pick.',
   ],
+  '/steam': [
+    'Connect your Steam library',
+    'Connect Steam to see every game you own on IMGM, with your hours. Rate one in about two minutes, and it becomes a card.',
+  ],
+  '/steam/library': ['Your Steam library'],
   '/backlog': ['Your Backlog'],
   '/profile': ['Your profile'],
   '/settings': ['Settings'],
@@ -80,6 +88,7 @@ const PAGES = {
   '/privacy': ['Privacy Policy', 'What IMGM collects, why, and how to delete your account and data.'],
   '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, collect a card for every rating, and get picks from Play Next.'],
   '/welcome': ['Welcome'],
+  '/signup/steam': ['Sign up with Steam'],
 };
 function RouteTitle() {
   const { pathname } = useLocation();
@@ -121,9 +130,14 @@ function App() {
           <Route path="/u/:username" element={<PlayerProfile />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/backlog" element={<Backlog />} />
+          {/* Steam: what connecting gives you (anyone), then your library (players) */}
+          <Route path="/steam" element={<SteamLanding />} />
+          <Route path="/steam/library" element={<SteamLibrary />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Auth />} />
+          {/* Back from Steam to sign up: the email step */}
+          <Route path="/signup/steam" element={<SteamSignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />

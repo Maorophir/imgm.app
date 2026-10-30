@@ -8,11 +8,11 @@ import { TEXT_LINK } from '../lib/ui';
 const Terms = () => (
   <LegalPage
     title="Terms of Use"
-    effective="October 10, 2026"
+    effective="October 30, 2026"
     intro="Welcome to IMGM (I Am Gaming, imgm.app). These terms are the rules for using the site. By creating an account or using IMGM, you agree to them. If you don't agree, please don't use IMGM."
   >
     <S title="1. Who can use IMGM">
-      <p>You must be at least 13 years old. If you're under 18, you need a parent's or guardian's permission. You're responsible for everything done with your account, so keep your password safe and tell us if you think someone else has used it.</p>
+      <p>You must be at least 13 years old. If you're under 18, you need a parent's or guardian's permission. You're responsible for everything done with your account, so keep your password, and any Steam account you connect, safe, and tell us if you think someone else has used it.</p>
     </S>
 
     <S title="2. Your account and gamer tag">
@@ -20,6 +20,7 @@ const Terms = () => (
         <li>One account per person. Give accurate sign-up details.</li>
         <li>Your gamer tag and profile picture must not impersonate anyone, include hate or harassment, be sexual, or break anyone's rights.</li>
         <li>We may change or remove a gamer tag or picture that breaks these rules.</li>
+        <li>You can sign up with, or connect, your own Steam account, to log in with it and see your Steam library on IMGM. Only connect a Steam account that's yours: anyone who can log in to it can log in to your IMGM account. You can disconnect it any time in your profile's settings.</li>
       </ul>
     </S>
 
@@ -46,6 +47,7 @@ const Terms = () => (
 
     <S title="6. Games, stores and other sites">
       <p>Game information and art come from IGDB and the games' publishers. Games, names, logos and artwork belong to their owners, and IMGM isn't affiliated with or endorsed by them. "Where to buy" links lead to other companies' stores (like Steam, GOG or PlayStation Store): anything you buy there is between you and that store, under their terms. IMGM may earn a commission from some store links in the future; this never changes what we show you.</p>
+      <p>If you connect Steam, your Steam library and playtime come from Steam and are shown as is, under sections 10 and 11: they can be incomplete or out of date (for example while your Steam profile is private). IMGM isn't affiliated with or endorsed by Valve or Steam. Steam and the Steam logo are trademarks of Valve Corporation.</p>
     </S>
 
     <S title="7. IMGM's site and code">
@@ -61,7 +63,7 @@ const Terms = () => (
     </S>
 
     <S title="10. No warranties">
-      <p>IMGM is provided "as is" and "as available", without warranties of any kind, to the fullest extent the law allows.</p>
+      <p>IMGM, including the game information and Steam data it shows, is provided "as is" and "as available", without warranties of any kind, to the fullest extent the law allows.</p>
     </S>
 
     <S title="11. Limits on liability">

@@ -13,7 +13,7 @@ import { getSessionUser } from '../lib/session.js';
 import { ensureGame } from '../services/gameStore.js';
 
 const MAX_ITEMS = 300;
-const SOURCES = ['play_next', 'game_page', 'hall_of_fame', 'gotw', 'other'];
+const SOURCES = ['play_next', 'game_page', 'hall_of_fame', 'gotw', 'steam', 'other'];
 
 const requireLogin = async (req, res) => {
   const user = await getSessionUser(req);

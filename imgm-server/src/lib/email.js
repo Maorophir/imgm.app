@@ -5,7 +5,6 @@
  * SMTP ports (25, 465, 587). Without RESEND_API_KEY (local development) nothing is
  * sent: the email is printed to the server log instead, link included.
  */
-import { clientOrigins } from './config.js';
 
 const RESEND_URL = 'https://api.resend.com/emails';
 const FROM = (process.env.EMAIL_FROM || 'IMGM <no-reply@imgm.app>').trim(); // a stray space after = must not break it
@@ -27,7 +26,9 @@ export const sendEmail = async ({ to, subject, html, text }) => {
 };
 
 const LIME = '#c6eb4e'; // the site's lime (--color-brand)
-const LOGO = `${clientOrigins[0]}/email-start.png`; // the power switch as a picture: mail apps don't show SVG
+// The power switch as a picture (mail apps don't show SVG), always from the live site:
+// a mail app loads it from the internet, so a test email from a laptop can't use localhost
+const LOGO = 'https://imgm.app/email-start.png';
 
 // Every email's top: the logo (power switch + IMGM) and what the letters stand for, and
 // a lime line across the card's top
@@ -131,4 +132,31 @@ export const welcomeEmail = (siteUrl) => ({
   subject: 'Welcome to IMGM!',
   text: ['Welcome to IMGM. Press start.', '', WHAT_TO_DO, '', `Press start: ${siteUrl}`, '', 'See you in the reviews,', 'IMGM'].join('\n'),
   html: emailFrame(`Welcome to IMGM. <span style="color:${LIME}">Press start.</span>`, WHAT_TO_DO, { url: siteUrl, start: true }),
+});
+
+/**
+ * After a Steam account is connected (lib/steamAuth.js): a heads-up, because whoever can
+ * log in to that Steam account can now log in to this IMGM account too. If it wasn't
+ * them, resetting the password gets the account back and disconnects Steam with it.
+ */
+export const steamConnectedEmail = (settingsUrl) => ({
+  subject: 'Steam is now connected to your IMGM account',
+  text: [
+    'Steam is connected',
+    '',
+    'A Steam account was just connected to your IMGM account. You can now log in with Steam, and rate games straight from your Steam library.',
+    '',
+    `To disconnect it, open Settings: ${settingsUrl}`,
+    '',
+    "Wasn't you? Reset your password from the login page: that also disconnects Steam.",
+    '',
+    'See you in the reviews,',
+    'IMGM',
+  ].join('\n'),
+  html: emailFrame(
+    'Steam is connected',
+    'A Steam account was just connected to your IMGM account. You can now log in with Steam, and rate games straight from your Steam library.',
+    { url: settingsUrl, label: 'Open Settings' },
+    "<strong style=\"color:#ffffff\">Wasn't you?</strong> Reset your password from the login page: that also disconnects Steam."
+  ),
 });

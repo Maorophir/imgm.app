@@ -315,6 +315,7 @@ export const getMyAccount = async (req, res) => {
     const user = await requireLogin(req, res);
     if (!user) return;
     const accounts = await prisma.account.findMany({ where: { userId: user.id }, select: { providerId: true, password: true } });
+    res.set('Cache-Control', 'private, no-store'); // one player's logins (Google, Steam…): never a shared copy
     res.json({
       hasPassword: accounts.some((a) => a.providerId === 'credential' && a.password),
       providers: accounts.map((a) => a.providerId),

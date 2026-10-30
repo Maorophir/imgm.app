@@ -162,6 +162,24 @@ export const deleteAvatar = () => fetchJson('/api/users/me/avatar', { method: 'D
 export const getMyAccount = (signal) => fetchJson('/api/users/me/account', { signal });
 export const deleteMyAccount = (body) => fetchJson('/api/users/me', { method: 'DELETE', body });
 
+// Steam. Connecting a Steam account and logging in with it go through IMGM's login
+// server: each start answers { url }, Steam's own sign-in page to send the player to
+// (see lib/steam.js goToSteam). returnTo is where Steam's answer lands on IMGM.
+export const startSteamConnect = (returnTo) => fetchJson('/api/auth/steam/link', { method: 'POST', body: { returnTo } });
+export const startSteamSignIn = (returnTo) => fetchJson('/api/auth/steam/sign-in', { method: 'POST', body: { returnTo } });
+export const startSteamSignUp = (returnTo) => fetchJson('/api/auth/steam/sign-up', { method: 'POST', body: { returnTo } });
+// Back from Steam to sign up: is it still waiting for an email ({ pending }), and the
+// email that finishes it (makes the account and logs in → { returnTo })
+export const getSteamSignUpPending = (signal) => fetchJson('/api/auth/steam/sign-up/pending', { signal });
+export const finishSteamSignUp = (email) => fetchJson('/api/auth/steam/sign-up/finish', { method: 'POST', body: { email } });
+// Disconnects Steam and deletes everything imported from it (reviews and the Backlog stay)
+export const disconnectSteam = () => fetchJson('/api/auth/steam/unlink', { method: 'POST', body: {} });
+// Your Steam connection: { connected, steamId, profileUrl, libraryEnabled, library }
+export const getSteamStatus = (signal) => fetchJson('/api/steam/me', { signal });
+// Your imported Steam library ({ games, others, ... }), and asking Steam for it again
+export const getSteamLibrary = (signal) => fetchJson('/api/steam/library', { signal });
+export const importSteamLibrary = () => fetchJson('/api/steam/import', { method: 'POST' });
+
 // Ready-made avatars (IMGM's original characters): [{ key, name, url }], and choosing one
 export const getAvatarPresets = (signal) => fetchJson('/api/users/avatars/presets', { signal });
 export const chooseAvatarPreset = (preset) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { preset } });

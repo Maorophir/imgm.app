@@ -7,15 +7,23 @@
  * Email and password, or Google (in a popup). New players go on to choose a gamer
  * tag (/welcome). Behind the card, real popular games' covers drift by, dimmed.
  *
+ * Both tabs also offer Steam: the whole page goes to Steam's own sign-in page (not a
+ * popup), and Steam's answer comes back through IMGM's server, straight to ?redirect
+ * (logged in), or here with ?steam_error=<code> (they cancelled, it took too long…). The
+ * code is read once, shown in the site's words (only known codes have any), and
+ * cleared from the address. A Steam account new to IMGM goes on to /signup/steam for an
+ * email (Steam shares none), from either tab.
+ *
  * Noir: a flat card of card stock (no frosted glass), a Big Shoulders heading, the
- * lime "Log in" (or "Sign up") as the page's one main action, and Google's own dark
- * sign-in button.
+ * lime "Log in" (or "Sign up") as the page's one main action, Google's own dark
+ * sign-in button, and a plain dark one for Steam (words only, no Steam logo).
  */
 import { useState, useEffect } from 'react';
 import { signIn, signUp, authClient, useSession } from '../lib/authClient';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { getFeaturedGames } from '../lib/api';
+import { getFeaturedGames, startSteamSignIn, startSteamSignUp } from '../lib/api';
 import { safeRedirect } from '../lib/safeRedirect';
+import { goToSteam, steamErrorMessage, steamStartError } from '../lib/steam';
 import { passwordProblems } from '../lib/passwordRules';
 import { TEXT_LINK } from '../lib/ui';
 import PasswordChecklist from '../components/PasswordChecklist';
@@ -29,8 +37,10 @@ function Auth() {
   const isLogin = searchParams.get('mode') !== 'signup';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  // Starts with Steam's answer, if Steam sent the player back here with one
+  const [error, setError] = useState(() => steamErrorMessage(searchParams.get('steam_error')) ?? '');
   const [loading, setLoading] = useState(false);
+  const [steamBusy, setSteamBusy] = useState(false); // on the way to Steam's page
   // Real popular games for the scrolling background (stays empty if the request fails)
   const [bgGames, setBgGames] = useState([]);
   const navigate = useNavigate();
@@ -45,6 +55,25 @@ function Auth() {
       return next;
     }, { replace: true });
   };
+
+  // Steam's answer is read once (above), then cleared from the address, keeping the
+  // ?redirect (replace: Back doesn't bring it back, a reload doesn't show it again)
+  useEffect(() => {
+    if (!searchParams.has('steam_error')) return;
+    setSearchParams((params) => {
+      const next = new URLSearchParams(params);
+      next.delete('steam_error');
+      return next;
+    }, { replace: true });
+  }, [searchParams, setSearchParams]);
+
+  // Back from Steam's page with the browser's Back button: the browser may show this
+  // page exactly as it was left ("Opening Steam…"), so the button works again
+  useEffect(() => {
+    const reset = (event) => event.persisted && setSteamBusy(false);
+    window.addEventListener('pageshow', reset);
+    return () => window.removeEventListener('pageshow', reset);
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -122,6 +151,21 @@ function Auth() {
       }
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  // Log in or sign up with Steam: IMGM's server makes the address of Steam's sign-in
+  // page (and remembers where to go after), then the whole page goes there. Steam says
+  // which Steam account it is: a connected one logs in, a new one signs up.
+  const handleSteam = async () => {
+    setError('');
+    setSteamBusy(true);
+    try {
+      const start = isLogin ? startSteamSignIn : startSteamSignUp;
+      goToSteam(await start(redirectTo)); // the button stays busy until the page is gone
+    } catch (err) {
+      setError(steamStartError(err));
+      setSteamBusy(false);
     }
   };
 
@@ -229,6 +273,18 @@ function Auth() {
           </svg>
           Continue with Google
         </button>
+
+        {/* Steam: a plain dark button in the same family as Google's, in IMGM's own
+            greys, with words and no logo */}
+        <button
+          type="button"
+          onClick={handleSteam}
+          disabled={steamBusy}
+          className="mt-3 w-full h-11 flex items-center justify-center bg-slate-950 border border-slate-500 text-white hover:border-white font-medium px-4 rounded-sm transition-colors duration-120 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-slate-500"
+        >
+          {steamBusy ? 'Opening Steam…' : isLogin ? 'Log in with Steam' : 'Sign up with Steam'}
+        </button>
+        {!isLogin && <p className="mt-2 text-center text-xs text-slate-400">Steam doesn't share your email, so we'll ask for it next.</p>}
 
         {/* Signing up (or in with Google, which can create an account) means agreeing */}
         <p className="mt-4 text-center text-xs text-slate-400">
