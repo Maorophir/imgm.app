@@ -79,11 +79,12 @@ export const playNextBetaUsers = new Set(
 export const canUsePlayNext = (userId) => playNextEnabled || playNextBetaUsers.has(userId);
 
 /**
- * Discover (the scrolling feed of games, /discover) is a closed beta on the live site
- * until DISCOVER=on is set on Render: before that, only the players in
- * DISCOVER_BETA_USERS (comma-separated user ids) see it. Local development always has it.
+ * Discover (the scrolling feed of games, /discover) is open to everyone (launched
+ * 2026-10-31). DISCOVER=off on Render takes it back to a closed beta: then only the
+ * players in DISCOVER_BETA_USERS (comma-separated user ids) see it. Local development
+ * always has it.
  */
-export const discoverEnabled = process.env.DISCOVER === 'on' || !isProduction;
+export const discoverEnabled = process.env.DISCOVER !== 'off' || !isProduction;
 const discoverBetaUsers = new Set(
   (process.env.DISCOVER_BETA_USERS || '')
     .split(',')
