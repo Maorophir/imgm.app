@@ -16,6 +16,30 @@ const TIMEOUT = 8_000;
 // Steam's content descriptors for adult sexual content (3 adult only, 4 frequent nudity)
 const ADULT_DESCRIPTORS = new Set([3, 4]);
 
+// Which trailer: a video's name says what it is. The kinds worth a first look, best
+// first (as the game page's pickVideos), and the ones that aren't the game itself:
+// critics' quotes, people talking, updates and add-ons. Steam's own "highlight" is often
+// an accolades reel, so it only breaks ties.
+const KINDS = [/\b(launch|release)\b/i, /gameplay|demo/i, /story|cinematic|opening/i, /announce|reveal|debut|teaser/i, /trailer/i];
+const SKIP = /accolade|interview|diary|behind the scenes|message|q ?& ?a|commentary|developer|director|producer|livestream|podcast|recap|anniversary|tv spot|commercial|dlc|expansion|season pass|patch|update/i;
+// A name in Chinese, Japanese or Korean script: the version for those markets (YouTube's
+// trailer is the better pick then)
+const CJK = /[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/;
+const kindOf = (name) => {
+  const i = KINDS.findIndex((kind) => kind.test(name));
+  return i === -1 ? KINDS.length : i;
+};
+// The best of a game's Steam videos, or null if none is the game itself (then the
+// feed plays its YouTube trailer, chosen by the same rules)
+const pickMovie = (movies) =>
+  movies
+    .map((movie, order) => ({ movie, name: movie.name ?? '', order }))
+    .filter(({ movie, name }) => typeof movie.hls_h264 === 'string' && movie.hls_h264.startsWith('https://') && !SKIP.test(name) && !CJK.test(name))
+    .sort((a, b) =>
+      kindOf(a.name) - kindOf(b.name) ||
+      Boolean(b.movie.highlight) - Boolean(a.movie.highlight) ||
+      a.order - b.order)[0]?.movie ?? null;
+
 const cache = new Map(); // appid -> { expiresAt, info: { trailer, mature } | null }
 
 // One app's trailer ({ name, hls, poster }) and age, or null when Steam has none to give
@@ -27,9 +51,7 @@ const lookUp = async (appid) => {
   if (!response.ok) throw new Error(`Steam's store answered ${response.status}`);
   const data = (await response.json())?.[appid]?.data;
   if (!data) return null;
-  // Steam marks its featured trailers as highlights; the first of those, else the first
-  const movies = (data.movies ?? []).filter((movie) => typeof movie.hls_h264 === 'string' && movie.hls_h264.startsWith('https://'));
-  const movie = movies.find((m) => m.highlight) ?? movies[0];
+  const movie = pickMovie(data.movies ?? []);
   const descriptors = data.content_descriptors?.ids ?? [];
   return {
     trailer: movie ? { name: movie.name ?? 'Trailer', hls: movie.hls_h264, poster: movie.thumbnail ?? null } : null,

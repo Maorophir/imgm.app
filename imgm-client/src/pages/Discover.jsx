@@ -22,15 +22,18 @@
  *
  * The trailer: tapping it the first time turns the sound on; after that a tap pauses
  * or plays it. The speaker button mutes and unmutes. Sound stays as set from game to
- * game. None of it reloads the video (it would start over): the player is told what
- * to do through YouTube's player messages.
+ * game. A timeline along the bottom edge moves through the video (drag or tap). None of
+ * it reloads the video (it would start over): the player is told what to do.
  *
  * Feeds (GET /api/games/discover, IGDB's popularity rankings): New (the last 90 days),
- * Coming soon (the most wanted of the next year), Trending.
+ * Most Wanted (the next year's most wishlisted, the hottest first), Trending.
+ * Each feed reopens where the player left it (remembered on the device); the arrow at
+ * the top left, or the feed's own tab, goes back to its first game; after the last one,
+ * "That's all for now" offers the top and the other feeds.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookmarkCheck, BookmarkPlus, ChevronDown, Clapperboard, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX } from 'lucide-react';
+import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX } from 'lucide-react';
 import { getDiscoverGames, getDiscoverVotes, getMyReview, saveReview, voteOnGame } from '../lib/api';
 import CollectibleCard from '../components/CollectibleCard';
 import { useSession } from '../lib/authClient';
@@ -38,7 +41,7 @@ import { useBacklog } from '../context/BacklogContext';
 import { pickVideos } from '../components/game/pickVideos';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
-import { GHOST_BUTTON_SM, SEGMENTS, segment, TEXT_LINK } from '../lib/ui';
+import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, SEGMENTS, segment, TEXT_LINK } from '../lib/ui';
 
 const DAY = 24 * 60 * 60 * 1000;
 // "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
@@ -52,9 +55,30 @@ const readMatureOk = () => {
 };
 const FEEDS = [
   { key: 'new', label: 'New' },
-  { key: 'soon', label: 'Coming soon' },
+  { key: 'soon', label: 'Most Wanted' }, // upcoming games, ranked by wishlists
   { key: 'trending', label: 'Trending' },
 ];
+
+// Where the player left each feed (the game on screen), so coming back carries on there
+const PLACES = 'imgm.discover.places';
+const readPlaces = () => {
+  try {
+    return JSON.parse(localStorage.getItem(PLACES)) ?? {};
+  } catch {
+    return {};
+  }
+};
+const savePlace = (feed, gameId) => {
+  try {
+    localStorage.setItem(PLACES, JSON.stringify({ ...readPlaces(), [feed]: gameId }));
+  } catch { /* this visit only */ }
+};
+
+// 75 seconds as "1:15"
+const clock = (seconds) => {
+  const s = Math.max(0, Math.floor(seconds || 0));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
 
 // When it's out, in words. IGDB marks a game known only by its year as out on 31 December.
 const releaseLine = (date, now) => {
@@ -98,7 +122,7 @@ const startVideo = (el, onSoundBlocked) =>
 // A Steam trailer, streamed from Steam's own video servers (HLS: no ads, no logo).
 // Safari and iPhones play the stream themselves; other browsers through hls.js, loaded
 // only when it's needed. Sound and pausing are the video's own.
-const SteamTrailer = ({ trailer, title, muted, paused, onFail, onSoundBlocked }) => {
+const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBlocked, onProgress }) => {
   const video = useRef(null);
   const [ready, setReady] = useState(false);
   useEffect(() => {
@@ -131,6 +155,10 @@ const SteamTrailer = ({ trailer, title, muted, paused, onFail, onSoundBlocked })
     if (paused) el.pause();
     else if (el.readyState >= HAVE_CURRENT_DATA) startVideo(el, onSoundBlocked); // else onCanPlay starts it
   }, [paused, onSoundBlocked]);
+  // The timeline moved: jump there
+  useEffect(() => {
+    if (seek) video.current.currentTime = seek.to;
+  }, [seek]);
   return (
     <video
       ref={video}
@@ -141,6 +169,7 @@ const SteamTrailer = ({ trailer, title, muted, paused, onFail, onSoundBlocked })
       // Started here, once there's something to play (not before: that "fails" too early)
       onCanPlay={() => !paused && startVideo(video.current, onSoundBlocked)}
       onPlaying={() => setReady(true)}
+      onTimeUpdate={(e) => onProgress(e.currentTarget.currentTime, e.currentTarget.duration)}
       onError={onFail}
       // Hidden until it plays, so the key art shows instead of a black box
       className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
@@ -152,22 +181,31 @@ const SteamTrailer = ({ trailer, title, muted, paused, onFail, onSoundBlocked })
 // once it starts (a new address would restart it), so sound and pausing go to the player
 // as messages. If YouTube won't play it here (an age-restricted video, or one its owner
 // keeps off other sites), it says so, and the key art stays instead of an error screen.
-const YouTubeTrailer = ({ video, title, muted, paused, onFail }) => {
+const YouTubeTrailer = ({ video, title, muted, paused, seek, onFail, onProgress }) => {
   const frame = useRef(null);
   const [ready, setReady] = useState(false);
   const [src] = useState(
     () => `${YOUTUBE}/embed/${video.youtubeId}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${video.youtubeId}&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1`
   );
   useEffect(() => {
+    let duration = 0; // YouTube sends it once, the time many times a second
     const heard = (event) => {
       if (event.source !== frame.current?.contentWindow) return;
       try {
-        if (JSON.parse(event.data)?.event === 'onError') onFail();
+        const message = JSON.parse(event.data);
+        if (message?.event === 'onError') onFail();
+        const info = message?.event === 'infoDelivery' ? message.info : null;
+        if (info?.duration) duration = info.duration;
+        if (typeof info?.currentTime === 'number') onProgress(info.currentTime, duration);
       } catch { /* not one of YouTube's messages */ }
     };
     window.addEventListener('message', heard);
     return () => window.removeEventListener('message', heard);
-  }, [onFail]);
+  }, [onFail, onProgress]);
+  // The timeline moved: jump there
+  useEffect(() => {
+    if (seek) command(frame.current, 'seekTo', [seek.to, true]);
+  }, [seek]);
   useEffect(() => {
     if (!ready) return;
     if (muted) command(frame.current, 'mute');
@@ -187,7 +225,7 @@ const YouTubeTrailer = ({ video, title, muted, paused, onFail }) => {
       allow="autoplay; encrypted-media; picture-in-picture"
       onLoad={() => {
         setReady(true);
-        tellPlayer(frame.current, { event: 'listening', id: 1, channel: 'widget' }); // send us its errors
+        tellPlayer(frame.current, { event: 'listening', id: 1, channel: 'widget' }); // send us its time and errors
       }}
       // Hidden until the player is ready, so the key art shows instead of a black box
       className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none border-0 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
@@ -210,6 +248,13 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
   const [problem, setProblem] = useState(null);
   const [popped, setPopped] = useState(null); // the score just saved: its card pops up
   const myRating = votes?.myRating ?? null;
+  // The trailer's timeline: where it is, and where the player moved it to (a new object
+  // each time, so picking the same spot twice still jumps)
+  const [progress, setProgress] = useState({ time: 0, duration: 0 });
+  const [seek, setSeek] = useState(null);
+  const [scrubbing, setScrubbing] = useState(null); // the time under the finger while dragging
+  const onProgress = useCallback((time, duration) => setProgress({ time, duration: Number.isFinite(duration) ? duration : 0 }), []);
+  const shownTime = scrubbing ?? progress.time;
   const video = useMemo(() => pickVideos(game.videos ?? [], 1)[0] ?? null, [game.videos]);
   // Steam's trailer first (no ads), YouTube's when there's none or it won't play
   const [steamFailed, setSteamFailed] = useState(false);
@@ -278,12 +323,23 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
           title={`${game.title}: ${game.steamTrailer.name}`}
           muted={muted}
           paused={paused}
+          seek={seek}
           onFail={failSteam}
           onSoundBlocked={onSoundBlocked}
+          onProgress={onProgress}
         />
       )}
       {active && !gated && source === 'youtube' && (
-        <YouTubeTrailer key={video.youtubeId} video={video} title={`${game.title}: ${video.name}`} muted={muted} paused={paused} onFail={failYoutube} />
+        <YouTubeTrailer
+          key={video.youtubeId}
+          video={video}
+          title={`${game.title}: ${video.name}`}
+          muted={muted}
+          paused={paused}
+          seek={seek}
+          onFail={failYoutube}
+          onProgress={onProgress}
+        />
       )}
       <button
         type="button"
@@ -295,6 +351,36 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
         <span aria-hidden="true" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-20 h-20 rounded-full bg-slate-950/60 backdrop-blur-sm text-white pointer-events-none">
           <Play className="w-9 h-9 translate-x-0.5" strokeWidth={1.6} />
         </span>
+      )}
+
+      {/* The trailer's timeline along the bottom edge: drag it, or tap a spot, to move
+          through the video (it stays above the tap layer, so it never pauses it) */}
+      {active && !gated && source && progress.duration > 0 && (
+        // (short of the bottom-right corner: the site's Feedback button sits there)
+        <div className="absolute inset-x-0 bottom-0 z-2 flex items-center gap-3 pl-4 pr-16 sm:pl-8 sm:pr-40">
+          <input
+            type="range"
+            min={0}
+            max={progress.duration}
+            step={0.1}
+            value={shownTime}
+            onChange={(e) => {
+              const to = Number(e.target.value);
+              setScrubbing(to);
+              setSeek({ to });
+            }}
+            onPointerUp={() => setScrubbing(null)}
+            onKeyUp={() => setScrubbing(null)}
+            onBlur={() => setScrubbing(null)}
+            aria-label={`${game.title} trailer timeline`}
+            aria-valuetext={`${clock(shownTime)} of ${clock(progress.duration)}`}
+            className="discover-timeline flex-1"
+            style={{ '--done': `${Math.min(100, (shownTime / progress.duration) * 100)}%` }}
+          />
+          <span className="shrink-0 text-xs tabular-nums text-slate-200 [text-shadow:0_1px_3px_rgb(0_0_0/.8)]">
+            {clock(shownTime)} / {clock(progress.duration)}
+          </span>
+        </div>
       )}
 
       {/* Rated for adults: the trailer waits for a tap that says the viewer is 18 or older
@@ -316,7 +402,7 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
       <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent pointer-events-none" />
 
       {/* What it is, and the actions, over the bottom of the video */}
-      <div className="absolute inset-x-0 bottom-0 px-4 pb-10 sm:px-8 sm:pb-12 pointer-events-none">
+      <div className="absolute inset-x-0 bottom-0 px-4 pb-16 sm:px-8 pointer-events-none">
         <div className="max-w-[1180px] mx-auto flex items-end gap-4">
           <div className="min-w-0 flex-1 pointer-events-auto">
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-200">
@@ -345,11 +431,6 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
               {game.platforms?.length > 0 && <span className="hidden sm:inline">· {game.platforms.slice(0, 4).join(', ')}</span>}
             </p>
             {game.description && <p className="mt-2 max-w-[620px] text-sm text-slate-300 line-clamp-2">{game.description}</p>}
-            {/* More trailers, screenshots and the reviews: the game page opens on them */}
-            <Link to={`/game/${game.id}`} className={`mt-2 inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-white ${TEXT_LINK}`}>
-              <Clapperboard className="w-4 h-4 text-slate-300" strokeWidth={1.8} aria-hidden="true" />
-              More videos
-            </Link>
 
             {/* Played it? One tap on a score saves it */}
             {rating && (
@@ -508,14 +589,28 @@ function Discover() {
       (entries) =>
         entries.forEach((entry) => {
           if (!entry.isIntersecting) return;
-          setActive(Number(entry.target.dataset.index));
+          const index = Number(entry.target.dataset.index);
+          setActive(index);
           setPaused(false); // a new game on screen plays
+          if (list[index]) savePlace(feed, list[index].id); // (not the closing card)
         }),
       { root: box, threshold: 0.6 }
     );
     box.querySelectorAll('[data-index]').forEach((el) => observer.observe(el));
     return () => observer.disconnect();
-  }, [list]);
+  }, [list, feed]);
+
+  // Opening a feed (this visit or a later one) starts where the player left it, or at
+  // its first game when that game has left the feed
+  const restored = useRef(null); // the feed whose place has been put back
+  useEffect(() => {
+    if (!games || restored.current === feed) return;
+    restored.current = feed;
+    const box = scroller.current;
+    const index = list.findIndex((g) => g.id === readPlaces()[feed]);
+    const slide = index > 0 ? box?.querySelector(`[data-index="${index}"]`) : null;
+    box?.scrollTo({ top: slide ? slide.offsetTop : 0 });
+  }, [games, list, feed]);
 
   // The votes on this feed's games, and the player's own (again after logging in or out)
   useEffect(() => {
@@ -560,19 +655,35 @@ function Discover() {
     const slide = box?.querySelector(`[data-index="${index}"]`);
     if (slide) box.scrollTo({ top: slide.offsetTop, behavior: 'smooth' });
   };
+  const backToTop = () => scroller.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  // A feed's tab opens it where the player left it; its tab again goes back to the top
   const pickFeed = (key) => {
+    if (key === feed) return backToTop();
+    restored.current = null; // its place goes back once its games are in
     setFeed(key);
     setActive(0);
-    scroller.current?.scrollTo({ top: 0 });
   };
+  const feedLabel = FEEDS.find((f) => f.key === feed)?.label;
 
   return (
     <main className="relative bg-slate-950">
+      {/* Back to the feed's first game (the hottest ones are at the top) */}
+      {active > 0 && list.length > 0 && (
+        <button
+          type="button"
+          onClick={backToTop}
+          aria-label={`Back to the first game in ${feedLabel}`}
+          className="absolute top-3 left-4 sm:left-8 z-10 grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white"
+        >
+          <ArrowUp className="w-5 h-5" strokeWidth={1.8} />
+        </button>
+      )}
+
       {/* The feeds, floating over the top of the feed */}
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100%-96px)]">
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100%-120px)]">
         <div className={`${SEGMENTS} bg-slate-950/60 backdrop-blur-sm`} role="tablist" aria-label="Discover feeds">
           {FEEDS.map((f) => (
-            <button key={f.key} type="button" role="tab" aria-selected={feed === f.key} onClick={() => pickFeed(f.key)} className={segment(feed === f.key)}>
+            <button key={f.key} type="button" role="tab" aria-selected={feed === f.key} onClick={() => pickFeed(f.key)} className={`${segment(feed === f.key)} max-sm:px-3`}>
               {f.label}
             </button>
           ))}
@@ -605,11 +716,30 @@ function Discover() {
             />
           </div>
         ))}
+
+        {/* After the last game: back to the top, or another feed (it counts as a place
+            of its own, so no trailer keeps playing behind it) */}
+        {list.length > 0 && (
+          <div data-index={list.length} className="h-full snap-start snap-always grid place-items-center px-6 text-center">
+            <div className="max-w-[520px]">
+              <p className="font-display uppercase text-[44px] sm:text-[64px] leading-[.88] tracking-[.005em] text-white">That's all for now</p>
+              <p className="mt-3 text-slate-300">You've seen every game in {feedLabel}. The lists refresh every few hours.</p>
+              <div className="mt-7 flex flex-wrap justify-center gap-3">
+                <button type="button" onClick={backToTop} className={PRIMARY_BUTTON}>Back to the top</button>
+                {FEEDS.filter((f) => f.key !== feed).map((f) => (
+                  <button key={f.key} type="button" onClick={() => pickFeed(f.key)} className={GHOST_BUTTON}>
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* A hint on the first game that there's more below */}
       {active === 0 && list.length > 1 && (
-        <button type="button" onClick={() => goTo(1)} className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1 text-sm text-slate-300 hover:text-white motion-safe:animate-bounce">
+        <button type="button" onClick={() => goTo(1)} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1 text-sm text-slate-300 hover:text-white motion-safe:animate-bounce">
           Swipe for more <ChevronDown className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
