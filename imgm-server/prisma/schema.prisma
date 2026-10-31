@@ -38,8 +38,11 @@ model User {
   // A connected Steam account's imported library (see SteamLibrary below)
   steamLibrary      SteamLibrary?
   steamGames        SteamLibraryGame[]
-  // Discover's thumbs up / down on games
+  // Discover's thumbs up / down on games, and its comments (with their likes and reports)
   discoverVotes     DiscoverVote[]
+  discoverComments       DiscoverComment[]
+  discoverCommentLikes   DiscoverCommentLike[]
+  discoverCommentReports DiscoverCommentReport[]
   
   // Custom IMGM relations
   reviews       Review[]
@@ -447,4 +450,50 @@ model DiscoverVote {
 
   @@id([userId, gameId])
   @@index([gameId])
+}
+
+// Discover's comments on a game: a comment, or a reply to one. Replies are one level
+// deep, like TikTok: a reply to a reply hangs off the same comment (and starts with the
+// other player's @tag). Deleting a comment deletes its replies.
+model DiscoverComment {
+  id        String            @id @default(cuid())
+  gameId    Int
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    DiscoverComment?  @relation("DiscoverReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   DiscoverComment[] @relation("DiscoverReplies")
+  body      String
+  // Hidden once 3 players report it, until it's checked (the reports are emailed)
+  hidden    Boolean           @default(false)
+  createdAt DateTime          @default(now())
+  likes     DiscoverCommentLike[]
+  reports   DiscoverCommentReport[]
+
+  @@index([gameId, parentId])
+  @@index([parentId])
+}
+
+// A heart on a comment (one per player)
+model DiscoverCommentLike {
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commentId String
+  comment   DiscoverComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime        @default(now())
+
+  @@id([userId, commentId])
+  @@index([commentId])
+}
+
+// A player reporting a comment (once each)
+model DiscoverCommentReport {
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commentId String
+  comment   DiscoverComment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reason    String?
+  createdAt DateTime        @default(now())
+
+  @@id([userId, commentId])
 }

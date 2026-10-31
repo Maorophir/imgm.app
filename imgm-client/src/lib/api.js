@@ -46,6 +46,14 @@ export const getDiscoverGames = (feed, signal) => fetchJson(`/api/games/discover
 // (1 up, -1 down, 0 to take it back) → that game's new { up, down, mine }
 export const getDiscoverVotes = (gameIds, signal) => fetchJson(`/api/discover/votes?ids=${gameIds.join(',')}`, { signal });
 export const voteOnGame = (gameId, value) => fetchJson(`/api/discover/votes/${gameId}`, { method: 'PUT', body: { value } });
+// Discover's comments on a game (replies are one level deep)
+export const getDiscoverComments = (gameId, page = 0, signal) => fetchJson(`/api/discover/games/${gameId}/comments?page=${page}`, { signal });
+export const getDiscoverReplies = (commentId, signal) => fetchJson(`/api/discover/comments/${commentId}/replies`, { signal });
+export const postDiscoverComment = (gameId, body, parentId) =>
+  fetchJson(`/api/discover/games/${gameId}/comments`, { method: 'POST', body: { body, ...(parentId ? { parentId } : {}) } });
+export const deleteDiscoverComment = (commentId) => fetchJson(`/api/discover/comments/${commentId}`, { method: 'DELETE' });
+export const likeDiscoverComment = (commentId, liked) => fetchJson(`/api/discover/comments/${commentId}/like`, { method: 'PUT', body: { liked } });
+export const reportDiscoverComment = (commentId, reason) => fetchJson(`/api/discover/comments/${commentId}/report`, { method: 'POST', body: { reason } });
 // Games to get the player reviewing: popular ones in their favourite genres they haven't
 // rated (logged in), else the most played games of all time. { personal, genres, games }
 export const getReviewPicks = (signal) => fetchJson('/api/games/review-picks', { signal });

@@ -43,9 +43,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, Maximize, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
+import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, Maximize, MessageCircle, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
 import { getDiscoverGames, getDiscoverVotes, getMyReview, saveReview, voteOnGame } from '../lib/api';
 import CollectibleCard from '../components/CollectibleCard';
+import DiscoverComments from '../components/discover/DiscoverComments';
 import { useSession } from '../lib/authClient';
 import { useBacklog } from '../context/BacklogContext';
 import { pickVideos } from '../components/game/pickVideos';
@@ -87,13 +88,18 @@ const savePlace = (feed, gameId) => {
 // header, like an app
 const PHONE = '(max-width: 767px), (max-height: 500px)';
 const isPhone = () => window.matchMedia(PHONE).matches;
-// The browser's own full screen (no address bar): Android and computers; iPhones have
-// none for a page (there, Add to Home Screen opens the site without Safari's bars)
-const canFullScreen = () => Boolean(document.fullscreenEnabled);
-const isIPhone = () => /iPhone|iPod/.test(navigator.userAgent);
-const isHomeScreenApp = () => navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
-// An upright screen: the trailer (16:9) shows whole, across the top, instead of cropped
-// to its middle third
+// The browser's own full screen (no address bar): Android, computers, iPads, and apps
+// built on WebKit that switch it on (Brave on iPhone), some only under WebKit's older
+// prefixed names. Safari on an iPhone has none for a page: there the button clears the
+// screen instead (only Safari's own bar stays).
+const canFullScreen = () => Boolean(document.fullscreenEnabled || document.webkitFullscreenEnabled);
+const fullScreenElement = () => document.fullscreenElement ?? document.webkitFullscreenElement ?? null;
+const enterFullScreen = (el) =>
+  Promise.resolve(el.requestFullscreen ? el.requestFullscreen({ navigationUI: 'hide' }) : el.webkitRequestFullscreen?.()).catch(() => {});
+const exitFullScreen = () =>
+  Promise.resolve(document.exitFullscreen ? document.exitFullscreen() : document.webkitExitFullscreen?.()).catch(() => {});
+// An upright screen: the trailer shows nearly whole (4:3, a little off each side),
+// across the top, over the game's key art, instead of cropped to its middle third
 const PORTRAIT = '(orientation: portrait)';
 const isPortrait = () => window.matchMedia(PORTRAIT).matches;
 
@@ -294,12 +300,14 @@ const YouTubeTrailer = ({ video, title, muted, paused, seek, tries, onFail, onSo
 };
 
 // A round action on the rail: icon over a short word, 44px+ to tap
-const RAIL = 'flex flex-col items-center gap-1 min-w-14 text-xs font-medium text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)]';
+const RAIL = 'flex flex-col items-center gap-1 tight:gap-0.5 w-16 text-xs tight:text-[11px] font-medium text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)]';
 // A round button over the top of the feed
-const TOP_BUTTON = 'grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white';
-const RAIL_ICON = 'grid place-items-center w-12 h-12 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
+const TOP_BUTTON = 'grid place-items-center w-12 h-12 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white';
+// The trailer, nearly whole on an upright screen (4:3 of its 16:9: a little off each side)
+const UPRIGHT_FRAME = 'absolute inset-x-0 top-[68px] aspect-[4/3] overflow-hidden [container-type:size]';
+const RAIL_ICON = 'grid place-items-center w-12 h-12 tight:w-10 tight:h-10 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk, onConfirmAge, onTapVideo, onToggleMute, onSoundBlocked, onVote, onRated }) => {
+const Slide = ({ game, now, active, muted, paused, clear, whole, bare, votes, matureOk, onConfirmAge, tapForSound, onTapVideo, onToggleMute, onComments, onSoundBlocked, onVote, onRated }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -339,6 +347,9 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
   // A game rated for adults waits for the viewer to say they're 18 or older
   const gated = game.mature && !matureOk;
   const art = game.artworks?.[0] ?? game.screenshots?.[0] ?? game.coverUrl;
+  // Upright (and not cleared for full screen): the trailer across the top, the art below
+  const upright = whole && !bare;
+  const still = game.steamTrailer?.poster ?? game.screenshots?.[0] ?? art;
   const score = game.ratings?.imgm;
   const rarity = typeof score === 'number' && game.reviewCount > 0 ? getRarity(score) : null;
   const saved = backlog?.has(game.id);
@@ -385,14 +396,15 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
 
   return (
     <section className="relative h-full snap-start snap-always overflow-hidden bg-slate-950 [container-type:size]" aria-label={game.title}>
-      {/* Upright, the screen behind the trailer: its key art, blurred and dimmed */}
-      {whole && art && <img src={art} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-50" />}
+      {/* Upright, the screen behind the trailer: the game's key art (the frame shows
+          another picture until the trailer plays, so they're not the same) */}
+      {upright && art && <img src={art} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover object-bottom" />}
 
-      {/* The trailer's frame: the whole screen (cropped to fill it), or upright, the whole
-          16:9 picture across the top. It's the size the videos cover (cqw/cqh). */}
-      <div className={whole ? 'absolute inset-x-0 top-[68px] aspect-video overflow-hidden [container-type:size]' : 'absolute inset-0'}>
-      {/* The key art, until (or instead of) the trailer */}
-      {art && <img src={art} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />}
+      {/* The trailer's frame: the whole screen (cropped to fill it), or upright, nearly
+          the whole picture across the top. It's the size the videos cover (cqw/cqh). */}
+      <div className={upright ? UPRIGHT_FRAME : 'absolute inset-0'}>
+      {/* A picture until (or instead of) the trailer */}
+      {(upright ? still : art) && <img src={upright ? still : art} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />}
 
       {/* The trailer (only the game on screen loads it). A clear layer over the slide
           keeps swipes and scrolls for the feed: its first tap turns the sound on, then
@@ -432,8 +444,8 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
       </div>
       <button
         type="button"
-        onClick={stuck && !muted && !paused ? () => setTries((n) => n + 1) : onTapVideo}
-        aria-label={stuck ? 'Play the trailer' : muted ? 'Turn the sound on' : paused ? 'Play the trailer' : 'Pause the trailer'}
+        onClick={stuck && !tapForSound && !paused ? () => setTries((n) => n + 1) : onTapVideo}
+        aria-label={stuck ? 'Play the trailer' : tapForSound ? 'Turn the sound on' : paused ? 'Play the trailer' : 'Pause the trailer'}
         className="absolute inset-0 cursor-pointer"
       />
 
@@ -483,6 +495,8 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
         </div>
       )}
 
+      {!bare && (
+      <>
       {/* Shades so the words read over any video: the top (the feeds) and the bottom */}
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-slate-950/70 to-transparent pointer-events-none" />
       <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent pointer-events-none" />
@@ -587,7 +601,7 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
 
         {/* The actions, the sound (for the whole feed) first (in a row on a phone on its
             side: a column wouldn't fit) */}
-        <div className="shrink-0 flex flex-col low:flex-row items-center low:items-end gap-3 low:gap-2 pointer-events-auto">
+        <div className="shrink-0 flex flex-col low:flex-row items-center low:items-end gap-3 tight:gap-1.5 low:gap-2 pointer-events-auto">
           <button type="button" onClick={onToggleMute} aria-label={muted ? 'Turn the sound on' : 'Mute'} className={RAIL}>
             <span className={RAIL_ICON}>
               {muted ? <VolumeX className="w-5 h-5" strokeWidth={1.8} /> : <Volume2 className="w-5 h-5" strokeWidth={1.8} />}
@@ -611,6 +625,10 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
               <ThumbsDown className="w-5 h-5" strokeWidth={1.8} fill={votes?.mine === -1 ? 'currentColor' : 'none'} />
             </span>
             <span className="tabular-nums">{(votes?.down ?? 0).toLocaleString('en-US')}</span>
+          </button>
+          <button type="button" onClick={onComments} aria-label={`Comments: ${votes?.comments ?? 0}`} className={RAIL}>
+            <span className={RAIL_ICON}><MessageCircle className="w-5 h-5" strokeWidth={1.8} /></span>
+            <span className="tabular-nums">{(votes?.comments ?? 0).toLocaleString('en-US')}</span>
           </button>
           <button type="button" onClick={want} aria-pressed={Boolean(saved)} className={RAIL}>
             <span className={`${RAIL_ICON} ${saved ? 'border-white bg-white/15' : ''}`}>
@@ -637,7 +655,8 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
           </button>
         </div>
       </div>
-
+      </>
+      )}
     </section>
   );
 };
@@ -647,7 +666,13 @@ function Discover() {
   const [lists, setLists] = useState({}); // feed -> games ([] if it couldn't load)
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
-  const [paused, setPaused] = useState(false); // the game on screen's trailer
+  // Muted with the speaker: a tap on the trailer then only pauses and plays, and the
+  // sound waits for the speaker again (before that, the first tap turns it on)
+  const [mutedByPlayer, setMutedByPlayer] = useState(false);
+  const toggleMute = () => {
+    setMuted(!muted);
+    setMutedByPlayer(!muted);
+  };  const [paused, setPaused] = useState(false); // the game on screen's trailer
   const [matureOk, setMatureOk] = useState(readMatureOk);
   const confirmAge = () => {
     setMatureOk(true);
@@ -657,7 +682,16 @@ function Discover() {
   };
   // The browser played the trailer muted after all: the speaker shows it
   const soundBlocked = useCallback(() => setMuted(true), []);
-  const [votes, setVotes] = useState({}); // gameId -> { up, down, mine }
+  const [votes, setVotes] = useState({}); // gameId -> { up, down, mine, myRating, comments }
+  const [commentsFor, setCommentsFor] = useState(null); // the game whose comments are open
+  const closeComments = useCallback(() => setCommentsFor(null), []);
+  // A game's comment count, kept with its votes (a number, or a change to it)
+  const setCommentCount = useCallback((id, next) => {
+    setVotes((all) => {
+      const now = all[id] ?? { up: 0, down: 0, mine: 0, myRating: null, comments: 0 };
+      return { ...all, [id]: { ...now, comments: typeof next === 'function' ? next(now.comments ?? 0) : next } };
+    });
+  }, []);
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
   const navigate = useNavigate();
@@ -666,7 +700,8 @@ function Discover() {
   const [phone, setPhone] = useState(isPhone);
   const [full, setFull] = useState(false); // in the browser's full screen
   const [portrait, setPortrait] = useState(isPortrait);
-  const [tip, setTip] = useState(false); // iPhone: how to get full screen there
+  const [bare, setBare] = useState(false); // the screen cleared for the trailer (no full screen here)
+  const [turnHint, setTurnHint] = useState(false);
   const page = useRef(null);
   const [now] = useState(() => Date.now()); // read once: what's out or coming, as of opening the page
   const scroller = useRef(null);
@@ -686,19 +721,22 @@ function Discover() {
   // the whole screen (dvh: what's left beside the browser's own bars, as they come and go)
   useEffect(() => {
     const fit = () => {
-      const whole = isPhone() || document.fullscreenElement === page.current;
+      const inFull = fullScreenElement() === page.current;
+      const whole = isPhone() || inFull;
       setPhone(isPhone());
       setPortrait(isPortrait());
-      setFull(document.fullscreenElement === page.current);
+      setFull(inFull);
       if (whole) setHeight('100dvh');
       else if (scroller.current) setHeight(window.innerHeight - scroller.current.getBoundingClientRect().top - window.scrollY);
     };
     fit();
     window.addEventListener('resize', fit);
     document.addEventListener('fullscreenchange', fit);
+    document.addEventListener('webkitfullscreenchange', fit);
     return () => {
       window.removeEventListener('resize', fit);
       document.removeEventListener('fullscreenchange', fit);
+      document.removeEventListener('webkitfullscreenchange', fit);
     };
   }, []);
 
@@ -713,20 +751,25 @@ function Discover() {
     };
   }, [phone]);
 
-  // Full screen is the player's choice (a button, never forced). iPhones have none for a
-  // page, so there the button says how: the site added to the Home Screen opens without
-  // Safari's bars.
-  const fullScreenButton = canFullScreen() ? 'real' : isIPhone() && !isHomeScreenApp() ? 'tip' : null;
+  // Full screen is the player's choice (a button, never forced). Where the browser has
+  // none (Safari on an iPhone), the button clears the screen: the trailer fills it, with
+  // nothing over it but the timeline, and only Safari's own bar stays.
+  const realFullScreen = canFullScreen();
   const toggleFullScreen = () => {
-    if (fullScreenButton === 'tip') return setTip((open) => !open);
-    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
-    else page.current?.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+    if (!realFullScreen) {
+      setTurnHint(!bare && portrait);
+      return setBare(!bare);
+    }
+    if (fullScreenElement()) exitFullScreen();
+    else if (page.current) enterFullScreen(page.current);
   };
+  const expanded = full || bare;
+  // Cleared, upright: a word for a few seconds that turning the phone shows the whole picture
   useEffect(() => {
-    if (!tip) return undefined;
-    const close = setTimeout(() => setTip(false), 8000);
-    return () => clearTimeout(close);
-  }, [tip]);
+    if (!turnHint) return undefined;
+    const hide = setTimeout(() => setTurnHint(false), 4000);
+    return () => clearTimeout(hide);
+  }, [turnHint]);
   // Out of Discover, on a phone: back where the player came from on IMGM, or home
   const leave = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'));
 
@@ -743,6 +786,7 @@ function Discover() {
           if (!entry.isIntersecting) return;
           const index = Number(entry.target.dataset.index);
           setActive(index);
+          setCommentsFor(null); // the comments were the last game's
           setPaused(false); // a new game on screen plays
           if (list[index]) savePlace(feed, list[index].id); // (not the closing card)
         }),
@@ -794,7 +838,7 @@ function Discover() {
 
   // The first tap on a trailer turns the sound on; after that, taps pause and play
   const tapVideo = () => {
-    if (muted) {
+    if (muted && !mutedByPlayer) {
       setMuted(false);
       setPaused(false);
     } else setPaused((p) => !p);
@@ -820,51 +864,45 @@ function Discover() {
   return (
     <main ref={page} className={`bg-slate-950 ${phone ? 'fixed inset-0 z-[55]' : 'relative'}`}>
       {/* On a phone the site's header is covered: the way out */}
-      {phone && (
+      {phone && !bare && (
         <button
           type="button"
           onClick={leave}
           aria-label="Leave Discover"
-          className="absolute top-3 left-4 z-10 grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white"
+          className={`absolute top-3 left-4 z-10 ${TOP_BUTTON}`}
         >
           <X className="w-5 h-5" strokeWidth={1.8} />
         </button>
       )}
 
-      {/* Full screen, in the top corner (the sound is the first of the actions) */}
-      <div className="absolute top-3 right-4 sm:right-8 z-10">
-        {fullScreenButton && (
-          <button
-            type="button"
-            onClick={toggleFullScreen}
-            aria-label={full ? 'Leave full screen' : 'Full screen'}
-            aria-expanded={fullScreenButton === 'tip' ? tip : undefined}
-            className={TOP_BUTTON}
-          >
-            {full ? <Minimize className="w-5 h-5" strokeWidth={1.8} /> : <Maximize className="w-5 h-5" strokeWidth={1.8} />}
-          </button>
-        )}
-        {tip && (
-          <p role="status" className="absolute top-full right-0 mt-2 w-64 rounded-sm border border-white/30 bg-slate-950/90 backdrop-blur-sm px-4 py-3 text-sm text-slate-200 animate-fade-in">
-            iPhones keep Safari's bars on a website. For full screen, tap Share, then <span className="text-white">Add to Home Screen</span>, and open IMGM from there.
-          </p>
-        )}
+      {/* Full screen, in the top corner, in line with the actions below it (the same
+          64px column at the same edge; the sound is the first of the actions) */}
+      <div className="absolute top-3 right-4 sm:right-8 z-10 w-16 grid justify-items-center">
+        <button type="button" onClick={toggleFullScreen} aria-label={expanded ? 'Leave full screen' : 'Full screen'} aria-pressed={expanded} className={`${RAIL_ICON} text-white`}>
+          {expanded ? <Minimize className="w-5 h-5" strokeWidth={1.8} /> : <Maximize className="w-5 h-5" strokeWidth={1.8} />}
+        </button>
       </div>
+      {turnHint && bare && portrait && (
+        <p role="status" className="absolute top-1/2 inset-x-0 z-10 -translate-y-1/2 text-center px-8 text-sm text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)] pointer-events-none animate-fade-in">
+          Turn your phone sideways to see the whole picture
+        </p>
+      )}
 
       {/* Back to the feed's first game (the hottest ones are at the top). On a phone its
           place is the way out: the feed's own tab goes back to the top there. */}
-      {!phone && active > 0 && list.length > 0 && (
+      {!phone && !bare && active > 0 && list.length > 0 && (
         <button
           type="button"
           onClick={backToTop}
           aria-label={`Back to the first game in ${feedLabel}`}
-          className="absolute top-3 left-4 sm:left-8 z-10 grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white"
+          className={`absolute top-3 left-4 sm:left-8 z-10 ${TOP_BUTTON}`}
         >
           <ArrowUp className="w-5 h-5" strokeWidth={1.8} />
         </button>
       )}
 
       {/* The feeds, floating over the top of the feed */}
+      {!bare && (
       <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100%-120px)]">
         <div className={`${SEGMENTS} bg-slate-950/60 backdrop-blur-sm`} role="tablist" aria-label="Discover feeds">
           {FEEDS.map((f) => (
@@ -874,6 +912,7 @@ function Discover() {
           ))}
         </div>
       </div>
+      )}
 
       <div ref={scroller} className="overflow-y-auto snap-y snap-mandatory overscroll-contain" style={{ height: height ?? '100vh' }}>
         {games === null && <div className="h-full grid place-items-center text-slate-400">Loading games…</div>}
@@ -899,13 +938,16 @@ function Discover() {
               paused={paused}
               clear={phone || full}
               whole={portrait}
+              bare={bare}
               votes={votes[game.id]}
               onTapVideo={tapVideo}
-              onToggleMute={() => setMuted((m) => !m)}
+              onToggleMute={toggleMute}
+              tapForSound={muted && !mutedByPlayer}
               matureOk={matureOk}
               onConfirmAge={confirmAge}
               onSoundBlocked={soundBlocked}
               onVote={(value) => vote(game.id, value)}
+              onComments={() => setCommentsFor(game.id)}
               onRated={(score) => setVotes((all) => ({ ...all, [game.id]: { up: 0, down: 0, mine: 0, ...all[game.id], myRating: score } }))}
             />
           </div>
@@ -931,8 +973,20 @@ function Discover() {
         )}
       </div>
 
+      {/* The comments on the game on screen, over the feed */}
+      {commentsFor && list.some((g) => g.id === commentsFor) && (
+        <DiscoverComments
+          key={commentsFor}
+          game={list.find((g) => g.id === commentsFor)}
+          total={votes[commentsFor]?.comments ?? 0}
+          loggedIn={Boolean(userId)}
+          onClose={closeComments}
+          onCountChange={setCommentCount}
+        />
+      )}
+
       {/* A hint on the first game that there's more below */}
-      {active === 0 && list.length > 1 && (
+      {active === 0 && list.length > 1 && !bare && (
         <button type="button" onClick={() => goTo(1)} className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 inline-flex items-center gap-1 text-sm text-slate-300 hover:text-white motion-safe:animate-bounce">
           Swipe for more <ChevronDown className="w-4 h-4" aria-hidden="true" />
         </button>
