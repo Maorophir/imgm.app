@@ -417,7 +417,7 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
           edge down until it melts into the page, with a soft shade on the left for the
           words. */}
       {upright && art && (
-        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[100cqw]">
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[calc(100cqw+28px)]">
           <img src={art} alt="" className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/45 via-slate-950/70 to-slate-950" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 via-slate-950/20 to-transparent" />
@@ -493,6 +493,28 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
         </div>
       )}
 
+      {/* Upright, the cut under the trailer is the lower edge of an IMGM card (the user's
+          call: embrace the cut, subtly, without taking any of the video): the same for
+          every game (a score means nothing for a game that isn't out), card stock with
+          rounded lower corners, a hairline rim and the small print every card carries
+          (the power mark, Beta · imgm.app), short of the actions' column. The art starts
+          under it. */}
+      {upright && (
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-[100cqw] h-7 flex items-center justify-between gap-3 pl-4 pr-[60px] bg-slate-950 border border-t-0 border-white/25 rounded-b-[14px] text-[10px] leading-none text-slate-400 pointer-events-none"
+        >
+          <span className="inline-flex items-center gap-1.5">
+            <PowerIcon className="w-3 h-3 text-brand" />
+            <span className="font-semibold uppercase tracking-[.24em] text-slate-300">IMGM</span>
+          </span>
+          <span className="inline-flex gap-3">
+            <span>Beta</span>
+            <span>imgm.app</span>
+          </span>
+        </div>
+      )}
+
       {/* The trailer's timeline along the bottom edge: drag it, or tap a spot, to move
           through the video (it stays above the tap layer, so it never pauses it) */}
       {active && !gated && source && progress.duration > 0 && (
@@ -555,7 +577,7 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
           <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-200">
             {upcoming && <span className="px-2 py-0.5 rounded-sm border border-white/70 text-white text-xs font-semibold uppercase tracking-[.12em]">Coming soon</span>}
             <span>{releaseLine(game.releaseDate, now)}</span>
-            {game.genres?.[0] && <span className="text-slate-300">{game.genres.slice(0, 2).join(' · ')}</span>}
+            {game.genres?.[0] && <span className="text-slate-300">{game.genres.slice(0, upright ? 1 : 2).join(' · ')}</span>}
           </p>
           <h2 className={`mt-2 font-display uppercase ${upright ? 'text-[34px]' : 'text-[44px] sm:text-[64px] low:text-[32px]'} leading-[.88] tracking-[.005em] text-white [text-wrap:balance]`}>
             <Link to={`/game/${game.id}`} className="hover:underline decoration-2 underline-offset-4">{game.title}</Link>
