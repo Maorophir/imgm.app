@@ -11,7 +11,6 @@
  * dimmed, as on TikTok).
  *
  * Beside that, at the right edge, the actions:
- *   Sound         on or off, for the whole feed
  *   Thumbs up     a vote (GET/PUT /api/discover/votes), with its count; tap again to
  *                 take it back
  *   Thumbs down   the same: just an opinion, the game stays on screen
@@ -22,9 +21,11 @@
  *                 replaces a written review (it's checked again just before saving).
  *   Share         the game's page (the phone's share sheet, or the link copied)
  *
- * The trailer: tapping it the first time turns the sound on; after that a tap pauses
- * or plays it. The speaker button mutes and unmutes. Sound stays as set from game to
- * game. A timeline along the bottom edge moves through the video (drag or tap). None of
+ * The trailer starts muted (sound popping up unannounced puts people off). The first
+ * tap turns the sound on; after that a tap pauses or plays it, and the sound has one
+ * control, like Reels: the speaker button that shows over the play icon while paused.
+ * Its icon also shows in the middle for a moment whenever it changes. Sound stays as set
+ * from game to game. A timeline along the bottom edge moves through the video (drag or tap). None of
  * it reloads the video (it would start over): the player is told what to do.
  *
  * Feeds (GET /api/games/discover, IGDB's popularity rankings): Hot Now (released in the
@@ -441,26 +442,6 @@ const Slide = ({ game, now, active, muted, soundFlash, paused, clear, whole, bar
           onProgress={onProgress}
         />
       )}
-      {/* The middle, like Reels: the sound's icon for a moment when it changes, and
-          while paused, the sound over the play icon */}
-      {active && source && !gated && (
-        <div aria-hidden="true" className="absolute z-1 inset-0 flex flex-col items-center justify-center gap-3 pointer-events-none">
-          {paused || stuck ? (
-            <span className={SOUND_BADGE}>{muted ? <VolumeX className="w-6 h-6" strokeWidth={1.8} /> : <Volume2 className="w-6 h-6" strokeWidth={1.8} />}</span>
-          ) : (
-            soundFlash > 0 && (
-              <span key={soundFlash} className={`${SOUND_BADGE} animate-flash`}>
-                {muted ? <VolumeX className="w-6 h-6" strokeWidth={1.8} /> : <Volume2 className="w-6 h-6" strokeWidth={1.8} />}
-              </span>
-            )
-          )}
-          {(paused || stuck) && (
-            <span className="grid place-items-center w-20 h-20 rounded-full bg-slate-950/60 backdrop-blur-sm text-white">
-              <Play className="w-9 h-9 translate-x-0.5" strokeWidth={1.6} />
-            </span>
-          )}
-        </div>
-      )}
       </div>
       <button
         type="button"
@@ -468,6 +449,31 @@ const Slide = ({ game, now, active, muted, soundFlash, paused, clear, whole, bar
         aria-label={stuck ? 'Play the trailer' : tapForSound ? 'Turn the sound on' : paused ? 'Play the trailer' : 'Pause the trailer'}
         className="absolute inset-0 cursor-pointer"
       />
+
+      {/* The middle of the trailer, like Reels: the sound's icon for a moment when it
+          changes, and while paused, the sound's own button over the play icon: after the
+          first tap, the only way to turn the sound on or off. It sits over the tap layer
+          (the play icon lets taps through to it, to play again). */}
+      {active && source && !gated && (
+        <div className={`${upright ? UPRIGHT_FRAME : 'absolute inset-0'} z-1 flex flex-col items-center justify-center gap-3 pointer-events-none`}>
+          {paused || stuck ? (
+            <button type="button" onClick={onToggleMute} aria-label={muted ? 'Turn the sound on' : 'Mute'} className={`${SOUND_BADGE} pointer-events-auto hover:bg-slate-950/80`}>
+              {muted ? <VolumeX className="w-6 h-6" strokeWidth={1.8} /> : <Volume2 className="w-6 h-6" strokeWidth={1.8} />}
+            </button>
+          ) : (
+            soundFlash > 0 && (
+              <span key={soundFlash} aria-hidden="true" className={`${SOUND_BADGE} animate-flash`}>
+                {muted ? <VolumeX className="w-6 h-6" strokeWidth={1.8} /> : <Volume2 className="w-6 h-6" strokeWidth={1.8} />}
+              </span>
+            )
+          )}
+          {(paused || stuck) && (
+            <span aria-hidden="true" className="grid place-items-center w-20 h-20 rounded-full bg-slate-950/60 backdrop-blur-sm text-white">
+              <Play className="w-9 h-9 translate-x-0.5" strokeWidth={1.6} />
+            </span>
+          )}
+        </div>
+      )}
 
       {/* The trailer's timeline along the bottom edge: drag it, or tap a spot, to move
           through the video (it stays above the tap layer, so it never pauses it) */}
@@ -619,15 +625,9 @@ const Slide = ({ game, now, active, muted, soundFlash, paused, clear, whole, bar
           )}
         </div>
 
-        {/* The actions, the sound (for the whole feed) first (in a row on a phone on its
-            side: a column wouldn't fit) */}
+        {/* The actions (in a row on a phone on its side: a column wouldn't fit). The
+            sound isn't one: it's in the middle of the trailer, like Reels. */}
         <div className="shrink-0 flex flex-col low:flex-row items-center low:items-end gap-3 tight:gap-1.5 low:gap-1 pointer-events-auto">
-          <button type="button" onClick={onToggleMute} aria-label={muted ? 'Turn the sound on' : 'Mute'} className={RAIL}>
-            <span className={RAIL_ICON}>
-              {muted ? <VolumeX className="w-5 h-5" strokeWidth={1.8} /> : <Volume2 className="w-5 h-5" strokeWidth={1.8} />}
-            </span>
-            {muted ? 'Muted' : 'Sound'}
-          </button>
           <button type="button" onClick={() => onVote(votes?.mine === 1 ? 0 : 1)} aria-pressed={votes?.mine === 1} aria-label={`Thumbs up: ${votes?.up ?? 0}`} className={RAIL}>
             <span className={`${RAIL_ICON} ${votes?.mine === 1 ? 'border-white bg-white/15' : ''}`}>
               <ThumbsUp className="w-5 h-5" strokeWidth={1.8} fill={votes?.mine === 1 ? 'currentColor' : 'none'} />
@@ -907,8 +907,7 @@ function Discover() {
       )}
 
       {/* Full screen, in the top corner, in line with the actions below it (the same
-          column at the same edge: 64px, or 52px at a phone's edge; the sound is the
-          first of the actions) */}
+          column at the same edge: 64px, or 52px at a phone's edge) */}
       <div className="absolute top-3 right-0.5 sm:right-8 z-10 w-13 sm:w-16 grid justify-items-center">
         <button type="button" onClick={toggleFullScreen} aria-label={expanded ? 'Leave full screen' : 'Full screen'} aria-pressed={expanded} className={`${RAIL_ICON} text-white`}>
           {expanded ? <Minimize className="w-5 h-5" strokeWidth={1.8} /> : <Maximize className="w-5 h-5" strokeWidth={1.8} />}
