@@ -12,7 +12,7 @@ import { TEXT_LINK } from '../lib/ui';
 const Privacy = () => (
   <LegalPage
     title="Privacy Policy"
-    effective="October 30, 2026"
+    effective="October 31, 2026"
     intro="This policy explains what IMGM (I Am Gaming, imgm.app) collects about you, why, who helps us run the site, and the choices you have. We keep it as short and plain as we can."
   >
     <S title="1. Who we are">
@@ -58,6 +58,7 @@ const Privacy = () => (
         <li>Google Cloud (Gemini AI, Cloud Vision, and the AI service's hosting) and Google sign-in;</li>
         <li>Resend (account emails);</li>
         <li>IGDB/Twitch (game information; we don't send them your personal data);</li>
+        <li>YouTube (Google) and Valve's Steam, for game trailers: when a trailer plays, your browser loads it from their servers, which see your IP address. We send them nothing about you; YouTube's trailers play in its privacy-enhanced mode;</li>
         <li>Valve, only if you connect Steam (Steam sign-in, and your Steam library). You log in on Steam's own site, under <a href="https://store.steampowered.com/privacy_agreement/" target="_blank" rel="noopener noreferrer" className={`font-medium text-white ${TEXT_LINK}`}>Valve's privacy policy</a>; we send Valve only your Steam ID, to ask for your games.</li>
       </ul>
       {/* TODO(owner): name the country where IMGM's database (Neon) stores data, e.g.
@@ -81,7 +82,7 @@ const Privacy = () => (
     </S>
 
     <S title="9. Cookies">
-      <p>IMGM uses only the cookies it needs to keep you logged in (and, while you log in, sign up or connect with Steam, a short-lived one that keeps that step safe). Your browser may also store a few settings for you (like your last Play Next answers). We don't use advertising or tracking cookies.</p>
+      <p>IMGM uses only the cookies it needs to keep you logged in (and, while you log in, sign up or connect with Steam, a short-lived one that keeps that step safe). Your browser may also store a few settings for you (like your last Play Next answers, or that you said you're 18 or older to watch mature trailers in Discover). We don't use advertising or tracking cookies.</p>
     </S>
 
     <S title="10. Children">

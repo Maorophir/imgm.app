@@ -77,3 +77,17 @@ export const playNextBetaUsers = new Set(
 );
 
 export const canUsePlayNext = (userId) => playNextEnabled || playNextBetaUsers.has(userId);
+
+/**
+ * Discover (the scrolling feed of games, /discover) is a closed beta on the live site
+ * until DISCOVER=on is set on Render: before that, only the players in
+ * DISCOVER_BETA_USERS (comma-separated user ids) see it. Local development always has it.
+ */
+export const discoverEnabled = process.env.DISCOVER === 'on' || !isProduction;
+const discoverBetaUsers = new Set(
+  (process.env.DISCOVER_BETA_USERS || '')
+    .split(',')
+    .map((id) => id.trim())
+    .filter(Boolean)
+);
+export const canUseDiscover = (userId) => discoverEnabled || discoverBetaUsers.has(userId);

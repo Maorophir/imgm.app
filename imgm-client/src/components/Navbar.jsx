@@ -1,11 +1,14 @@
 /**
  * Navbar — the site header on every page: logo, game search, the main links (Games ·
- * Game of the Week · Hall of Fame · Steam · Play Next) and the account: the player's
+ * Discover · Game of the Week · Hall of Fame · Steam · Play Next) and the account: the player's
  * menu, or for visitors "Log in" and "Sign up". Noir: a solid warm-black bar on a hairline.
  *
- * Laptop and up (lg+): one 72px row: logo · search (centred) · links · account. Below
- * xl the links sit 20px apart (28px from xl), so all five leave the search its 200px.
- * Tablet (sm–lg): the same, with the links wrapped onto a second row underneath.
+ * Desktop (xl+, 1280px and up): one 72px row: logo · search (centred) · links ·
+ * account, the links 20px apart, so all six leave the search its 200px. There the search
+ * counts as 200px wide when the row decides whether to wrap (a flex row wraps by each
+ * box's starting width), then grows into what's left, up to 380px.
+ * Tablet and laptop (sm–xl): the same, with the links wrapped onto a second row
+ * underneath (six don't fit beside the search below 1280px).
  * Phone: a 56px row (logo · search button · account), then the links on a row of their
  * own in 14px type, as in the design: no menu to open. Below 400px wide they're 13px
  * with 12px gaps (about 315px of words + 48px of gaps for all five). Where they don't
@@ -14,8 +17,7 @@
  * search button opens the search field on its own row.
  *
  * Visitors: "Sign up" is a ghost button at every width (not lime: that's kept for each
- * page's own main action). "Log in", a plain link, shows beside it from 360px wide,
- * except on laptops below xl, where the links already fill the row. To make room on
+ * page's own main action). "Log in", a plain link, shows beside it from 360px wide. To make room on
  * phones below 400px, the logo's small "beta" steps aside for visitors (the footer still
  * says it): logo about 104px + 8 + search 44 + 8 + Log in 44 + 16 + Sign up 85 = about
  * 309px, in 328px. Below 360px, the sign-up page's "Already have an account? Log in" is
@@ -32,6 +34,7 @@ import SearchBar from './SearchBar';
 import UserMenu from './UserMenu';
 import Logo from './Logo';
 import { usePlayNextAccess } from '../hooks/usePlayNextAccess';
+import { useDiscoverAccess } from '../hooks/useDiscoverAccess';
 
 // Ivory links. Hovering underlines one; the current page keeps a heavier underline. On
 // phones the row can scroll sideways, which would clip a focus ring drawn outside the
@@ -45,7 +48,7 @@ const navClass = ({ isActive }) =>
 // where it can't fit beside "Sign up" (see the header). The breakpoint is in rem like
 // lg and xl, so Tailwind orders the three correctly.
 const logInClass =
-  'hidden min-[22.5rem]:inline-flex lg:hidden xl:inline-flex items-center h-11 whitespace-nowrap font-medium text-white hover:text-slate-50 underline underline-offset-[6px] decoration-1 decoration-transparent hover:decoration-current transition-colors duration-120';
+  'hidden min-[22.5rem]:inline-flex items-center h-11 whitespace-nowrap font-medium text-white hover:text-slate-50 underline underline-offset-[6px] decoration-1 decoration-transparent hover:decoration-current transition-colors duration-120';
 
 // The phone's square search button: a bare ivory icon, no box
 const iconButtonClass =
@@ -63,6 +66,10 @@ const BASE_LINKS = [
 // there or open their library from it. It comes before Play Next, so it stays in view
 // where the phone row has to scroll (and it stays underlined on /steam/library too).
 const STEAM_LINK = { to: '/steam', label: 'Steam' };
+// Discover: the scrolling feed of hot and upcoming games, IMGM's way to keep a visitor
+// who isn't reviewing. Second (after Games), so it's in view where the phone row has to
+// scroll; only for those who may use it (a closed beta until DISCOVER=on)
+const DISCOVER_LINK = { to: '/discover', label: 'Discover' };
 // Play Next keeps its lime star, IMGM's mark for its AI guide
 // One span around the star and the words, with a real space between them: in the link's
 // flex row, separate pieces (and a margin) would leave a gap in the underline
@@ -72,7 +79,9 @@ function Navbar() {
   const { data: session, isPending } = useSession();
   // Play Next shows for everyone after launch, before that only for beta players
   const playNext = usePlayNextAccess();
-  const LINKS = [...BASE_LINKS, STEAM_LINK, ...(playNext.enabled ? [PLAY_NEXT_LINK] : [])];
+  const discover = useDiscoverAccess();
+  const [games, ...rest] = BASE_LINKS;
+  const LINKS = [games, ...(discover.enabled ? [DISCOVER_LINK] : []), ...rest, STEAM_LINK, ...(playNext.enabled ? [PLAY_NEXT_LINK] : [])];
 
   // The phone's search row remembers the page it was opened on, so it closes by
   // itself once a search takes the player somewhere else (a result, or Enter)
@@ -111,7 +120,7 @@ function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-slate-950 border-b border-slate-700">
       <nav aria-label="Main">
-        <div className={`${WRAP} flex flex-wrap items-center gap-x-2 sm:gap-x-4 min-h-14 pt-1.5 sm:pt-3.5 sm:pb-1 lg:py-0 lg:min-h-[72px]`}>
+        <div className={`${WRAP} flex flex-wrap items-center gap-x-2 sm:gap-x-4 min-h-14 pt-1.5 sm:pt-3.5 sm:pb-1 xl:py-0 xl:min-h-[72px]`}>
           {/* Logo, with a small "beta" up by the top of the wordmark. The tiniest phones
               drop the "beta" (the footer still says it) so the row doesn't overflow, and
               for visitors so do phones below 400px, to fit "Log in" beside "Sign up". */}
@@ -139,7 +148,7 @@ function Navbar() {
           <div
             id="nav-search"
             ref={searchRef}
-            className={`${searchOpen ? 'flex' : 'hidden'} order-last basis-full pt-1 pb-2.5 sm:flex sm:order-none sm:basis-auto sm:p-0 sm:mx-auto sm:flex-[0_1_380px] sm:min-w-[200px]`}
+            className={`${searchOpen ? 'flex' : 'hidden'} order-last basis-full pt-1 pb-2.5 sm:flex sm:order-none sm:basis-auto sm:p-0 sm:mx-auto sm:flex-[0_1_380px] sm:min-w-[200px] xl:flex-[1_1_200px] xl:max-w-[380px]`}
           >
             <SearchBar />
           </div>
@@ -148,7 +157,7 @@ function Navbar() {
               tighter gaps below 400px, scrolling sideways where they don't fit; from
               tablets up they always fit, so nothing clips their focus ring), in the bar
               from lg, a little closer together below xl so the search keeps its room */}
-          <ul className="flex order-last basis-full gap-4 pb-1.5 text-sm overflow-x-auto [scrollbar-width:none] max-[25rem]:gap-3 max-[25rem]:text-[13px] sm:overflow-visible sm:gap-6 sm:text-base lg:order-none lg:basis-auto lg:gap-5 lg:pb-0 xl:gap-7">
+          <ul className="flex order-last basis-full gap-4 pb-1.5 text-sm overflow-x-auto [scrollbar-width:none] max-[25rem]:gap-3 max-[25rem]:text-[13px] sm:overflow-visible sm:gap-6 sm:text-base xl:order-none xl:basis-auto xl:gap-5 xl:pb-0">
             {LINKS.map((l) => (
               <li key={l.to}>
                 <NavLink

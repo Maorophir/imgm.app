@@ -3,6 +3,7 @@ import { prisma } from '../lib/db.js';
 import { cacheAtEdge } from '../lib/cdnCache.js';
 import * as igdb from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
+import { getSteamTrailers } from '../services/steamTrailers.js';
 import { getSessionUser } from '../lib/session.js';
 
 // Re-fetch a cached game from IGDB once it's older than this
@@ -147,6 +148,45 @@ export const getFeaturedGames = async (req, res) => {
   } catch (error) {
     console.error('Error fetching featured games:', error);
     res.status(502).json({ error: 'Failed to fetch featured games' });
+  }
+};
+
+// The last list of each Discover feed saved to the DB (saved again only when it changes)
+const lastSavedDiscover = new Map();
+
+// GET /api/games/discover?feed=hot|upcoming — Discover's feeds, one game per
+// screen: each with its trailers (Steam's, without ads, when the game is on Steam;
+// YouTube's otherwise), whether it's for adults (any rating board, or Steam), and its
+// IMGM rating like the featured games
+export const getDiscoverGames = async (req, res) => {
+  const feed = req.query.feed ?? 'hot';
+  if (!igdb.DISCOVER_FEED_NAMES.includes(feed)) return res.status(400).json({ error: 'Unknown feed' });
+  try {
+    const games = await igdb.getDiscoverGames(feed);
+    // Saved in the background, like the featured games, so their pages load from the DB
+    if (lastSavedDiscover.get(feed) !== games) {
+      lastSavedDiscover.set(feed, games);
+      // Only the usual game fields: the Discover-only ones aren't columns
+      Promise.all(
+        games.map(({ mature, steamAppId, ...game }) =>
+          upsertGame(game).catch((error) => console.error(`Error caching Discover game ${game.id}:`, error))
+        )
+      );
+    }
+    const steam = await getSteamTrailers(games.map((game) => game.steamAppId));
+    const list = await withImgmRatings(
+      games.map(({ steamAppId, ...game }) => ({
+        ...game,
+        steamTrailer: steam.get(steamAppId)?.trailer ?? null,
+        mature: game.mature || Boolean(steam.get(steamAppId)?.mature),
+      }))
+    );
+    // The same list for every visitor: the CDN can answer while this server sleeps
+    cacheAtEdge(res);
+    res.json(list);
+  } catch (error) {
+    console.error(`Error fetching the Discover feed ${feed}:`, error);
+    res.status(502).json({ error: 'Failed to fetch games' });
   }
 };
 
