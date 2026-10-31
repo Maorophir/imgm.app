@@ -417,8 +417,8 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
           edge down until it melts into the page, with a soft shade on the left for the
           words. */}
       {upright && art && (
-        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[calc(100cqw+28px)]">
-          <img src={art} alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[100cqw]">
+          <img src={art} alt="" onError={(e) => (e.currentTarget.style.display = 'none')} className="absolute inset-0 w-full h-full object-cover" />
           <div className="absolute inset-0 bg-gradient-to-b from-slate-950/45 via-slate-950/70 to-slate-950" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 via-slate-950/20 to-transparent" />
         </div>
@@ -426,7 +426,10 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
 
       {/* The trailer's frame: the whole screen (cropped to fill it), or upright, nearly
           the whole picture across the top. It's the size the videos cover (cqw/cqh). */}
-      <div className={upright ? UPRIGHT_FRAME : 'absolute inset-0'}>
+      <div
+        className={upright ? `${UPRIGHT_FRAME} rounded-b-[18px] border-2 border-t-0 border-(--ink)` : 'absolute inset-0'}
+        style={upright ? { '--ink': rarity?.color ?? 'rgb(238 231 217 / .55)' } : undefined}
+      >
       {/* A picture until (or instead of) the trailer */}
       {(upright ? still : art) && <img src={upright ? still : art} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />}
 
@@ -493,26 +496,17 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
         </div>
       )}
 
-      {/* Upright, the cut under the trailer is the lower edge of an IMGM card (the user's
-          call: embrace the cut, subtly, without taking any of the video): the same for
-          every game (a score means nothing for a game that isn't out), card stock with
-          rounded lower corners, a hairline rim and the small print every card carries
-          (the power mark, Beta · imgm.app), short of the actions' column. The art starts
-          under it. */}
+      {/* Upright, the trailer ends like an IMGM card (the user's call, option C): its
+          frame gets a card's rounded lower corners and rim, in the game's rarity ink when
+          it's rated on IMGM (ivory when not), with a tiny IMGM mark under it */}
       {upright && (
-        <div
+        <p
           aria-hidden="true"
-          className="absolute inset-x-0 top-[100cqw] h-7 flex items-center justify-between gap-3 pl-4 pr-[60px] bg-slate-950 border border-t-0 border-white/25 rounded-b-[14px] text-[10px] leading-none text-slate-400 pointer-events-none"
+          className="absolute inset-x-0 top-[calc(100cqw+6px)] flex justify-center items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[.3em] text-(--ink) pointer-events-none"
+          style={{ '--ink': rarity?.color ?? 'rgb(238 231 217 / .55)' }}
         >
-          <span className="inline-flex items-center gap-1.5">
-            <PowerIcon className="w-3 h-3 text-brand" />
-            <span className="font-semibold uppercase tracking-[.24em] text-slate-300">IMGM</span>
-          </span>
-          <span className="inline-flex gap-3">
-            <span>Beta</span>
-            <span>imgm.app</span>
-          </span>
-        </div>
+          <PowerIcon className="w-3 h-3" /> IMGM
+        </p>
       )}
 
       {/* The trailer's timeline along the bottom edge: drag it, or tap a spot, to move
