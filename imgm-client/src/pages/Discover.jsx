@@ -31,10 +31,14 @@
  * Each feed reopens where the player left it (remembered on the device); the arrow at
  * the top left, or the feed's own tab, goes back to its first game; after the last one,
  * "That's all for now" offers the top and the other feeds.
+ *
+ * On a phone the feed covers the whole screen, the site's header too, like an app: an X
+ * at the top left leaves, and the first tap (sound on) also asks for the browser's full
+ * screen where there is one (Android; not iPhones). On a computer, a button does that.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX } from 'lucide-react';
+import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, Maximize, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
 import { getDiscoverGames, getDiscoverVotes, getMyReview, saveReview, voteOnGame } from '../lib/api';
 import CollectibleCard from '../components/CollectibleCard';
 import { useSession } from '../lib/authClient';
@@ -74,6 +78,14 @@ const savePlace = (feed, gameId) => {
   } catch { /* this visit only */ }
 };
 
+// A phone (upright, or on its side): the feed takes the whole screen, over the site's
+// header, like an app
+const PHONE = '(max-width: 767px), (max-height: 500px)';
+const isPhone = () => window.matchMedia(PHONE).matches;
+// The browser's own full screen (no address bar): Android and computers; iPhones have
+// none for a page (there, Add to Home Screen opens the site without Safari's bars)
+const canFullScreen = () => Boolean(document.fullscreenEnabled);
+
 // 75 seconds as "1:15"
 const clock = (seconds) => {
   const s = Math.max(0, Math.floor(seconds || 0));
@@ -106,6 +118,8 @@ const YOUTUBE = 'https://www.youtube-nocookie.com';
 // Tells the YouTube player something (mute, unMute, playVideo, pauseVideo…)
 const tellPlayer = (frame, message) => frame?.contentWindow?.postMessage(JSON.stringify(message), YOUTUBE);
 const command = (frame, func, args = []) => tellPlayer(frame, { event: 'command', func, args });
+const YT_PLAYING = 1; // the player's states, as it reports them
+const YT_PAUSED = 2;
 
 const HAVE_CURRENT_DATA = 2; // a video's readyState once it has a frame to show
 
@@ -181,42 +195,76 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
 // once it starts (a new address would restart it), so sound and pausing go to the player
 // as messages. If YouTube won't play it here (an age-restricted video, or one its owner
 // keeps off other sites), it says so, and the key art stays instead of an error screen.
-const YouTubeTrailer = ({ video, title, muted, paused, seek, onFail, onProgress }) => {
+// It always starts muted: iPhones only start a video by themselves without sound (with
+// sound, YouTube's own play button waits for a tap), and the sound comes on once it plays.
+// It shows only once it's really playing, so its play button never does.
+const YouTubeTrailer = ({ video, title, muted, paused, seek, tries, onFail, onSoundBlocked, onStuck, onProgress }) => {
   const frame = useRef(null);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(false); // the player takes messages
+  const [playing, setPlaying] = useState(false); // it has played: show it
   const [src] = useState(
-    () => `${YOUTUBE}/embed/${video.youtubeId}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${video.youtubeId}&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1`
+    () => `${YOUTUBE}/embed/${video.youtubeId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${video.youtubeId}&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1`
   );
+  // What the page last asked for, for the player's messages below
+  const asked = useRef({ muted, paused });
+  useEffect(() => {
+    asked.current = { muted, paused };
+  }, [muted, paused]);
   useEffect(() => {
     let duration = 0; // YouTube sends it once, the time many times a second
+    let state = null;
     const heard = (event) => {
       if (event.source !== frame.current?.contentWindow) return;
       try {
         const message = JSON.parse(event.data);
         if (message?.event === 'onError') onFail();
-        const info = message?.event === 'infoDelivery' ? message.info : null;
+        const info = message?.event === 'infoDelivery' || message?.event === 'initialDelivery' ? message.info : null;
         if (info?.duration) duration = info.duration;
         if (typeof info?.currentTime === 'number') onProgress(info.currentTime, duration);
+        const now = message?.event === 'onStateChange' ? message.info : info?.playerState;
+        if (typeof now !== 'number' || now === state) return;
+        state = now;
+        if (now === YT_PLAYING) {
+          setPlaying(true);
+          onStuck(false);
+        }
+        // Paused, but not by the page: the browser stopped it when the sound came on
+        // (iPhones want a tap for that). It carries on muted, and the speaker says so.
+        if (now === YT_PAUSED && !asked.current.paused && !asked.current.muted) {
+          command(frame.current, 'mute');
+          command(frame.current, 'playVideo');
+          onSoundBlocked();
+        }
       } catch { /* not one of YouTube's messages */ }
     };
     window.addEventListener('message', heard);
     return () => window.removeEventListener('message', heard);
-  }, [onFail, onProgress]);
+  }, [onFail, onProgress, onSoundBlocked, onStuck]);
+  // Not playing a few seconds after loading (an iPhone in Low Power Mode starts no video
+  // by itself): the page shows its own play button, and the next tap starts it
+  useEffect(() => {
+    if (!ready || playing) return undefined;
+    const wait = setTimeout(() => onStuck(true), 3500);
+    return () => clearTimeout(wait);
+  }, [ready, playing, onStuck]);
   // The timeline moved: jump there
   useEffect(() => {
     if (seek) command(frame.current, 'seekTo', [seek.to, true]);
   }, [seek]);
+  // Sound once it plays (before that, an unmuted start is what iPhones refuse)
   useEffect(() => {
     if (!ready) return;
-    if (muted) command(frame.current, 'mute');
+    if (muted || !playing) command(frame.current, 'mute');
     else {
       command(frame.current, 'unMute');
       command(frame.current, 'setVolume', [100]);
     }
-  }, [muted, ready]);
+  }, [muted, ready, playing]);
+  // (a tap also starts a trailer that didn't start by itself)
   useEffect(() => {
     if (ready) command(frame.current, paused ? 'pauseVideo' : 'playVideo');
-  }, [paused, ready]);
+  }, [paused, muted, tries, ready]);
+  useEffect(() => () => onStuck(false), [onStuck]); // its play button goes with it
   return (
     <iframe
       ref={frame}
@@ -225,10 +273,10 @@ const YouTubeTrailer = ({ video, title, muted, paused, seek, onFail, onProgress 
       allow="autoplay; encrypted-media; picture-in-picture"
       onLoad={() => {
         setReady(true);
-        tellPlayer(frame.current, { event: 'listening', id: 1, channel: 'widget' }); // send us its time and errors
+        tellPlayer(frame.current, { event: 'listening', id: 1, channel: 'widget' }); // send us its time, state and errors
       }}
-      // Hidden until the player is ready, so the key art shows instead of a black box
-      className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none border-0 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
+      // Hidden until it plays, so the key art shows instead of a black box or a play button
+      className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none border-0 transition-opacity duration-500 ${playing ? 'opacity-100' : 'opacity-0'}`}
       style={COVER_VIDEO}
     />
   );
@@ -238,7 +286,7 @@ const YouTubeTrailer = ({ video, title, muted, paused, seek, onFail, onProgress 
 const RAIL = 'flex flex-col items-center gap-1 min-w-14 text-xs font-medium text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)]';
 const RAIL_ICON = 'grid place-items-center w-12 h-12 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge, onTapVideo, onToggleMute, onSoundBlocked, onVote, onRated }) => {
+const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onConfirmAge, onTapVideo, onToggleMute, onSoundBlocked, onVote, onRated }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -261,6 +309,8 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
   const [youtubeFailed, setYoutubeFailed] = useState(false);
   const failSteam = useCallback(() => setSteamFailed(true), []);
   const failYoutube = useCallback(() => setYoutubeFailed(true), []);
+  const [stuck, setStuck] = useState(false); // a trailer that didn't start by itself
+  const [tries, setTries] = useState(0); // taps on it to start it (with the sound already on)
   const source = game.steamTrailer && !steamFailed ? 'steam' : video && !youtubeFailed ? 'youtube' : null;
   // A game rated for adults waits for the viewer to say they're 18 or older
   const gated = game.mature && !matureOk;
@@ -338,16 +388,19 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
           paused={paused}
           seek={seek}
           onFail={failYoutube}
+          onSoundBlocked={onSoundBlocked}
+          onStuck={setStuck}
+          tries={tries}
           onProgress={onProgress}
         />
       )}
       <button
         type="button"
-        onClick={onTapVideo}
-        aria-label={muted ? 'Turn the sound on' : paused ? 'Play the trailer' : 'Pause the trailer'}
+        onClick={stuck && !muted && !paused ? () => setTries((n) => n + 1) : onTapVideo}
+        aria-label={stuck ? 'Play the trailer' : muted ? 'Turn the sound on' : paused ? 'Play the trailer' : 'Pause the trailer'}
         className="absolute inset-0 cursor-pointer"
       />
-      {active && paused && source && !gated && (
+      {active && (paused || stuck) && source && !gated && (
         <span aria-hidden="true" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-20 h-20 rounded-full bg-slate-950/60 backdrop-blur-sm text-white pointer-events-none">
           <Play className="w-9 h-9 translate-x-0.5" strokeWidth={1.6} />
         </span>
@@ -356,8 +409,9 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
       {/* The trailer's timeline along the bottom edge: drag it, or tap a spot, to move
           through the video (it stays above the tap layer, so it never pauses it) */}
       {active && !gated && source && progress.duration > 0 && (
-        // (short of the bottom-right corner: the site's Feedback button sits there)
-        <div className="absolute inset-x-0 bottom-0 z-2 flex items-center gap-3 pl-4 pr-16 sm:pl-8 sm:pr-40">
+        // (short of the bottom-right corner, where the site's Feedback button sits, unless
+        // the feed covers the whole screen)
+        <div className={`absolute inset-x-0 bottom-0 z-2 flex items-center gap-3 pl-4 sm:pl-8 ${clear ? 'pr-4 sm:pr-8' : 'pr-16 sm:pr-40'}`}>
           <input
             type="range"
             min={0}
@@ -384,9 +438,10 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
       )}
 
       {/* Rated for adults: the trailer waits for a tap that says the viewer is 18 or older
-          (remembered on this device), like Steam's own age check */}
+          (remembered on this device), like Steam's own age check. On a phone it stays
+          clear of the actions on the right. */}
       {gated && source && (
-        <div className="absolute inset-x-0 top-[22%] z-1 flex justify-center px-4">
+        <div className="absolute inset-x-0 top-[22%] z-1 flex justify-center pl-4 pr-20 sm:px-4">
           <div className="max-w-[360px] w-full text-center rounded-sm border border-white/30 bg-slate-950/75 backdrop-blur-sm px-5 py-4">
             <p className="text-xs font-semibold uppercase tracking-[.14em] text-slate-300">Mature trailer</p>
             <p className="mt-1 text-sm text-slate-200">This game is rated for adults (M / 18+).</p>
@@ -556,6 +611,9 @@ function Discover() {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [height, setHeight] = useState(null);
+  const [phone, setPhone] = useState(isPhone);
+  const [full, setFull] = useState(false); // in the browser's full screen
+  const page = useRef(null);
   const [now] = useState(() => Date.now()); // read once: what's out or coming, as of opening the page
   const scroller = useRef(null);
 
@@ -570,13 +628,42 @@ function Discover() {
     return () => controller.abort();
   }, [feed, lists]);
 
-  // The feed fills the screen under the site's header
+  // The feed fills the screen under the site's header; on a phone, or in full screen,
+  // the whole screen (dvh: what's left beside the browser's own bars, as they come and go)
   useEffect(() => {
-    const fit = () => scroller.current && setHeight(window.innerHeight - scroller.current.getBoundingClientRect().top - window.scrollY);
+    const fit = () => {
+      const whole = isPhone() || document.fullscreenElement === page.current;
+      setPhone(isPhone());
+      setFull(document.fullscreenElement === page.current);
+      if (whole) setHeight('100dvh');
+      else if (scroller.current) setHeight(window.innerHeight - scroller.current.getBoundingClientRect().top - window.scrollY);
+    };
     fit();
     window.addEventListener('resize', fit);
-    return () => window.removeEventListener('resize', fit);
+    document.addEventListener('fullscreenchange', fit);
+    return () => {
+      window.removeEventListener('resize', fit);
+      document.removeEventListener('fullscreenchange', fit);
+    };
   }, []);
+
+  // Over the site, the page under it stays put (no scrolling it from behind the feed)
+  useEffect(() => {
+    if (!phone) return undefined;
+    const root = document.documentElement;
+    const before = root.style.overflow;
+    root.style.overflow = 'hidden';
+    return () => {
+      root.style.overflow = before;
+    };
+  }, [phone]);
+
+  const toggleFullScreen = () => {
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+    else page.current?.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
+  };
+  // Out of Discover, on a phone: back where the player came from on IMGM, or home
+  const leave = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'));
 
   // Only games with a trailer to play
   const list = useMemo(() => (games ?? []).filter((g) => g.videos?.length), [games]);
@@ -640,11 +727,13 @@ function Discover() {
     }
   };
 
-  // The first tap on a trailer turns the sound on; after that, taps pause and play
+  // The first tap on a trailer turns the sound on (and, on a phone that can, goes full
+  // screen: no address bar, like an app); after that, taps pause and play
   const tapVideo = () => {
     if (muted) {
       setMuted(false);
       setPaused(false);
+      if (phone && canFullScreen() && !document.fullscreenElement) toggleFullScreen();
     } else setPaused((p) => !p);
   };
 
@@ -666,9 +755,35 @@ function Discover() {
   const feedLabel = FEEDS.find((f) => f.key === feed)?.label;
 
   return (
-    <main className="relative bg-slate-950">
-      {/* Back to the feed's first game (the hottest ones are at the top) */}
-      {active > 0 && list.length > 0 && (
+    <main ref={page} className={`bg-slate-950 ${phone ? 'fixed inset-0 z-[55]' : 'relative'}`}>
+      {/* On a phone the site's header is covered: the way out */}
+      {phone && (
+        <button
+          type="button"
+          onClick={leave}
+          aria-label="Leave Discover"
+          className="absolute top-3 left-4 z-10 grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white"
+        >
+          <X className="w-5 h-5" strokeWidth={1.8} />
+        </button>
+      )}
+
+      {/* Full screen, where the browser has it (on a phone the first tap does it: no room
+          up here beside the feeds) */}
+      {!phone && canFullScreen() && (
+        <button
+          type="button"
+          onClick={toggleFullScreen}
+          aria-label={full ? 'Leave full screen' : 'Full screen'}
+          className="absolute top-3 right-[4.25rem] sm:right-[5.25rem] z-10 grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white"
+        >
+          {full ? <Minimize className="w-5 h-5" strokeWidth={1.8} /> : <Maximize className="w-5 h-5" strokeWidth={1.8} />}
+        </button>
+      )}
+
+      {/* Back to the feed's first game (the hottest ones are at the top). On a phone its
+          place is the way out: the feed's own tab goes back to the top there. */}
+      {!phone && active > 0 && list.length > 0 && (
         <button
           type="button"
           onClick={backToTop}
@@ -712,6 +827,7 @@ function Discover() {
               active={i === active}
               muted={muted}
               paused={paused}
+              clear={phone || full}
               votes={votes[game.id]}
               onTapVideo={tapVideo}
               matureOk={matureOk}
