@@ -10,7 +10,8 @@
  * title, the IMGM verdict and two lines about it ("more" opens the rest, over the video
  * dimmed, as on TikTok).
  *
- * Beside that, the actions:
+ * Beside that, at the right edge, the actions:
+ *   Sound         on or off, for the whole feed
  *   Thumbs up     a vote (GET/PUT /api/discover/votes), with its count; tap again to
  *                 take it back
  *   Thumbs down   the same: just an opinion, the game stays on screen
@@ -34,7 +35,7 @@
  * "That's all for now" offers the top and the other feeds.
  *
  * On a phone the feed covers the whole screen, the site's header too, like an app: an X
- * at the top left leaves. A button beside the speaker asks for the browser's full screen
+ * at the top left leaves. A button in the top right corner asks for the browser's full screen
  * (Android and computers; on an iPhone, which has none for a page, it says how to add the
  * site to the Home Screen instead). On an upright screen the trailer shows whole (16:9)
  * across the top, over its blurred key art, instead of cropped to its middle third;
@@ -298,7 +299,7 @@ const RAIL = 'flex flex-col items-center gap-1 min-w-14 text-xs font-medium text
 const TOP_BUTTON = 'grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white';
 const RAIL_ICON = 'grid place-items-center w-12 h-12 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk, onConfirmAge, onTapVideo, onSoundBlocked, onVote, onRated }) => {
+const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk, onConfirmAge, onTapVideo, onToggleMute, onSoundBlocked, onVote, onRated }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -489,145 +490,151 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
       {/* The whole description open: the video dims behind it, as on TikTok */}
       {readAll && <div aria-hidden="true" className="absolute inset-0 bg-slate-950/50 pointer-events-none animate-fade-in" />}
 
-      {/* What it is, and the actions, over the bottom of the video */}
-      <div className="absolute inset-x-0 bottom-0 px-4 pb-16 sm:px-8 low:pb-12 pointer-events-none">
-        <div className="max-w-[1180px] mx-auto flex items-end gap-4">
-          <div className="min-w-0 flex-1 pointer-events-auto">
-            <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-200">
-              {upcoming && <span className="px-2 py-0.5 rounded-sm border border-white/70 text-white text-xs font-semibold uppercase tracking-[.12em]">Coming soon</span>}
-              <span>{releaseLine(game.releaseDate, now)}</span>
-              {game.genres?.[0] && <span className="text-slate-300">{game.genres.slice(0, 2).join(' · ')}</span>}
-            </p>
-            <h2 className="mt-2 font-display uppercase text-[44px] sm:text-[64px] low:text-[40px] leading-[.88] tracking-[.005em] text-white [text-wrap:balance]">
-              <Link to={`/game/${game.id}`} className="hover:underline decoration-2 underline-offset-4">{game.title}</Link>
-            </h2>
-            <p className="mt-2 flex flex-wrap items-center gap-x-2.5 text-sm text-slate-300" style={rarity ? { '--ink': rarity.color } : undefined}>
-              {rarity ? (
-                <>
-                  <RarityMark tier={rarity.key} className="text-(--ink)" />
-                  <span><span className="tabular-nums text-(--ink)">{score.toFixed(1)}</span> <span className="text-(--ink)">{rarity.label}</span> on IMGM · {game.reviewCount} review{game.reviewCount === 1 ? '' : 's'}</span>
-                </>
-              ) : (
-                <span>
-                  {upcoming
-                    ? 'Not out yet: save it for launch day.'
-                    : myRating !== null
-                      ? `Your ${myRating} is its first score on IMGM.`
-                      : 'No IMGM rating yet. Played it? Be the first.'}
-                </span>
-              )}
-              {game.platforms?.length > 0 && <span className="hidden sm:inline low:hidden">· {game.platforms.slice(0, 4).join(', ')}</span>}
-            </p>
-            {/* Like TikTok: the text (or "more") opens it all, scrolling if it's long */}
-            {game.description && (
-              <div className="mt-2 max-w-[620px] text-sm text-slate-300">
-                <p
-                  ref={blurb}
-                  onClick={() => (cut || readAll) && setReadAll((open) => !open)}
-                  className={`${readAll ? 'max-h-[24cqh] low:max-h-[18cqh] overflow-y-auto overscroll-contain pr-1' : 'line-clamp-2 low:line-clamp-1'} ${cut || readAll ? 'cursor-pointer' : ''}`}
-                >
-                  {game.description}
-                </p>
-                {(cut || readAll) && (
-                  <button type="button" onClick={() => setReadAll((open) => !open)} aria-expanded={readAll} className="min-h-8 font-semibold text-white hover:underline underline-offset-4">
-                    {readAll ? 'less' : 'more'}
-                  </button>
-                )}
-              </div>
+      {/* What it is, over the bottom of the video (in the site's 1180px column, as before),
+          and the actions at the right edge, under the full screen button */}
+      <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 px-4 pb-16 sm:px-8 low:pb-12 pointer-events-none">
+        <div className="min-w-0 flex-1 sm:pl-[max(0px,calc((100cqw-1244px)/2))] pointer-events-auto">
+          <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-200">
+            {upcoming && <span className="px-2 py-0.5 rounded-sm border border-white/70 text-white text-xs font-semibold uppercase tracking-[.12em]">Coming soon</span>}
+            <span>{releaseLine(game.releaseDate, now)}</span>
+            {game.genres?.[0] && <span className="text-slate-300">{game.genres.slice(0, 2).join(' · ')}</span>}
+          </p>
+          <h2 className="mt-2 font-display uppercase text-[44px] sm:text-[64px] low:text-[40px] leading-[.88] tracking-[.005em] text-white [text-wrap:balance]">
+            <Link to={`/game/${game.id}`} className="hover:underline decoration-2 underline-offset-4">{game.title}</Link>
+          </h2>
+          <p className="mt-2 flex flex-wrap items-center gap-x-2.5 text-sm text-slate-300" style={rarity ? { '--ink': rarity.color } : undefined}>
+            {rarity ? (
+              <>
+                <RarityMark tier={rarity.key} className="text-(--ink)" />
+                <span><span className="tabular-nums text-(--ink)">{score.toFixed(1)}</span> <span className="text-(--ink)">{rarity.label}</span> on IMGM · {game.reviewCount} review{game.reviewCount === 1 ? '' : 's'}</span>
+              </>
+            ) : (
+              <span>
+                {upcoming
+                  ? 'Not out yet: save it for launch day.'
+                  : myRating !== null
+                    ? `Your ${myRating} is its first score on IMGM.`
+                    : 'No IMGM rating yet. Played it? Be the first.'}
+              </span>
             )}
-
-            {/* Played it? One tap on a score saves it */}
-            {rating && (
-              <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-fade-in" role="group" aria-label={`Your score for ${game.title}`}>
-                <span className="text-sm text-slate-200 mr-1">Your score:</span>
-                {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
-                  const tier = getRarity(n);
-                  return (
-                    <button
-                      key={n}
-                      type="button"
-                      onClick={() => rate(n)}
-                      disabled={saving !== null}
-                      className={`grid place-items-center w-10 h-10 rounded-sm border bg-slate-950/60 text-sm font-semibold tabular-nums transition-colors duration-120 hover:border-(--ink) hover:text-(--ink) disabled:opacity-50 ${
-                        saving === n ? 'border-(--ink) text-(--ink)' : 'border-white/30 text-white'
-                      }`}
-                      style={{ '--ink': tier.color }}
-                      aria-label={`${n} out of 10, ${tier.label}`}
-                    >
-                      {n}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-            {problem && <p role="alert" className="mt-2 text-sm text-red-200">{problem}</p>}
-
-            {/* Saved: the card the score earned, and the way to the full review */}
-            {popped && (
-              <div
-                role="status"
-                className="mt-3 flex w-fit items-center gap-3 rounded-sm border border-(--ink) bg-slate-950/85 p-2 pr-4 animate-pop"
-                style={{ '--ink': getRarity(popped).color }}
+            {game.platforms?.length > 0 && <span className="hidden sm:inline low:hidden">· {game.platforms.slice(0, 4).join(', ')}</span>}
+          </p>
+          {/* Like TikTok: the text (or "more") opens it all, scrolling if it's long */}
+          {game.description && (
+            <div className="mt-2 max-w-[620px] text-sm text-slate-300">
+              <p
+                ref={blurb}
+                onClick={() => (cut || readAll) && setReadAll((open) => !open)}
+                className={`${readAll ? 'max-h-[24cqh] low:max-h-[18cqh] overflow-y-auto overscroll-contain pr-1' : 'line-clamp-2 low:line-clamp-1'} ${cut || readAll ? 'cursor-pointer' : ''}`}
               >
-                <div className="w-14 shrink-0">
-                  <CollectibleCard variant="mini" title={game.title} score={popped} coverUrl={game.coverUrl} />
-                </div>
-                <div className="text-sm">
-                  <p className="text-white">
-                    Rated {popped} · <span className="text-(--ink)">{getRarity(popped).label}</span>. The card is yours.
-                  </p>
-                  <Link to={`/game/${game.id}/review`} className={`inline-flex items-center min-h-11 font-medium text-white ${TEXT_LINK}`}>
-                    Add details
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
+                {game.description}
+              </p>
+              {(cut || readAll) && (
+                <button type="button" onClick={() => setReadAll((open) => !open)} aria-expanded={readAll} className="min-h-8 font-semibold text-white hover:underline underline-offset-4">
+                  {readAll ? 'less' : 'more'}
+                </button>
+              )}
+            </div>
+          )}
 
-          {/* The actions (in a row on a phone on its side: a column wouldn't fit) */}
-          <div className="shrink-0 flex flex-col low:flex-row items-center low:items-end gap-3 low:gap-2 pointer-events-auto">
-            <button type="button" onClick={() => onVote(votes?.mine === 1 ? 0 : 1)} aria-pressed={votes?.mine === 1} aria-label={`Thumbs up: ${votes?.up ?? 0}`} className={RAIL}>
-              <span className={`${RAIL_ICON} ${votes?.mine === 1 ? 'border-white bg-white/15' : ''}`}>
-                <ThumbsUp className="w-5 h-5" strokeWidth={1.8} fill={votes?.mine === 1 ? 'currentColor' : 'none'} />
-              </span>
-              <span className="tabular-nums">{(votes?.up ?? 0).toLocaleString('en-US')}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => onVote(votes?.mine === -1 ? 0 : -1)}
-              aria-pressed={votes?.mine === -1}
-              aria-label={`Thumbs down: ${votes?.down ?? 0}`}
-              className={RAIL}
+          {/* Played it? One tap on a score saves it */}
+          {rating && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-fade-in" role="group" aria-label={`Your score for ${game.title}`}>
+              <span className="text-sm text-slate-200 mr-1">Your score:</span>
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
+                const tier = getRarity(n);
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => rate(n)}
+                    disabled={saving !== null}
+                    className={`grid place-items-center w-10 h-10 rounded-sm border bg-slate-950/60 text-sm font-semibold tabular-nums transition-colors duration-120 hover:border-(--ink) hover:text-(--ink) disabled:opacity-50 ${
+                      saving === n ? 'border-(--ink) text-(--ink)' : 'border-white/30 text-white'
+                    }`}
+                    style={{ '--ink': tier.color }}
+                    aria-label={`${n} out of 10, ${tier.label}`}
+                  >
+                    {n}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          {problem && <p role="alert" className="mt-2 text-sm text-red-200">{problem}</p>}
+
+          {/* Saved: the card the score earned, and the way to the full review */}
+          {popped && (
+            <div
+              role="status"
+              className="mt-3 flex w-fit items-center gap-3 rounded-sm border border-(--ink) bg-slate-950/85 p-2 pr-4 animate-pop"
+              style={{ '--ink': getRarity(popped).color }}
             >
-              <span className={`${RAIL_ICON} ${votes?.mine === -1 ? 'border-white bg-white/15' : ''}`}>
-                <ThumbsDown className="w-5 h-5" strokeWidth={1.8} fill={votes?.mine === -1 ? 'currentColor' : 'none'} />
-              </span>
-              <span className="tabular-nums">{(votes?.down ?? 0).toLocaleString('en-US')}</span>
+              <div className="w-14 shrink-0">
+                <CollectibleCard variant="mini" title={game.title} score={popped} coverUrl={game.coverUrl} />
+              </div>
+              <div className="text-sm">
+                <p className="text-white">
+                  Rated {popped} · <span className="text-(--ink)">{getRarity(popped).label}</span>. The card is yours.
+                </p>
+                <Link to={`/game/${game.id}/review`} className={`inline-flex items-center min-h-11 font-medium text-white ${TEXT_LINK}`}>
+                  Add details
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* The actions, the sound (for the whole feed) first (in a row on a phone on its
+            side: a column wouldn't fit) */}
+        <div className="shrink-0 flex flex-col low:flex-row items-center low:items-end gap-3 low:gap-2 pointer-events-auto">
+          <button type="button" onClick={onToggleMute} aria-label={muted ? 'Turn the sound on' : 'Mute'} className={RAIL}>
+            <span className={RAIL_ICON}>
+              {muted ? <VolumeX className="w-5 h-5" strokeWidth={1.8} /> : <Volume2 className="w-5 h-5" strokeWidth={1.8} />}
+            </span>
+            {muted ? 'Muted' : 'Sound'}
+          </button>
+          <button type="button" onClick={() => onVote(votes?.mine === 1 ? 0 : 1)} aria-pressed={votes?.mine === 1} aria-label={`Thumbs up: ${votes?.up ?? 0}`} className={RAIL}>
+            <span className={`${RAIL_ICON} ${votes?.mine === 1 ? 'border-white bg-white/15' : ''}`}>
+              <ThumbsUp className="w-5 h-5" strokeWidth={1.8} fill={votes?.mine === 1 ? 'currentColor' : 'none'} />
+            </span>
+            <span className="tabular-nums">{(votes?.up ?? 0).toLocaleString('en-US')}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => onVote(votes?.mine === -1 ? 0 : -1)}
+            aria-pressed={votes?.mine === -1}
+            aria-label={`Thumbs down: ${votes?.down ?? 0}`}
+            className={RAIL}
+          >
+            <span className={`${RAIL_ICON} ${votes?.mine === -1 ? 'border-white bg-white/15' : ''}`}>
+              <ThumbsDown className="w-5 h-5" strokeWidth={1.8} fill={votes?.mine === -1 ? 'currentColor' : 'none'} />
+            </span>
+            <span className="tabular-nums">{(votes?.down ?? 0).toLocaleString('en-US')}</span>
+          </button>
+          <button type="button" onClick={want} aria-pressed={Boolean(saved)} className={RAIL}>
+            <span className={`${RAIL_ICON} ${saved ? 'border-white bg-white/15' : ''}`}>
+              {saved ? <BookmarkCheck className="w-5 h-5" strokeWidth={1.8} /> : <BookmarkPlus className="w-5 h-5" strokeWidth={1.8} />}
+            </span>
+            {saved ? 'Saved' : 'Want it'}
+          </button>
+          {!upcoming && myRating !== null && (
+            // Rated already: their score, which opens their review (never a new one-tap score)
+            <Link to={`/game/${game.id}/review`} className={RAIL} style={{ '--ink': getRarity(myRating).color }}>
+              <span className={`${RAIL_ICON} border-(--ink) text-(--ink) font-display text-[22px] leading-none`}>{myRating}</span>
+              Your {myRating}
+            </Link>
+          )}
+          {!upcoming && myRating === null && (
+            <button type="button" onClick={() => setRating((open) => !open)} aria-expanded={rating} className={RAIL}>
+              <span className={`${RAIL_ICON} ${rating ? 'border-white' : ''}`}><Star className="w-5 h-5" strokeWidth={1.8} /></span>
+              Played it?
             </button>
-            <button type="button" onClick={want} aria-pressed={Boolean(saved)} className={RAIL}>
-              <span className={`${RAIL_ICON} ${saved ? 'border-white bg-white/15' : ''}`}>
-                {saved ? <BookmarkCheck className="w-5 h-5" strokeWidth={1.8} /> : <BookmarkPlus className="w-5 h-5" strokeWidth={1.8} />}
-              </span>
-              {saved ? 'Saved' : 'Want it'}
-            </button>
-            {!upcoming && myRating !== null && (
-              // Rated already: their score, which opens their review (never a new one-tap score)
-              <Link to={`/game/${game.id}/review`} className={RAIL} style={{ '--ink': getRarity(myRating).color }}>
-                <span className={`${RAIL_ICON} border-(--ink) text-(--ink) font-display text-[22px] leading-none`}>{myRating}</span>
-                Your {myRating}
-              </Link>
-            )}
-            {!upcoming && myRating === null && (
-              <button type="button" onClick={() => setRating((open) => !open)} aria-expanded={rating} className={RAIL}>
-                <span className={`${RAIL_ICON} ${rating ? 'border-white' : ''}`}><Star className="w-5 h-5" strokeWidth={1.8} /></span>
-                Played it?
-              </button>
-            )}
-            <button type="button" onClick={share} className={RAIL}>
-              <span className={RAIL_ICON}><Share2 className="w-5 h-5" strokeWidth={1.8} /></span>
-              {shared ? 'Copied' : 'Share'}
-            </button>
-          </div>
+          )}
+          <button type="button" onClick={share} className={RAIL}>
+            <span className={RAIL_ICON}><Share2 className="w-5 h-5" strokeWidth={1.8} /></span>
+            {shared ? 'Copied' : 'Share'}
+          </button>
         </div>
       </div>
 
@@ -824,12 +831,8 @@ function Discover() {
         </button>
       )}
 
-      {/* Sound for the whole feed, and full screen (side by side, or on an upright phone,
-          one under the other: no room beside the feeds) */}
-      <div className="absolute top-3 right-4 sm:right-8 z-10 flex flex-col sm:flex-row-reverse gap-2">
-        <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Turn the sound on' : 'Mute'} className={TOP_BUTTON}>
-          {muted ? <VolumeX className="w-5 h-5" strokeWidth={1.8} /> : <Volume2 className="w-5 h-5" strokeWidth={1.8} />}
-        </button>
+      {/* Full screen, in the top corner (the sound is the first of the actions) */}
+      <div className="absolute top-3 right-4 sm:right-8 z-10">
         {fullScreenButton && (
           <button
             type="button"
@@ -898,6 +901,7 @@ function Discover() {
               whole={portrait}
               votes={votes[game.id]}
               onTapVideo={tapVideo}
+              onToggleMute={() => setMuted((m) => !m)}
               matureOk={matureOk}
               onConfirmAge={confirmAge}
               onSoundBlocked={soundBlocked}
