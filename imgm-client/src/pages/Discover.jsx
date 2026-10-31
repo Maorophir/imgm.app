@@ -143,6 +143,8 @@ const YT_PLAYING = 1; // the player's states, as it reports them
 const YT_PAUSED = 2;
 
 const HAVE_CURRENT_DATA = 2; // a video's readyState once it has a frame to show
+// How many games either side of the one on screen are drawn in full
+const NEAR = 2;
 
 // Starts a video. Only the browser refusing sound without a tap (NotAllowedError) turns
 // the sound off for the feed; any other failure (nothing loaded yet) waits for canplay.
@@ -189,6 +191,17 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
     const el = video.current;
     if (paused) el.pause();
     else if (el.readyState >= HAVE_CURRENT_DATA) startVideo(el, onSoundBlocked); // else onCanPlay starts it
+  }, [paused, onSoundBlocked]);
+  // A start can be cut off (hls.js switching the stream's quality interrupts play()), and
+  // canplay doesn't come again: while it should be playing, a stopped video is started
+  // again every so often, so a trailer never sits frozen on its first frame
+  useEffect(() => {
+    if (paused) return undefined;
+    const nudge = setInterval(() => {
+      const el = video.current;
+      if (el?.paused && el.readyState >= HAVE_CURRENT_DATA) startVideo(el, onSoundBlocked);
+    }, 700);
+    return () => clearInterval(nudge);
   }, [paused, onSoundBlocked]);
   // The timeline moved: jump there
   useEffect(() => {
@@ -322,7 +335,7 @@ const feedWord = (on) =>
   }`;
 const RAIL_ICON = 'grid place-items-center w-12 h-12 tight:w-10 tight:h-10 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clear, whole, bare, votes, matureOk, onConfirmAge, tapForSound, onTapVideo, onToggleMute, onComments, onSoundBlocked, onVote, onRated }) => {
+const Slide = ({ game, now, active, next, muted, soundFlash, onFlashDone, paused, clear, whole, bare, votes, matureOk, onConfirmAge, tapForSound, onTapVideo, onToggleMute, onComments, onSoundBlocked, onVote, onRated }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -434,12 +447,14 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
       {/* The trailer (only the game on screen loads it). A clear layer over the slide
           keeps swipes and scrolls for the feed: its first tap turns the sound on, then
           taps pause and play. */}
-      {active && !gated && source === 'steam' && (
+      {/* (the next game's Steam trailer loads too, paused and hidden, so a swipe starts it
+          at once; it's the same player when its game comes on screen) */}
+      {(active || next) && !gated && source === 'steam' && (
         <SteamTrailer
           trailer={game.steamTrailer}
           title={`${game.title}: ${game.steamTrailer.name}`}
           muted={muted}
-          paused={paused}
+          paused={paused || !active}
           seek={seek}
           onFail={failSteam}
           onSoundBlocked={onSoundBlocked}
@@ -1037,12 +1052,23 @@ function Discover() {
             </p>
           </div>
         )}
+        {/* Only the games near the one on screen are drawn in full (players, words,
+            actions); the rest are their picture until the feed gets close, so a swipe
+            redraws a few games, not all of them */}
         {list.map((game, i) => (
           <div key={game.id} data-index={i} className="h-full">
+            {Math.abs(i - active) > NEAR ? (
+              <section className="relative h-full snap-start snap-always overflow-hidden bg-slate-950" aria-label={game.title}>
+                {(game.artworks?.[0] ?? game.screenshots?.[0] ?? game.coverUrl) && (
+                  <img src={game.artworks?.[0] ?? game.screenshots?.[0] ?? game.coverUrl} alt="" aria-hidden="true" loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-60" />
+                )}
+              </section>
+            ) : (
             <Slide
               game={game}
               now={now}
               active={i === active}
+              next={i === active + 1}
               muted={muted}
               soundFlash={i === active ? soundFlash : 0}
               onFlashDone={flashDone}
@@ -1061,6 +1087,7 @@ function Discover() {
               onComments={() => setCommentsFor(game.id)}
               onRated={(score) => setVotes((all) => ({ ...all, [game.id]: { up: 0, down: 0, mine: 0, ...all[game.id], myRating: score } }))}
             />
+            )}
           </div>
         ))}
 
