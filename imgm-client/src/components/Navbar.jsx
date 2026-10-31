@@ -28,7 +28,7 @@ import { useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
-import { useNavHidden } from '../lib/navVisibility';
+import { useNavMode } from '../lib/navVisibility';
 import { wakeGuide } from '../lib/api';
 import { WRAP } from '../lib/ui';
 import SearchBar from './SearchBar';
@@ -87,7 +87,7 @@ function Navbar() {
   // The phone's search row remembers the page it was opened on, so it closes by
   // itself once a search takes the player somewhere else (a result, or Enter)
   const location = useLocation();
-  const navHidden = useNavHidden();
+  const navMode = useNavMode();
   const [searchOpenOn, setSearchOpenOn] = useState(null);
   const searchOpen = searchOpenOn === location.key;
   const searchRef = useRef(null);
@@ -120,8 +120,8 @@ function Navbar() {
   );
 
   return (
-    // (Discover on an upright phone tucks it away, with an arrow to bring it back)
-    <header className={`sticky top-0 z-50 bg-slate-950 border-b border-slate-700 ${navHidden ? 'hidden' : ''}`}>
+    // (Discover on an upright phone tucks it away, and its tab lays it over the page)
+    <header className={`${navMode === 'over' ? 'fixed inset-x-0' : 'sticky'} top-0 z-50 bg-slate-950 border-b border-slate-700 ${navMode === 'hidden' ? 'hidden' : ''}`}>
       <nav aria-label="Main">
         <div className={`${WRAP} flex flex-wrap items-center gap-x-2 sm:gap-x-4 min-h-14 pt-1.5 sm:pt-3.5 sm:pb-1 xl:py-0 xl:min-h-[72px]`}>
           {/* Logo, with a small "beta" up by the top of the wordmark. The tiniest phones
