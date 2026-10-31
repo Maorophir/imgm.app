@@ -52,7 +52,7 @@ router.get('/search', searchLimiter, searchGames);
 router.get('/featured', igdbLimiter, getFeaturedGames);
 router.get('/review-picks', igdbLimiter, getReviewPicks); // games to get you reviewing (yours, or the all-time greats)
 
-// GET /api/games/discover?feed=new|soon|trending — Discover's feeds (cached 6 hours)
+// GET /api/games/discover?feed=hot|upcoming — Discover's feeds (cached 6 hours)
 router.get('/discover', igdbLimiter, getDiscoverGames);
 
 // GET /api/games/top — IMGM Top Games, the community chart (before /:id, or "top" would be an id)

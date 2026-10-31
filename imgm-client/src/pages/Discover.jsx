@@ -25,8 +25,9 @@
  * game. A timeline along the bottom edge moves through the video (drag or tap). None of
  * it reloads the video (it would start over): the player is told what to do.
  *
- * Feeds (GET /api/games/discover, IGDB's popularity rankings): New (the last 90 days),
- * Most Wanted (the next year's most wishlisted, the hottest first), Trending.
+ * Feeds (GET /api/games/discover, IGDB's popularity rankings): Hot Now (released in the
+ * last 2 years, what people are into right now) and Upcoming (the next year's most
+ * wishlisted, the hottest first).
  * Each feed reopens where the player left it (remembered on the device); the arrow at
  * the top left, or the feed's own tab, goes back to its first game; after the last one,
  * "That's all for now" offers the top and the other feeds.
@@ -54,9 +55,8 @@ const readMatureOk = () => {
   }
 };
 const FEEDS = [
-  { key: 'new', label: 'New' },
-  { key: 'soon', label: 'Most Wanted' }, // upcoming games, ranked by wishlists
-  { key: 'trending', label: 'Trending' },
+  { key: 'hot', label: 'Hot Now' }, // released games people are into right now
+  { key: 'upcoming', label: 'Upcoming' }, // the next year's most wishlisted, hottest first
 ];
 
 // Where the player left each feed (the game on screen), so coming back carries on there
@@ -536,7 +536,7 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
 };
 
 function Discover() {
-  const [feed, setFeed] = useState('new');
+  const [feed, setFeed] = useState('hot');
   const [lists, setLists] = useState({}); // feed -> games ([] if it couldn't load)
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -694,7 +694,14 @@ function Discover() {
         {games === null && <div className="h-full grid place-items-center text-slate-400">Loading games…</div>}
         {games && list.length === 0 && (
           <div className="h-full grid place-items-center text-center px-6 text-slate-300">
-            <p>Nothing here right now. <button type="button" onClick={() => pickFeed('trending')} className={`font-medium text-white ${TEXT_LINK}`}>See what's trending</button></p>
+            <p>
+              Nothing here right now.{' '}
+              {FEEDS.filter((f) => f.key !== feed).map((f) => (
+                <button key={f.key} type="button" onClick={() => pickFeed(f.key)} className={`font-medium text-white ${TEXT_LINK}`}>
+                  See {f.label}
+                </button>
+              ))}
+            </p>
           </div>
         )}
         {list.map((game, i) => (

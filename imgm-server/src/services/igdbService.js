@@ -475,21 +475,25 @@ export const getPopularGames = async (limit = 10) => {
 const POPULARITY = { visits: 1, wantToPlay: 2, mostWishlistedUpcoming: 10 }; // IGDB /popularity_types
 const DAY_S = 24 * 60 * 60;
 const DISCOVER_RANKED = 500; // how far down each ranking to look (IGDB's most per request)
-const DISCOVER_LIMIT = 40;
 const DISCOVER_TTL = 6 * 60 * 60 * 1000;
 const discoverCache = new Map(); // feed -> { expiresAt, results }
 
 const DISCOVER_FEEDS = {
-  // Out in the last 90 days, most visited first
-  new: { rankings: [POPULARITY.visits], window: (now) => `first_release_date > ${now - 90 * DAY_S} & first_release_date <= ${now}` },
-  // Out in the next year, most wanted first (two rankings: the wishlist one misses some
-  // giants, like GTA VI). Each card says when it's out, so the feed leads with the hype.
-  soon: {
+  // Hot Now: out in the last 2 years (so not Minecraft or Roblox), most visited right
+  // now. The newest big releases rise to the top by themselves (a separate New list was
+  // nearly the same games).
+  hot: {
+    rankings: [POPULARITY.visits],
+    window: (now) => `first_release_date > ${now - 730 * DAY_S} & first_release_date <= ${now}`,
+    limit: 50,
+  },
+  // Upcoming: out in the next year, most wanted first (two rankings: the wishlist one
+  // misses some giants, like GTA VI). Each card says when it's out, so it leads with the hype.
+  upcoming: {
     rankings: [POPULARITY.mostWishlistedUpcoming, POPULARITY.wantToPlay],
     window: (now) => `first_release_date > ${now} & first_release_date < ${now + 365 * DAY_S}`,
+    limit: 40,
   },
-  // Out in the last 2 years (so not Minecraft or Roblox), most visited right now
-  trending: { rankings: [POPULARITY.visits], window: (now) => `first_release_date > ${now - 730 * DAY_S} & first_release_date <= ${now}` },
 };
 export const DISCOVER_FEED_NAMES = Object.keys(DISCOVER_FEEDS);
 
@@ -509,7 +513,7 @@ export const getDiscoverGames = async (feed) => {
   const cached = discoverCache.get(feed);
   if (cached && Date.now() < cached.expiresAt) return cached.results;
 
-  const { rankings, window } = DISCOVER_FEEDS[feed];
+  const { rankings, window, limit } = DISCOVER_FEEDS[feed];
   // A game's place is its best one across the rankings (the top of each comes first)
   const rank = new Map();
   for (const ranking of await Promise.all(rankings.map(topOfRanking))) {
@@ -524,7 +528,7 @@ export const getDiscoverGames = async (feed) => {
   // Steam app (where its trailers can come from without YouTube's ads)
   const results = raw
     .sort((a, b) => rank.get(a.id) - rank.get(b.id))
-    .slice(0, DISCOVER_LIMIT)
+    .slice(0, limit)
     .map((game) => ({
       ...mapIgdbGame(game),
       mature: (game.age_ratings ?? []).some((rating) => MATURE_RATINGS.has(rating.rating_category)),

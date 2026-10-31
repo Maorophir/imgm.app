@@ -154,12 +154,12 @@ export const getFeaturedGames = async (req, res) => {
 // The last list of each Discover feed saved to the DB (saved again only when it changes)
 const lastSavedDiscover = new Map();
 
-// GET /api/games/discover?feed=new|soon|trending — Discover's feeds, one game per
+// GET /api/games/discover?feed=hot|upcoming — Discover's feeds, one game per
 // screen: each with its trailers (Steam's, without ads, when the game is on Steam;
 // YouTube's otherwise), whether it's for adults (any rating board, or Steam), and its
 // IMGM rating like the featured games
 export const getDiscoverGames = async (req, res) => {
-  const feed = req.query.feed ?? 'new';
+  const feed = req.query.feed ?? 'hot';
   if (!igdb.DISCOVER_FEED_NAMES.includes(feed)) return res.status(400).json({ error: 'Unknown feed' });
   try {
     const games = await igdb.getDiscoverGames(feed);

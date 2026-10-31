@@ -40,7 +40,7 @@ export const searchGames = (query, signal) =>
   fetchJson(`/api/games/search?q=${encodeURIComponent(query)}`, { signal });
 
 export const getFeaturedGames = (signal) => fetchJson('/api/games/featured', { signal });
-// Discover's feeds, one game per screen with its trailer: 'new' | 'soon' | 'trending'
+// Discover's feeds, one game per screen with its trailer: 'hot' | 'upcoming'
 export const getDiscoverGames = (feed, signal) => fetchJson(`/api/games/discover?feed=${feed}`, { signal });
 // Discover's thumbs up / down: { [gameId]: { up, down, mine } } for these games, and a vote
 // (1 up, -1 down, 0 to take it back) → that game's new { up, down, mine }
