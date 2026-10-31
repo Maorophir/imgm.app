@@ -313,7 +313,7 @@ const SOUND_BADGE = 'grid place-items-center w-14 h-14 rounded-full bg-slate-950
 const UPRIGHT_FRAME = 'absolute inset-x-0 top-0 aspect-[4/3] overflow-hidden [container-type:size]';
 const RAIL_ICON = 'grid place-items-center w-12 h-12 tight:w-10 tight:h-10 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, soundFlash, paused, clear, whole, bare, votes, matureOk, onConfirmAge, tapForSound, onTapVideo, onToggleMute, onComments, onSoundBlocked, onVote, onRated }) => {
+const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clear, whole, bare, votes, matureOk, onConfirmAge, tapForSound, onTapVideo, onToggleMute, onComments, onSoundBlocked, onVote, onRated }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -450,8 +450,8 @@ const Slide = ({ game, now, active, muted, soundFlash, paused, clear, whole, bar
         className="absolute inset-0 cursor-pointer"
       />
 
-      {/* The middle of the trailer, like Reels: the sound's icon for a moment when it
-          changes, and while paused, the sound's own button over the play icon: after the
+      {/* The middle of the trailer, like Reels: the sound's icon for a moment when a tap
+          turns it on, and while paused, the sound's own button over the play icon: after the
           first tap, the only way to turn the sound on or off. It sits over the tap layer
           (the play icon lets taps through to it, to play again). */}
       {active && source && !gated && (
@@ -462,7 +462,7 @@ const Slide = ({ game, now, active, muted, soundFlash, paused, clear, whole, bar
             </button>
           ) : (
             soundFlash > 0 && (
-              <span key={soundFlash} aria-hidden="true" className={`${SOUND_BADGE} animate-flash`}>
+              <span key={soundFlash} aria-hidden="true" onAnimationEnd={onFlashDone} className={`${SOUND_BADGE} animate-flash`}>
                 {muted ? <VolumeX className="w-6 h-6" strokeWidth={1.8} /> : <Volume2 className="w-6 h-6" strokeWidth={1.8} />}
               </span>
             )
@@ -686,14 +686,16 @@ function Discover() {
   const [lists, setLists] = useState({}); // feed -> games ([] if it couldn't load)
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
-  const [soundFlash, setSoundFlash] = useState(0); // counts sound changes: the middle icon shows each
+  // The speaker that pops up in the middle when a tap turns the sound on (only then: it's
+  // cleared once it has faded, so playing again after a pause doesn't show it again)
+  const [soundFlash, setSoundFlash] = useState(0);
+  const flashDone = useCallback(() => setSoundFlash(0), []);
   // Muted with the speaker: a tap on the trailer then only pauses and plays, and the
   // sound waits for the speaker again (before that, the first tap turns it on)
   const [mutedByPlayer, setMutedByPlayer] = useState(false);
   const toggleMute = () => {
     setMuted(!muted);
     setMutedByPlayer(!muted);
-    setSoundFlash((n) => n + 1);
   };
   const [paused, setPaused] = useState(false); // the game on screen's trailer
   const [matureOk, setMatureOk] = useState(readMatureOk);
@@ -704,10 +706,7 @@ function Discover() {
     } catch { /* this visit only */ }
   };
   // The browser played the trailer muted after all: the speaker shows it
-  const soundBlocked = useCallback(() => {
-    setMuted(true);
-    setSoundFlash((n) => n + 1);
-  }, []);
+  const soundBlocked = useCallback(() => setMuted(true), []);
   const [votes, setVotes] = useState({}); // gameId -> { up, down, mine, myRating, comments }
   const [commentsFor, setCommentsFor] = useState(null); // the game whose comments are open
   const closeComments = useCallback(() => setCommentsFor(null), []);
@@ -969,6 +968,7 @@ function Discover() {
               active={i === active}
               muted={muted}
               soundFlash={i === active ? soundFlash : 0}
+              onFlashDone={flashDone}
               paused={paused}
               clear={phone || full}
               whole={portrait}
