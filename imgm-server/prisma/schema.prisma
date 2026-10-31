@@ -38,6 +38,8 @@ model User {
   // A connected Steam account's imported library (see SteamLibrary below)
   steamLibrary      SteamLibrary?
   steamGames        SteamLibraryGame[]
+  // Discover's thumbs up / down on games
+  discoverVotes     DiscoverVote[]
   
   // Custom IMGM relations
   reviews       Review[]
@@ -426,4 +428,23 @@ model SteamLibraryGame {
   shared       Boolean   @default(false)
 
   @@id([userId, appid])
+}
+
+// -----------------------------------------------------------------------------
+// Discover: a player's thumbs up or down on a game in the feed (routes/discover.js)
+// -----------------------------------------------------------------------------
+
+// One vote per player per game: 1 (up) or -1 (down); taking it back deletes the row.
+// gameId is IGDB's id, not a link to Game: a feed's games may still be on their way
+// into the DB when someone votes.
+model DiscoverVote {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gameId    Int
+  value     Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@id([userId, gameId])
+  @@index([gameId])
 }
