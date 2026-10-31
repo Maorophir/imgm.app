@@ -222,7 +222,7 @@ export default function DiscoverComments({ game, total, loggedIn, onClose, onCou
       <section
         role="dialog"
         aria-label={`Comments on ${game.title}`}
-        className="absolute z-30 inset-x-0 bottom-0 h-[72%] md:inset-x-auto md:right-0 md:top-0 md:h-full md:w-[400px] flex flex-col bg-slate-950/95 backdrop-blur-sm border-t md:border-t-0 md:border-l border-white/14 rounded-t-sm md:rounded-none animate-fade-in"
+        className="absolute z-30 inset-x-0 bottom-0 h-[72%] md:inset-x-auto md:right-0 md:top-0 md:h-full md:w-[400px] flex flex-col bg-slate-950/65 backdrop-blur-md border-t md:border-t-0 md:border-l border-white/14 rounded-t-sm md:rounded-none animate-fade-in"
       >
         <header className="flex items-center justify-between gap-3 px-4 h-13 border-b border-white/10 shrink-0">
           <h2 className="text-sm font-semibold text-white">{count(total, 'comment')}</h2>

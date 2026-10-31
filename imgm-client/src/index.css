@@ -146,6 +146,7 @@ body {
   --animate-scroll-right: scrollRight 120s linear infinite;
   --animate-fade-in: fadeIn 0.4s ease-out;
   --animate-pop: pop 0.28s ease-out;
+  --animate-flash: flash 1.1s ease-out forwards;
   --animate-marquee: marquee var(--marquee-duration, 6s) linear infinite;
 
   /* MarqueeText: slide to the end right away (--marquee-shift), pause to read,
@@ -164,6 +165,13 @@ body {
   /* Legendary (10/10): the stars float, one after another. No glow: Noir has none. */
   @keyframes shimmer {
     50% { transform: translateY(-3px); }
+  }
+
+  /* Discover: the sound's icon shows in the middle for a moment when it changes */
+  @keyframes flash {
+    0% { opacity: 0; transform: scale(0.85); }
+    15%, 60% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1); }
   }
 
   @keyframes fadeIn {
