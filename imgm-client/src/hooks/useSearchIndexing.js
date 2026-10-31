@@ -22,7 +22,6 @@ const NOINDEX = new Set([
   '/search', // results pages (Google's advice: don't index your own search)
   '/login',
   '/signup/steam',
-  '/discover', // a demo for now
   '/welcome',
   '/forgot-password',
   '/reset-password',

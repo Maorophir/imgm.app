@@ -14,7 +14,10 @@
  *                 take it back
  *   Thumbs down   the same: just an opinion, the game stays on screen
  *   Want it       the real Backlog (logged out: log in, then back here)
- *   Played it?    a score picker: a score opens the game's review quest
+ *   Played it?    a 1–10 picker: one tap saves the score as a quick review, and the card
+ *                 pops up, with Add details (the quest). A game the player has rated
+ *                 says "Your 8" instead and opens their review: a one-tap score never
+ *                 replaces a written review (it's checked again just before saving).
  *   Share         the game's page (the phone's share sheet, or the link copied)
  *
  * The trailer: tapping it the first time turns the sound on; after that a tap pauses
@@ -27,8 +30,9 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { BookmarkCheck, BookmarkPlus, ChevronDown, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX } from 'lucide-react';
-import { getDiscoverGames, getDiscoverVotes, voteOnGame } from '../lib/api';
+import { BookmarkCheck, BookmarkPlus, ChevronDown, Clapperboard, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX } from 'lucide-react';
+import { getDiscoverGames, getDiscoverVotes, getMyReview, saveReview, voteOnGame } from '../lib/api';
+import CollectibleCard from '../components/CollectibleCard';
 import { useSession } from '../lib/authClient';
 import { useBacklog } from '../context/BacklogContext';
 import { pickVideos } from '../components/game/pickVideos';
@@ -79,6 +83,18 @@ const YOUTUBE = 'https://www.youtube-nocookie.com';
 const tellPlayer = (frame, message) => frame?.contentWindow?.postMessage(JSON.stringify(message), YOUTUBE);
 const command = (frame, func, args = []) => tellPlayer(frame, { event: 'command', func, args });
 
+const HAVE_CURRENT_DATA = 2; // a video's readyState once it has a frame to show
+
+// Starts a video. Only the browser refusing sound without a tap (NotAllowedError) turns
+// the sound off for the feed; any other failure (nothing loaded yet) waits for canplay.
+const startVideo = (el, onSoundBlocked) =>
+  el.play().catch((error) => {
+    if (error?.name !== 'NotAllowedError' || el.muted) return;
+    el.muted = true;
+    onSoundBlocked();
+    el.play().catch(() => {});
+  });
+
 // A Steam trailer, streamed from Steam's own video servers (HLS: no ads, no logo).
 // Safari and iPhones play the stream themselves; other browsers through hls.js, loaded
 // only when it's needed. Sound and pausing are the video's own.
@@ -113,21 +129,17 @@ const SteamTrailer = ({ trailer, title, muted, paused, onFail, onSoundBlocked })
   useEffect(() => {
     const el = video.current;
     if (paused) el.pause();
-    // A browser may refuse sound without a tap first: then it plays muted, and says so
-    else el.play().catch(() => {
-      el.muted = true;
-      onSoundBlocked();
-      el.play().catch(() => {});
-    });
+    else if (el.readyState >= HAVE_CURRENT_DATA) startVideo(el, onSoundBlocked); // else onCanPlay starts it
   }, [paused, onSoundBlocked]);
   return (
     <video
       ref={video}
       aria-label={title}
       muted
-      autoPlay
       playsInline
       loop
+      // Started here, once there's something to play (not before: that "fails" too early)
+      onCanPlay={() => !paused && startVideo(video.current, onSoundBlocked)}
       onPlaying={() => setReady(true)}
       onError={onFail}
       // Hidden until it plays, so the key art shows instead of a black box
@@ -188,12 +200,16 @@ const YouTubeTrailer = ({ video, title, muted, paused, onFail }) => {
 const RAIL = 'flex flex-col items-center gap-1 min-w-14 text-xs font-medium text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)]';
 const RAIL_ICON = 'grid place-items-center w-12 h-12 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge, onTapVideo, onToggleMute, onSoundBlocked, onVote }) => {
+const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge, onTapVideo, onToggleMute, onSoundBlocked, onVote, onRated }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [rating, setRating] = useState(false); // the score picker is open
   const [shared, setShared] = useState(false);
+  const [saving, setSaving] = useState(null); // the score being saved
+  const [problem, setProblem] = useState(null);
+  const [popped, setPopped] = useState(null); // the score just saved: its card pops up
+  const myRating = votes?.myRating ?? null;
   const video = useMemo(() => pickVideos(game.videos ?? [], 1)[0] ?? null, [game.videos]);
   // Steam's trailer first (no ads), YouTube's when there's none or it won't play
   const [steamFailed, setSteamFailed] = useState(false);
@@ -213,6 +229,29 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
     if (!backlog?.loggedIn) return navigate(`/login?redirect=${encodeURIComponent(pathname)}`);
     backlog.toggle(game.id);
   };
+  // Played it? One tap saves the score as a quick review (logged out: log in first).
+  // A review written since the page loaded is never replaced: it's checked again here.
+  const rate = async (score) => {
+    if (!backlog?.loggedIn) return navigate(`/login?redirect=${encodeURIComponent(pathname)}`);
+    setSaving(score);
+    setProblem(null);
+    try {
+      const existing = await getMyReview(game.id).catch(() => null);
+      if (existing?.rating) {
+        onRated(existing.rating);
+      } else {
+        await saveReview({ gameId: game.id, rating: score });
+        onRated(score);
+        setPopped(score);
+      }
+      setRating(false);
+    } catch (error) {
+      setProblem(error?.data?.error ?? "Couldn't save your score. Please try again.");
+    } finally {
+      setSaving(null);
+    }
+  };
+
   const share = async () => {
     const url = `${window.location.origin}/game/${game.id}`;
     try {
@@ -295,30 +334,67 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
                   <span><span className="tabular-nums text-(--ink)">{score.toFixed(1)}</span> <span className="text-(--ink)">{rarity.label}</span> on IMGM · {game.reviewCount} review{game.reviewCount === 1 ? '' : 's'}</span>
                 </>
               ) : (
-                <span>{upcoming ? 'Not out yet: save it for launch day.' : 'No IMGM rating yet. Played it? Be the first.'}</span>
+                <span>
+                  {upcoming
+                    ? 'Not out yet: save it for launch day.'
+                    : myRating !== null
+                      ? `Your ${myRating} is its first score on IMGM.`
+                      : 'No IMGM rating yet. Played it? Be the first.'}
+                </span>
               )}
               {game.platforms?.length > 0 && <span className="hidden sm:inline">· {game.platforms.slice(0, 4).join(', ')}</span>}
             </p>
             {game.description && <p className="mt-2 max-w-[620px] text-sm text-slate-300 line-clamp-2">{game.description}</p>}
+            {/* More trailers, screenshots and the reviews: the game page opens on them */}
+            <Link to={`/game/${game.id}`} className={`mt-2 inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-white ${TEXT_LINK}`}>
+              <Clapperboard className="w-4 h-4 text-slate-300" strokeWidth={1.8} aria-hidden="true" />
+              More videos
+            </Link>
 
-            {/* Played it? Pick a score: it opens the game's review quest */}
+            {/* Played it? One tap on a score saves it */}
             {rating && (
-              <div className="mt-3 flex flex-wrap items-center gap-1.5 animate-fade-in" role="group" aria-label={`Your score for ${game.title}`}>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5 animate-fade-in" role="group" aria-label={`Your score for ${game.title}`}>
                 <span className="text-sm text-slate-200 mr-1">Your score:</span>
                 {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => {
                   const tier = getRarity(n);
                   return (
-                    <Link
+                    <button
                       key={n}
-                      to={`/game/${game.id}/review`}
-                      className="grid place-items-center w-10 h-10 rounded-sm border border-white/30 bg-slate-950/60 text-sm font-semibold tabular-nums text-white hover:border-(--ink) hover:text-(--ink) transition-colors duration-120"
+                      type="button"
+                      onClick={() => rate(n)}
+                      disabled={saving !== null}
+                      className={`grid place-items-center w-10 h-10 rounded-sm border bg-slate-950/60 text-sm font-semibold tabular-nums transition-colors duration-120 hover:border-(--ink) hover:text-(--ink) disabled:opacity-50 ${
+                        saving === n ? 'border-(--ink) text-(--ink)' : 'border-white/30 text-white'
+                      }`}
                       style={{ '--ink': tier.color }}
                       aria-label={`${n} out of 10, ${tier.label}`}
                     >
                       {n}
-                    </Link>
+                    </button>
                   );
                 })}
+              </div>
+            )}
+            {problem && <p role="alert" className="mt-2 text-sm text-red-200">{problem}</p>}
+
+            {/* Saved: the card the score earned, and the way to the full review */}
+            {popped && (
+              <div
+                role="status"
+                className="mt-3 flex w-fit items-center gap-3 rounded-sm border border-(--ink) bg-slate-950/85 p-2 pr-4 animate-pop"
+                style={{ '--ink': getRarity(popped).color }}
+              >
+                <div className="w-14 shrink-0">
+                  <CollectibleCard variant="mini" title={game.title} score={popped} coverUrl={game.coverUrl} />
+                </div>
+                <div className="text-sm">
+                  <p className="text-white">
+                    Rated {popped} · <span className="text-(--ink)">{getRarity(popped).label}</span>. The card is yours.
+                  </p>
+                  <Link to={`/game/${game.id}/review`} className={`inline-flex items-center min-h-11 font-medium text-white ${TEXT_LINK}`}>
+                    Add details
+                  </Link>
+                </div>
               </div>
             )}
           </div>
@@ -349,7 +425,14 @@ const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge
               </span>
               {saved ? 'Saved' : 'Want it'}
             </button>
-            {!upcoming && (
+            {!upcoming && myRating !== null && (
+              // Rated already: their score, which opens their review (never a new one-tap score)
+              <Link to={`/game/${game.id}/review`} className={RAIL} style={{ '--ink': getRarity(myRating).color }}>
+                <span className={`${RAIL_ICON} border-(--ink) text-(--ink) font-display text-[22px] leading-none`}>{myRating}</span>
+                Your {myRating}
+              </Link>
+            )}
+            {!upcoming && myRating === null && (
               <button type="button" onClick={() => setRating((open) => !open)} aria-expanded={rating} className={RAIL}>
                 <span className={`${RAIL_ICON} ${rating ? 'border-white' : ''}`}><Star className="w-5 h-5" strokeWidth={1.8} /></span>
                 Played it?
@@ -518,6 +601,7 @@ function Discover() {
               onToggleMute={() => setMuted((m) => !m)}
               onSoundBlocked={soundBlocked}
               onVote={(value) => vote(game.id, value)}
+              onRated={(score) => setVotes((all) => ({ ...all, [game.id]: { up: 0, down: 0, mine: 0, ...all[game.id], myRating: score } }))}
             />
           </div>
         ))}

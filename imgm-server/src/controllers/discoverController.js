@@ -3,7 +3,9 @@
  *
  * The feeds themselves are the same for everyone and cached at the edge
  * (GET /api/games/discover), so the votes come separately: counts for the games on
- * screen, and the player's own vote, which no cache may share.
+ * screen, and the player's own vote and score (their review's rating: Played it? shows
+ * it instead of a picker, so a one-tap score never replaces a written review), which no
+ * cache may share.
  */
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
@@ -12,15 +14,18 @@ import { getSessionUser } from '../lib/session.js';
 const MAX_IDS = 60; // a feed is 40 games; a little room
 const IGDB_ID = z.coerce.number().int().positive().max(2_147_483_647);
 
-// { [gameId]: { up, down, mine } } for the given games (mine: 1, -1 or 0)
+// { [gameId]: { up, down, mine, myRating } } for the given games (mine: 1, -1 or 0;
+// myRating: the player's review score, or null)
 const tally = async (gameIds, userId) => {
-  const [counts, mine] = await Promise.all([
+  const [counts, mine, rated] = await Promise.all([
     prisma.discoverVote.groupBy({ by: ['gameId', 'value'], where: { gameId: { in: gameIds } }, _count: { _all: true } }),
     userId ? prisma.discoverVote.findMany({ where: { userId, gameId: { in: gameIds } }, select: { gameId: true, value: true } }) : [],
+    userId ? prisma.review.findMany({ where: { userId, gameId: { in: gameIds } }, select: { gameId: true, rating: true } }) : [],
   ]);
-  const votes = Object.fromEntries(gameIds.map((id) => [id, { up: 0, down: 0, mine: 0 }]));
+  const votes = Object.fromEntries(gameIds.map((id) => [id, { up: 0, down: 0, mine: 0, myRating: null }]));
   for (const row of counts) votes[row.gameId][row.value > 0 ? 'up' : 'down'] = row._count._all;
   for (const row of mine) votes[row.gameId].mine = row.value;
+  for (const row of rated) votes[row.gameId].myRating = row.rating;
   return votes;
 };
 

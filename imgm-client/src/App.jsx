@@ -90,7 +90,10 @@ const PAGES = {
   '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, collect a card for every rating, and get picks from Play Next.'],
   '/welcome': ['Welcome'],
   '/signup/steam': ['Sign up with Steam'],
-  '/discover': ['Discover new games'],
+  '/discover': [
+    'Discover: new and upcoming games, trailer by trailer',
+    'Scroll through new releases, upcoming games and what\'s trending, one trailer at a time. Vote, save one for later, or rate it in one tap.',
+  ],
 };
 function RouteTitle() {
   const { pathname } = useLocation();
@@ -135,7 +138,7 @@ function App() {
           {/* Steam: what connecting gives you (anyone), then your library (players) */}
           <Route path="/steam" element={<SteamLanding />} />
           <Route path="/steam/library" element={<SteamLibrary />} />
-          {/* Discover: a feed of new games, one per screen (a demo for now) */}
+          {/* Discover: a feed of new and upcoming games, one trailer per screen */}
           <Route path="/discover" element={<Discover />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
