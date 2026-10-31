@@ -314,8 +314,12 @@ const SOUND_BADGE = 'grid place-items-center w-14 h-14 rounded-full bg-slate-950
 // (at the top, under the feeds' tabs: the site's header is above it, so every pixel
 // counts on a phone)
 const UPRIGHT_FRAME = 'absolute inset-x-0 top-0 aspect-square overflow-hidden [container-type:size]';
-// On an upright phone the feeds' tabs (and the back-to-top arrow) sit just under it
-const UNDER_TRAILER = 'top-[calc(100vw+8px)]';
+// On an upright phone the feeds are just words at the top, over the trailer, like
+// TikTok's: the one on screen in white with a short line under it, the other dimmed
+const feedWord = (on) =>
+  `relative h-9 px-1 text-[15px] font-semibold [text-shadow:0_1px_3px_rgb(0_0_0/.8)] transition-colors duration-120 ${
+    on ? 'text-white after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-1 after:w-6 after:h-0.5 after:bg-white' : 'text-white/60 hover:text-white'
+  }`;
 const RAIL_ICON = 'grid place-items-center w-12 h-12 tight:w-10 tight:h-10 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
 const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clear, whole, bare, votes, matureOk, onConfirmAge, tapForSound, onTapVideo, onToggleMute, onComments, onSoundBlocked, onVote, onRated }) => {
@@ -937,7 +941,7 @@ function Discover() {
 
       {/* Full screen, in the top corner, in line with the actions below it (the same
           column at the same edge: 64px, or 52px at a phone's edge) */}
-      <div className="absolute top-3 right-0.5 sm:right-8 z-10 w-13 sm:w-16 grid justify-items-center">
+      <div className={`absolute ${tucks ? 'top-[30px]' : 'top-3'} right-0.5 sm:right-8 z-10 w-13 sm:w-16 grid justify-items-center`}>
         <button type="button" onClick={toggleFullScreen} aria-label={expanded ? 'Leave full screen' : 'Full screen'} aria-pressed={expanded} className={`${RAIL_ICON} text-white`}>
           {expanded ? <Minimize className="w-5 h-5" strokeWidth={1.8} /> : <Maximize className="w-5 h-5" strokeWidth={1.8} />}
         </button>
@@ -964,24 +968,37 @@ function Discover() {
         </button>
       )}
 
-      {/* Back to the feed's first game (the hottest ones are at the top): at the top left,
-          or on an upright phone beside the tabs under the trailer. Over the site's header
-          (a phone on its side) its place is the way out, and the feed's tab does it. */}
+      {/* Back to the feed's first game (the hottest ones are at the top): at the top left
+          (on an upright phone a small bare arrow beside the feeds' words). Over the site's
+          header (a phone on its side) its place is the way out, and the feed's tab does it. */}
       {!cover && !bare && active > 0 && list.length > 0 && (
         <button
           type="button"
           onClick={backToTop}
           aria-label={`Back to the first game in ${feedLabel}`}
-          className={`absolute ${tucks ? `${UNDER_TRAILER} w-11 h-11` : 'top-3 w-12 h-12'} left-4 sm:left-8 z-10 ${TOP_BUTTON.replace('w-12 h-12 ', '')}`}
+          className={
+            tucks
+              ? 'absolute top-8 left-2 z-10 grid place-items-center w-9 h-9 text-white drop-shadow-[0_1px_3px_rgb(0_0_0/.8)]'
+              : `absolute top-3 left-4 sm:left-8 z-10 ${TOP_BUTTON}`
+          }
         >
-          <ArrowUp className="w-5 h-5" strokeWidth={1.8} />
+          <ArrowUp className="w-5 h-5" strokeWidth={tucks ? 2.2 : 1.8} />
         </button>
       )}
 
-      {/* The feeds, floating over the top of the feed (on an upright phone, under the
-          trailer: the top is the trailer's) */}
-      {!bare && (
-      <div className={`absolute ${tucks ? UNDER_TRAILER : 'top-3'} left-1/2 -translate-x-1/2 z-10 max-w-[calc(100%-120px)]`}>
+      {/* The feeds, floating over the top of the feed (on an upright phone, small words
+          under the menu's tab) */}
+      {!bare && tucks && (
+        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-10 flex gap-4" role="tablist" aria-label="Discover feeds">
+          {FEEDS.map((f) => (
+            <button key={f.key} type="button" role="tab" aria-selected={feed === f.key} onClick={() => pickFeed(f.key)} className={feedWord(feed === f.key)}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      )}
+      {!bare && !tucks && (
+      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100%-120px)]">
         <div className={`${SEGMENTS} bg-slate-950/60 backdrop-blur-sm`} role="tablist" aria-label="Discover feeds">
           {FEEDS.map((f) => (
             <button key={f.key} type="button" role="tab" aria-selected={feed === f.key} onClick={() => pickFeed(f.key)} className={`${segment(feed === f.key)} max-sm:px-3`}>
