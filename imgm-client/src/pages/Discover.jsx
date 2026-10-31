@@ -45,11 +45,12 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, Maximize, MessageCircle, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
+import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, ChevronUp, Maximize, MessageCircle, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
 import { getDiscoverGames, getDiscoverVotes, getMyReview, saveReview, voteOnGame } from '../lib/api';
 import CollectibleCard from '../components/CollectibleCard';
 import DiscoverComments from '../components/discover/DiscoverComments';
 import { useSession } from '../lib/authClient';
+import { setNavHidden, useNavHidden } from '../lib/navVisibility';
 import { useBacklog } from '../context/BacklogContext';
 import { pickVideos } from '../components/game/pickVideos';
 import { getRarity } from '../components/reviewQuest/questOptions';
@@ -403,8 +404,17 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
   return (
     <section className="relative h-full snap-start snap-always overflow-hidden bg-slate-950 [container-type:size]" aria-label={game.title}>
       {/* Upright, under the trailer: the game's key art, filling the bottom half (the
-          frame shows another picture until the trailer plays, so they're not the same) */}
-      {upright && art && <img src={art} alt="" aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[75cqw] w-full h-[calc(100%-75cqw)] object-cover" />}
+          frame shows another picture until the trailer plays, so they're not the same).
+          Faded like a game page's backdrop (the user's call): dimmed from the trailer's
+          edge down until it melts into the page, with a soft shade on the left for the
+          words. */}
+      {upright && art && (
+        <div aria-hidden="true" className="absolute inset-x-0 bottom-0 top-[75cqw]">
+          <img src={art} alt="" className="absolute inset-0 w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/45 via-slate-950/70 to-slate-950" />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/70 via-slate-950/20 to-transparent" />
+        </div>
+      )}
 
       {/* The trailer's frame: the whole screen (cropped to fill it), or upright, nearly
           the whole picture across the top. It's the size the videos cover (cqw/cqh). */}
@@ -726,6 +736,8 @@ function Discover() {
   const [full, setFull] = useState(false); // in the browser's full screen
   const [portrait, setPortrait] = useState(isPortrait);
   const [bare, setBare] = useState(false); // the screen cleared for the trailer (no full screen here)
+  const [navShown, setNavShown] = useState(false); // the site's header pulled down (upright phone)
+  const navHidden = useNavHidden();
   const [turnHint, setTurnHint] = useState(false);
   const page = useRef(null);
   const [now] = useState(() => Date.now()); // read once: what's out or coming, as of opening the page
@@ -764,7 +776,7 @@ function Discover() {
       document.removeEventListener('fullscreenchange', fit);
       document.removeEventListener('webkitfullscreenchange', fit);
     };
-  }, [bare]);
+  }, [bare, navHidden]);
 
   // Over the site, the page under it stays put (no scrolling it from behind the feed)
   useEffect(() => {
@@ -792,6 +804,13 @@ function Discover() {
   const expanded = full || bare;
   // Over the site (its header too): a phone on its side, or the screen cleared
   const cover = phone && (!portrait || bare);
+  // An upright phone: the site's header is tucked away for the feed, and a small arrow
+  // at the top left pulls it back down (and up again). Leaving Discover brings it back.
+  const tucks = phone && portrait && !bare;
+  useEffect(() => {
+    setNavHidden(tucks && !navShown);
+  }, [tucks, navShown]);
+  useEffect(() => () => setNavHidden(false), []);
   // Cleared, upright: a word for a few seconds that turning the phone shows the whole picture
   useEffect(() => {
     if (!turnHint) return undefined;
@@ -918,9 +937,23 @@ function Discover() {
         </p>
       )}
 
-      {/* Back to the feed's first game (the hottest ones are at the top). Over the site's
-          header its place is the way out: the feed's own tab goes back to the top there. */}
-      {!cover && !bare && active > 0 && list.length > 0 && (
+      {/* The site's header, tucked away on an upright phone: pull it down, or up again */}
+      {tucks && (
+        <button
+          type="button"
+          onClick={() => setNavShown((shown) => !shown)}
+          aria-label={navShown ? "Hide the site's menu" : "Show the site's menu"}
+          aria-expanded={navShown}
+          className={`absolute top-3 left-4 z-10 ${TOP_BUTTON}`}
+        >
+          {navShown ? <ChevronUp className="w-5 h-5" strokeWidth={1.8} /> : <ChevronDown className="w-5 h-5" strokeWidth={1.8} />}
+        </button>
+      )}
+
+      {/* Back to the feed's first game (the hottest ones are at the top). On a phone its
+          place is the menu's arrow or the way out: the feed's own tab goes back to the top
+          there. */}
+      {!phone && !bare && active > 0 && list.length > 0 && (
         <button
           type="button"
           onClick={backToTop}
