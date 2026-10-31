@@ -779,16 +779,26 @@ function Discover() {
   const [now] = useState(() => Date.now()); // read once: what's out or coming, as of opening the page
   const scroller = useRef(null);
 
-  // Each feed loads the first time it's picked, then stays
-  const games = lists[feed] ?? null;
+  // Each feed loads the first time it's picked, then stays. A load that fails (the
+  // server waking up or restarting) is tried again once by itself after a few seconds,
+  // then the page offers Try again, never an empty feed.
+  const [failed, setFailed] = useState({}); // feed -> failed tries so far
+  const games = Array.isArray(lists[feed]) ? lists[feed] : null;
+  const loadFailed = (failed[feed] ?? 0) >= 2;
   useEffect(() => {
-    if (lists[feed]) return undefined;
+    if (lists[feed] || loadFailed) return undefined;
     const controller = new AbortController();
-    getDiscoverGames(feed, controller.signal)
-      .then((list) => setLists((all) => ({ ...all, [feed]: list })))
-      .catch(() => !controller.signal.aborted && setLists((all) => ({ ...all, [feed]: [] })));
-    return () => controller.abort();
-  }, [feed, lists]);
+    const wait = setTimeout(() => {
+      getDiscoverGames(feed, controller.signal)
+        .then((list) => setLists((all) => ({ ...all, [feed]: list })))
+        .catch(() => !controller.signal.aborted && setFailed((all) => ({ ...all, [feed]: (all[feed] ?? 0) + 1 })));
+    }, failed[feed] ? 3000 : 0);
+    return () => {
+      clearTimeout(wait);
+      controller.abort();
+    };
+  }, [feed, lists, failed, loadFailed]);
+  const retryFeed = () => setFailed((all) => ({ ...all, [feed]: 0 }));
 
   // The feed fills the screen under the site's header; on a phone on its side, cleared,
   // or in full screen, the whole screen (dvh: what's left beside the browser's own bars,
@@ -1039,7 +1049,15 @@ function Discover() {
       {/* (no scrollbar: on a computer it pushed the actions out of line with the full
           screen button, and the feed is swiped or scrolled, never dragged by a bar) */}
       <div ref={scroller} className="overflow-y-auto snap-y snap-mandatory overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" style={{ height: height ?? '100vh' }}>
-        {games === null && <div className="h-full grid place-items-center text-slate-400">Loading games…</div>}
+        {games === null && !loadFailed && <div className="h-full grid place-items-center text-slate-400">Loading games…</div>}
+        {games === null && loadFailed && (
+          <div className="h-full grid place-items-center text-center px-6 text-slate-300">
+            <p>
+              Couldn't load the games.{' '}
+              <button type="button" onClick={retryFeed} className={`font-medium text-white ${TEXT_LINK}`}>Try again</button>
+            </p>
+          </div>
+        )}
         {games && list.length === 0 && (
           <div className="h-full grid place-items-center text-center px-6 text-slate-300">
             <p>
