@@ -20,6 +20,9 @@
 @custom-variant short (@media (max-height: 850px));
 /* low: a phone on its side (500px tall or less). Discover's actions go in a row there. */
 @custom-variant low (@media (max-height: 500px));
+/* tight: a phone's screen in its browser (740px tall or less). Discover's seven actions
+   step down there so their column fits under the full screen button. */
+@custom-variant tight (@media (max-height: 740px));
 
 @layer base {
   /* Keyboard focus: an ivory outline. Lime is kept for the one primary action, so

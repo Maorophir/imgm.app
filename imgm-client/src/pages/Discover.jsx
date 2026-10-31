@@ -43,9 +43,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, Maximize, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
+import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, Maximize, MessageCircle, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
 import { getDiscoverGames, getDiscoverVotes, getMyReview, saveReview, voteOnGame } from '../lib/api';
 import CollectibleCard from '../components/CollectibleCard';
+import DiscoverComments from '../components/discover/DiscoverComments';
 import { useSession } from '../lib/authClient';
 import { useBacklog } from '../context/BacklogContext';
 import { pickVideos } from '../components/game/pickVideos';
@@ -299,14 +300,14 @@ const YouTubeTrailer = ({ video, title, muted, paused, seek, tries, onFail, onSo
 };
 
 // A round action on the rail: icon over a short word, 44px+ to tap
-const RAIL = 'flex flex-col items-center gap-1 w-16 text-xs font-medium text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)]';
+const RAIL = 'flex flex-col items-center gap-1 tight:gap-0.5 w-16 text-xs tight:text-[11px] font-medium text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)]';
 // A round button over the top of the feed
 const TOP_BUTTON = 'grid place-items-center w-12 h-12 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white';
 // The trailer, nearly whole on an upright screen (4:3 of its 16:9: a little off each side)
 const UPRIGHT_FRAME = 'absolute inset-x-0 top-[68px] aspect-[4/3] overflow-hidden [container-type:size]';
-const RAIL_ICON = 'grid place-items-center w-12 h-12 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
+const RAIL_ICON = 'grid place-items-center w-12 h-12 tight:w-10 tight:h-10 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, paused, clear, whole, bare, votes, matureOk, onConfirmAge, tapForSound, onTapVideo, onToggleMute, onSoundBlocked, onVote, onRated }) => {
+const Slide = ({ game, now, active, muted, paused, clear, whole, bare, votes, matureOk, onConfirmAge, tapForSound, onTapVideo, onToggleMute, onComments, onSoundBlocked, onVote, onRated }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -600,7 +601,7 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, bare, votes, ma
 
         {/* The actions, the sound (for the whole feed) first (in a row on a phone on its
             side: a column wouldn't fit) */}
-        <div className="shrink-0 flex flex-col low:flex-row items-center low:items-end gap-3 low:gap-2 pointer-events-auto">
+        <div className="shrink-0 flex flex-col low:flex-row items-center low:items-end gap-3 tight:gap-1.5 low:gap-2 pointer-events-auto">
           <button type="button" onClick={onToggleMute} aria-label={muted ? 'Turn the sound on' : 'Mute'} className={RAIL}>
             <span className={RAIL_ICON}>
               {muted ? <VolumeX className="w-5 h-5" strokeWidth={1.8} /> : <Volume2 className="w-5 h-5" strokeWidth={1.8} />}
@@ -624,6 +625,10 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, bare, votes, ma
               <ThumbsDown className="w-5 h-5" strokeWidth={1.8} fill={votes?.mine === -1 ? 'currentColor' : 'none'} />
             </span>
             <span className="tabular-nums">{(votes?.down ?? 0).toLocaleString('en-US')}</span>
+          </button>
+          <button type="button" onClick={onComments} aria-label={`Comments: ${votes?.comments ?? 0}`} className={RAIL}>
+            <span className={RAIL_ICON}><MessageCircle className="w-5 h-5" strokeWidth={1.8} /></span>
+            <span className="tabular-nums">{(votes?.comments ?? 0).toLocaleString('en-US')}</span>
           </button>
           <button type="button" onClick={want} aria-pressed={Boolean(saved)} className={RAIL}>
             <span className={`${RAIL_ICON} ${saved ? 'border-white bg-white/15' : ''}`}>
@@ -677,7 +682,16 @@ function Discover() {
   };
   // The browser played the trailer muted after all: the speaker shows it
   const soundBlocked = useCallback(() => setMuted(true), []);
-  const [votes, setVotes] = useState({}); // gameId -> { up, down, mine }
+  const [votes, setVotes] = useState({}); // gameId -> { up, down, mine, myRating, comments }
+  const [commentsFor, setCommentsFor] = useState(null); // the game whose comments are open
+  const closeComments = useCallback(() => setCommentsFor(null), []);
+  // A game's comment count, kept with its votes (a number, or a change to it)
+  const setCommentCount = useCallback((id, next) => {
+    setVotes((all) => {
+      const now = all[id] ?? { up: 0, down: 0, mine: 0, myRating: null, comments: 0 };
+      return { ...all, [id]: { ...now, comments: typeof next === 'function' ? next(now.comments ?? 0) : next } };
+    });
+  }, []);
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
   const navigate = useNavigate();
@@ -772,6 +786,7 @@ function Discover() {
           if (!entry.isIntersecting) return;
           const index = Number(entry.target.dataset.index);
           setActive(index);
+          setCommentsFor(null); // the comments were the last game's
           setPaused(false); // a new game on screen plays
           if (list[index]) savePlace(feed, list[index].id); // (not the closing card)
         }),
@@ -932,6 +947,7 @@ function Discover() {
               onConfirmAge={confirmAge}
               onSoundBlocked={soundBlocked}
               onVote={(value) => vote(game.id, value)}
+              onComments={() => setCommentsFor(game.id)}
               onRated={(score) => setVotes((all) => ({ ...all, [game.id]: { up: 0, down: 0, mine: 0, ...all[game.id], myRating: score } }))}
             />
           </div>
@@ -956,6 +972,18 @@ function Discover() {
           </div>
         )}
       </div>
+
+      {/* The comments on the game on screen, over the feed */}
+      {commentsFor && list.some((g) => g.id === commentsFor) && (
+        <DiscoverComments
+          key={commentsFor}
+          game={list.find((g) => g.id === commentsFor)}
+          total={votes[commentsFor]?.comments ?? 0}
+          loggedIn={Boolean(userId)}
+          onClose={closeComments}
+          onCountChange={setCommentCount}
+        />
+      )}
 
       {/* A hint on the first game that there's more below */}
       {active === 0 && list.length > 1 && !bare && (
