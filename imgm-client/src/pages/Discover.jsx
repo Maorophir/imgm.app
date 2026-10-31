@@ -427,9 +427,7 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
       {/* The trailer's frame: the whole screen (cropped to fill it), or upright, nearly
           the whole picture across the top. It's the size the videos cover (cqw/cqh). */}
       <div
-        className={upright ? `${UPRIGHT_FRAME} rounded-b-[18px] border-2 border-t-0 border-(--ink)` : 'absolute inset-0'}
-        style={upright ? { '--ink': rarity?.color ?? 'rgb(238 231 217 / .55)' } : undefined}
-      >
+        className={upright ? `${UPRIGHT_FRAME} rounded-b-[18px] border-2 border-t-0 border-white/55` : 'absolute inset-0'}>
       {/* A picture until (or instead of) the trailer */}
       {(upright ? still : art) && <img src={upright ? still : art} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />}
 
@@ -497,13 +495,12 @@ const Slide = ({ game, now, active, muted, soundFlash, onFlashDone, paused, clea
       )}
 
       {/* Upright, the trailer ends like an IMGM card (the user's call, option C): its
-          frame gets a card's rounded lower corners and rim, in the game's rarity ink when
-          it's rated on IMGM (ivory when not), with a tiny IMGM mark under it */}
+          frame gets a card's rounded lower corners and a soft ivory rim, the same for every
+          game (the rating is in the words below), with a tiny IMGM mark under it */}
       {upright && (
         <p
           aria-hidden="true"
-          className="absolute inset-x-0 top-[calc(100cqw+6px)] flex justify-center items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[.3em] text-(--ink) pointer-events-none"
-          style={{ '--ink': rarity?.color ?? 'rgb(238 231 217 / .55)' }}
+          className="absolute inset-x-0 top-[calc(100cqw+6px)] flex justify-center items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[.3em] text-white/55 pointer-events-none"
         >
           <PowerIcon className="w-3 h-3" /> IMGM
         </p>
