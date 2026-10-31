@@ -1,16 +1,20 @@
 /**
- * Whether the site's header is tucked away: Discover hides it on an upright phone (the
- * feed wants the whole screen) and shows a small arrow to pull it back down. One shared
- * switch, so the Navbar and Discover agree without passing props through App.
+ * How the site's header shows: normally, tucked away, or laid over the page. Discover
+ * tucks it away on an upright phone (the feed wants the whole screen), and its small
+ * IMGM tab pulls it down over the trailer (not pushing the feed down, so nothing below
+ * moves). One shared switch, so the Navbar and Discover agree without props through App.
+ *   null       the usual sticky header
+ *   'hidden'   tucked away
+ *   'over'     laid over the top of the page
  */
 import { useSyncExternalStore } from 'react';
 
-let hidden = false;
+let mode = null;
 const listeners = new Set();
 
-export const setNavHidden = (value) => {
-  if (hidden === value) return;
-  hidden = value;
+export const setNavMode = (value) => {
+  if (mode === value) return;
+  mode = value;
   listeners.forEach((listen) => listen());
 };
 
@@ -19,4 +23,4 @@ const subscribe = (listen) => {
   return () => listeners.delete(listen);
 };
 
-export const useNavHidden = () => useSyncExternalStore(subscribe, () => hidden, () => false);
+export const useNavMode = () => useSyncExternalStore(subscribe, () => mode, () => null);
