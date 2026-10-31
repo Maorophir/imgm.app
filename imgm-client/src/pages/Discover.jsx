@@ -7,7 +7,8 @@
  * Steam, YouTube's otherwise. The others wait as their key art, so only one video ever
  * loads at a time. A game rated for adults asks "18 or older?" first (once per device). Over it, at the bottom:
  * when it's out ("Out in 12 days", "Coming 2027" when IGDB knows only the year), the
- * title, the IMGM verdict and a line about it.
+ * title, the IMGM verdict and two lines about it ("more" opens the rest, over the video
+ * dimmed, as on TikTok).
  *
  * Beside that, the actions:
  *   Thumbs up     a vote (GET/PUT /api/discover/votes), with its count; tap again to
@@ -306,6 +307,17 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
   const [saving, setSaving] = useState(null); // the score being saved
   const [problem, setProblem] = useState(null);
   const [popped, setPopped] = useState(null); // the score just saved: its card pops up
+  // The description: two lines, and "more" opens the rest (only when there is more)
+  const [readAll, setReadAll] = useState(false);
+  const [cut, setCut] = useState(false);
+  const blurb = useRef(null);
+  useEffect(() => {
+    const el = blurb.current;
+    if (!el || readAll) return undefined;
+    const measure = new ResizeObserver(() => setCut(el.scrollHeight > el.clientHeight + 1));
+    measure.observe(el);
+    return () => measure.disconnect();
+  }, [readAll, game.description]);
   const myRating = votes?.myRating ?? null;
   // The trailer's timeline: where it is, and where the player moved it to (a new object
   // each time, so picking the same spot twice still jumps)
@@ -474,6 +486,9 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-slate-950/70 to-transparent pointer-events-none" />
       <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent pointer-events-none" />
 
+      {/* The whole description open: the video dims behind it, as on TikTok */}
+      {readAll && <div aria-hidden="true" className="absolute inset-0 bg-slate-950/50 pointer-events-none animate-fade-in" />}
+
       {/* What it is, and the actions, over the bottom of the video */}
       <div className="absolute inset-x-0 bottom-0 px-4 pb-16 sm:px-8 low:pb-12 pointer-events-none">
         <div className="max-w-[1180px] mx-auto flex items-end gap-4">
@@ -501,9 +516,25 @@ const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk
                       : 'No IMGM rating yet. Played it? Be the first.'}
                 </span>
               )}
-              {game.platforms?.length > 0 && <span className="hidden sm:inline">· {game.platforms.slice(0, 4).join(', ')}</span>}
+              {game.platforms?.length > 0 && <span className="hidden sm:inline low:hidden">· {game.platforms.slice(0, 4).join(', ')}</span>}
             </p>
-            {game.description && <p className="mt-2 max-w-[620px] text-sm text-slate-300 line-clamp-2 low:line-clamp-1">{game.description}</p>}
+            {/* Like TikTok: the text (or "more") opens it all, scrolling if it's long */}
+            {game.description && (
+              <div className="mt-2 max-w-[620px] text-sm text-slate-300">
+                <p
+                  ref={blurb}
+                  onClick={() => (cut || readAll) && setReadAll((open) => !open)}
+                  className={`${readAll ? 'max-h-[24cqh] low:max-h-[18cqh] overflow-y-auto overscroll-contain pr-1' : 'line-clamp-2 low:line-clamp-1'} ${cut || readAll ? 'cursor-pointer' : ''}`}
+                >
+                  {game.description}
+                </p>
+                {(cut || readAll) && (
+                  <button type="button" onClick={() => setReadAll((open) => !open)} aria-expanded={readAll} className="min-h-8 font-semibold text-white hover:underline underline-offset-4">
+                    {readAll ? 'less' : 'more'}
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Played it? One tap on a score saves it */}
             {rating && (
