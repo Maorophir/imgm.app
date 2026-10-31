@@ -66,6 +66,8 @@ const Feedback = () => {
   };
 
   const floating = !location.pathname.startsWith('/play-next');
+  // On a phone, Discover's actions run down the right edge: the button would cover them
+  const besideFeed = location.pathname === '/discover';
 
   return (
     <>
@@ -74,7 +76,7 @@ const Feedback = () => {
           type="button"
           onClick={openFeedback}
           aria-label="Send feedback"
-          className="fixed bottom-5 right-5 z-40 inline-flex items-center gap-2 h-11 px-3 sm:px-4 rounded-sm bg-slate-900 border border-slate-500 text-sm font-medium text-white hover:border-white hover:text-slate-50 transition-colors duration-120"
+          className={`fixed bottom-5 right-5 z-40 ${besideFeed ? 'max-md:hidden' : ''} inline-flex items-center gap-2 h-11 px-3 sm:px-4 rounded-sm bg-slate-900 border border-slate-500 text-sm font-medium text-white hover:border-white hover:text-slate-50 transition-colors duration-120`}
         >
           <MessageSquarePlus className="w-5 h-5 sm:w-4 sm:h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" />
           <span className="hidden sm:inline">Feedback</span>
