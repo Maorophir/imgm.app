@@ -67,7 +67,7 @@ function UserMenu({ user }) {
         </span>
         {/* The gamer tag shows where the header has room for it: not on phones, and not on
             laptops, where the links share the one row with the search (it shows again from xl) */}
-        <span className="hidden md:block lg:hidden xl:block text-base font-medium text-white max-w-32 truncate">{name}</span>
+        <span className="hidden md:block text-base font-medium text-white max-w-32 truncate">{name}</span>
         <ChevronDown
           className={`w-4 h-4 text-slate-400 transition-transform duration-120 ${open ? 'rotate-180' : ''}`}
           strokeWidth={1.8}

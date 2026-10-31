@@ -32,7 +32,9 @@ import GameGuide from './pages/GameGuide';
 import SteamLanding from './pages/SteamLanding';
 import SteamLibrary from './pages/SteamLibrary';
 import SteamSignUp from './pages/SteamSignUp';
+import Discover from './pages/Discover';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
+import { useDiscoverAccess } from './hooks/useDiscoverAccess';
 import { usePageTitle } from './hooks/usePageTitle';
 import { useSearchIndexing } from './hooks/useSearchIndexing';
 
@@ -53,6 +55,13 @@ import { useSearchIndexing } from './hooks/useSearchIndexing';
  */
 // Play Next for players who may use it (everyone after launch, beta players before);
 // everyone else is sent home as if the page didn't exist
+// Discover is a closed beta until it opens to everyone: anyone else is sent home
+function DiscoverRoute() {
+  const { enabled, loading } = useDiscoverAccess();
+  if (loading) return <div className="min-h-[70vh]" />;
+  return enabled ? <Discover /> : <Navigate to="/" replace />;
+}
+
 function PlayNextRoute() {
   const { enabled, loading } = usePlayNextAccess();
   if (loading) return <div className="min-h-[70vh]" />;
@@ -89,6 +98,10 @@ const PAGES = {
   '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, collect a card for every rating, and get picks from Play Next.'],
   '/welcome': ['Welcome'],
   '/signup/steam': ['Sign up with Steam'],
+  '/discover': [
+    'Discover: new and upcoming games, trailer by trailer',
+    'Scroll through new releases, upcoming games and what\'s trending, one trailer at a time. Vote, save one for later, or rate it in one tap.',
+  ],
 };
 function RouteTitle() {
   const { pathname } = useLocation();
@@ -133,6 +146,8 @@ function App() {
           {/* Steam: what connecting gives you (anyone), then your library (players) */}
           <Route path="/steam" element={<SteamLanding />} />
           <Route path="/steam/library" element={<SteamLibrary />} />
+          {/* Discover: a feed of new and upcoming games, one trailer per screen */}
+          <Route path="/discover" element={<DiscoverRoute />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Auth />} />

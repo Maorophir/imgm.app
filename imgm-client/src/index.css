@@ -334,3 +334,43 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .animate-xp-pop { animation: none; }
 }
+
+/* Discover's trailer timeline (pages/Discover.jsx): a thin ivory line filled up to now
+   (--done), with a small round handle; the input is 32px tall so a finger finds it, and
+   the line thickens under the pointer or while it's being dragged */
+.discover-timeline {
+  appearance: none;
+  height: 32px;
+  background: transparent;
+  cursor: pointer;
+  --line: 3px;
+}
+.discover-timeline:hover,
+.discover-timeline:active,
+.discover-timeline:focus-visible { --line: 5px; }
+.discover-timeline::-webkit-slider-runnable-track {
+  height: var(--line);
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-white) var(--done), rgb(238 231 217 / 0.3) var(--done));
+}
+.discover-timeline::-moz-range-track {
+  height: var(--line);
+  border-radius: 999px;
+  background: linear-gradient(to right, var(--color-white) var(--done), rgb(238 231 217 / 0.3) var(--done));
+}
+.discover-timeline::-webkit-slider-thumb {
+  appearance: none;
+  width: 13px;
+  height: 13px;
+  margin-top: calc((var(--line) - 13px) / 2);
+  border-radius: 50%;
+  background: var(--color-white);
+  box-shadow: 0 1px 4px rgb(0 0 0 / 0.6);
+}
+.discover-timeline::-moz-range-thumb {
+  width: 13px;
+  height: 13px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--color-white);
+}

@@ -40,6 +40,12 @@ export const searchGames = (query, signal) =>
   fetchJson(`/api/games/search?q=${encodeURIComponent(query)}`, { signal });
 
 export const getFeaturedGames = (signal) => fetchJson('/api/games/featured', { signal });
+// Discover's feeds, one game per screen with its trailer: 'hot' | 'upcoming'
+export const getDiscoverGames = (feed, signal) => fetchJson(`/api/games/discover?feed=${feed}`, { signal });
+// Discover's thumbs up / down: { [gameId]: { up, down, mine } } for these games, and a vote
+// (1 up, -1 down, 0 to take it back) → that game's new { up, down, mine }
+export const getDiscoverVotes = (gameIds, signal) => fetchJson(`/api/discover/votes?ids=${gameIds.join(',')}`, { signal });
+export const voteOnGame = (gameId, value) => fetchJson(`/api/discover/votes/${gameId}`, { method: 'PUT', body: { value } });
 // Games to get the player reviewing: popular ones in their favourite genres they haven't
 // rated (logged in), else the most played games of all time. { personal, genres, games }
 export const getReviewPicks = (signal) => fetchJson('/api/games/review-picks', { signal });
