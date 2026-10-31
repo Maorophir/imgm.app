@@ -2,17 +2,17 @@
  * Discover — Route: /discover
  *
  * A full-height feed of games, one per screen, snapping like Reels or TikTok: swipe or
- * scroll for the next one. The game on screen plays its trailer (muted, from IGDB's
- * YouTube list) edge to edge, cropped to fill the screen like a phone video; the others
- * wait as their key art, so only one video ever loads at a time. Over it, at the bottom:
+ * scroll for the next one. The game on screen plays its trailer (muted) edge to edge,
+ * cropped to fill the screen like a phone video: Steam's (no ads) when the game is on
+ * Steam, YouTube's otherwise. The others wait as their key art, so only one video ever
+ * loads at a time. A game rated for adults asks "18 or older?" first (once per device). Over it, at the bottom:
  * when it's out ("Out in 12 days", "Coming 2027" when IGDB knows only the year), the
  * title, the IMGM verdict and a line about it.
  *
  * Beside that, the actions:
  *   Thumbs up     a vote (GET/PUT /api/discover/votes), with its count; tap again to
  *                 take it back
- *   Thumbs down   the same, and on to the next game: it's also "not for me" (later it
- *                 teaches Play Next what you skip)
+ *   Thumbs down   the same: just an opinion, the game stays on screen
  *   Want it       the real Backlog (logged out: log in, then back here)
  *   Played it?    a score picker: a score opens the game's review quest
  *   Share         the game's page (the phone's share sheet, or the link copied)
@@ -25,7 +25,7 @@
  * Feeds (GET /api/games/discover, IGDB's popularity rankings): New (the last 90 days),
  * Coming soon (the most wanted of the next year), Trending.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { BookmarkCheck, BookmarkPlus, ChevronDown, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX } from 'lucide-react';
 import { getDiscoverGames, getDiscoverVotes, voteOnGame } from '../lib/api';
@@ -34,9 +34,18 @@ import { useBacklog } from '../context/BacklogContext';
 import { pickVideos } from '../components/game/pickVideos';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
-import { SEGMENTS, segment, TEXT_LINK } from '../lib/ui';
+import { GHOST_BUTTON_SM, SEGMENTS, segment, TEXT_LINK } from '../lib/ui';
 
 const DAY = 24 * 60 * 60 * 1000;
+// "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
+const MATURE_OK = 'imgm.discover.matureOk';
+const readMatureOk = () => {
+  try {
+    return localStorage.getItem(MATURE_OK) === 'yes';
+  } catch {
+    return false;
+  }
+};
 const FEEDS = [
   { key: 'new', label: 'New' },
   { key: 'soon', label: 'Coming soon' },
@@ -66,28 +75,97 @@ const COVER_VIDEO = {
 };
 
 const YOUTUBE = 'https://www.youtube-nocookie.com';
-// Tells the YouTube player to do something (mute, unMute, playVideo, pauseVideo…)
-const tellPlayer = (frame, func, args = []) =>
-  frame?.contentWindow?.postMessage(JSON.stringify({ event: 'command', func, args }), YOUTUBE);
+// Tells the YouTube player something (mute, unMute, playVideo, pauseVideo…)
+const tellPlayer = (frame, message) => frame?.contentWindow?.postMessage(JSON.stringify(message), YOUTUBE);
+const command = (frame, func, args = []) => tellPlayer(frame, { event: 'command', func, args });
 
-// The trailer, edge to edge. Its address is fixed once it starts (a new address would
-// restart it), so sound and pausing go to the player as messages instead.
-const Trailer = ({ video, title, muted, paused }) => {
+// A Steam trailer, streamed from Steam's own video servers (HLS: no ads, no logo).
+// Safari and iPhones play the stream themselves; other browsers through hls.js, loaded
+// only when it's needed. Sound and pausing are the video's own.
+const SteamTrailer = ({ trailer, title, muted, paused, onFail, onSoundBlocked }) => {
+  const video = useRef(null);
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    const el = video.current;
+    let hls = null;
+    let gone = false;
+    if (el.canPlayType('application/vnd.apple.mpegurl')) el.src = trailer.hls;
+    else {
+      import('hls.js')
+        .then(({ default: Hls }) => {
+          if (gone) return;
+          if (!Hls.isSupported()) return onFail();
+          hls = new Hls({ capLevelToPlayerSize: true }); // no 1080p stream for a phone
+          hls.on(Hls.Events.ERROR, (_, data) => data.fatal && onFail());
+          hls.loadSource(trailer.hls);
+          hls.attachMedia(el);
+        })
+        .catch(onFail);
+    }
+    return () => {
+      gone = true;
+      hls?.destroy();
+    };
+  }, [trailer.hls, onFail]);
+  useEffect(() => {
+    video.current.muted = muted;
+  }, [muted]);
+  useEffect(() => {
+    const el = video.current;
+    if (paused) el.pause();
+    // A browser may refuse sound without a tap first: then it plays muted, and says so
+    else el.play().catch(() => {
+      el.muted = true;
+      onSoundBlocked();
+      el.play().catch(() => {});
+    });
+  }, [paused, onSoundBlocked]);
+  return (
+    <video
+      ref={video}
+      aria-label={title}
+      muted
+      autoPlay
+      playsInline
+      loop
+      onPlaying={() => setReady(true)}
+      onError={onFail}
+      // Hidden until it plays, so the key art shows instead of a black box
+      className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
+    />
+  );
+};
+
+// A YouTube trailer, edge to edge: for games Steam has no trailer of. Its address is fixed
+// once it starts (a new address would restart it), so sound and pausing go to the player
+// as messages. If YouTube won't play it here (an age-restricted video, or one its owner
+// keeps off other sites), it says so, and the key art stays instead of an error screen.
+const YouTubeTrailer = ({ video, title, muted, paused, onFail }) => {
   const frame = useRef(null);
   const [ready, setReady] = useState(false);
   const [src] = useState(
     () => `${YOUTUBE}/embed/${video.youtubeId}?autoplay=1&mute=${muted ? 1 : 0}&controls=0&loop=1&playlist=${video.youtubeId}&playsinline=1&rel=0&iv_load_policy=3&disablekb=1&fs=0&enablejsapi=1`
   );
   useEffect(() => {
+    const heard = (event) => {
+      if (event.source !== frame.current?.contentWindow) return;
+      try {
+        if (JSON.parse(event.data)?.event === 'onError') onFail();
+      } catch { /* not one of YouTube's messages */ }
+    };
+    window.addEventListener('message', heard);
+    return () => window.removeEventListener('message', heard);
+  }, [onFail]);
+  useEffect(() => {
     if (!ready) return;
-    if (muted) tellPlayer(frame.current, 'mute');
+    if (muted) command(frame.current, 'mute');
     else {
-      tellPlayer(frame.current, 'unMute');
-      tellPlayer(frame.current, 'setVolume', [100]);
+      command(frame.current, 'unMute');
+      command(frame.current, 'setVolume', [100]);
     }
   }, [muted, ready]);
   useEffect(() => {
-    if (ready) tellPlayer(frame.current, paused ? 'pauseVideo' : 'playVideo');
+    if (ready) command(frame.current, paused ? 'pauseVideo' : 'playVideo');
   }, [paused, ready]);
   return (
     <iframe
@@ -95,7 +173,10 @@ const Trailer = ({ video, title, muted, paused }) => {
       title={title}
       src={src}
       allow="autoplay; encrypted-media; picture-in-picture"
-      onLoad={() => setReady(true)}
+      onLoad={() => {
+        setReady(true);
+        tellPlayer(frame.current, { event: 'listening', id: 1, channel: 'widget' }); // send us its errors
+      }}
       // Hidden until the player is ready, so the key art shows instead of a black box
       className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none border-0 transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
       style={COVER_VIDEO}
@@ -107,13 +188,21 @@ const Trailer = ({ video, title, muted, paused }) => {
 const RAIL = 'flex flex-col items-center gap-1 min-w-14 text-xs font-medium text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)]';
 const RAIL_ICON = 'grid place-items-center w-12 h-12 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, paused, votes, onTapVideo, onToggleMute, onVote, onNext }) => {
+const Slide = ({ game, now, active, muted, paused, votes, matureOk, onConfirmAge, onTapVideo, onToggleMute, onSoundBlocked, onVote }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [rating, setRating] = useState(false); // the score picker is open
   const [shared, setShared] = useState(false);
   const video = useMemo(() => pickVideos(game.videos ?? [], 1)[0] ?? null, [game.videos]);
+  // Steam's trailer first (no ads), YouTube's when there's none or it won't play
+  const [steamFailed, setSteamFailed] = useState(false);
+  const [youtubeFailed, setYoutubeFailed] = useState(false);
+  const failSteam = useCallback(() => setSteamFailed(true), []);
+  const failYoutube = useCallback(() => setYoutubeFailed(true), []);
+  const source = game.steamTrailer && !steamFailed ? 'steam' : video && !youtubeFailed ? 'youtube' : null;
+  // A game rated for adults waits for the viewer to say they're 18 or older
+  const gated = game.mature && !matureOk;
   const art = game.artworks?.[0] ?? game.screenshots?.[0] ?? game.coverUrl;
   const score = game.ratings?.imgm;
   const rarity = typeof score === 'number' && game.reviewCount > 0 ? getRarity(score) : null;
@@ -144,17 +233,43 @@ const Slide = ({ game, now, active, muted, paused, votes, onTapVideo, onToggleMu
       {/* The trailer, edge to edge (only the game on screen loads it). A clear layer over
           it keeps swipes and scrolls for the feed: its first tap turns the sound on,
           then taps pause and play. */}
-      {active && video && <Trailer key={video.youtubeId} video={video} title={`${game.title}: ${video.name}`} muted={muted} paused={paused} />}
+      {active && !gated && source === 'steam' && (
+        <SteamTrailer
+          trailer={game.steamTrailer}
+          title={`${game.title}: ${game.steamTrailer.name}`}
+          muted={muted}
+          paused={paused}
+          onFail={failSteam}
+          onSoundBlocked={onSoundBlocked}
+        />
+      )}
+      {active && !gated && source === 'youtube' && (
+        <YouTubeTrailer key={video.youtubeId} video={video} title={`${game.title}: ${video.name}`} muted={muted} paused={paused} onFail={failYoutube} />
+      )}
       <button
         type="button"
         onClick={onTapVideo}
         aria-label={muted ? 'Turn the sound on' : paused ? 'Play the trailer' : 'Pause the trailer'}
         className="absolute inset-0 cursor-pointer"
       />
-      {active && paused && (
+      {active && paused && source && !gated && (
         <span aria-hidden="true" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-20 h-20 rounded-full bg-slate-950/60 backdrop-blur-sm text-white pointer-events-none">
           <Play className="w-9 h-9 translate-x-0.5" strokeWidth={1.6} />
         </span>
+      )}
+
+      {/* Rated for adults: the trailer waits for a tap that says the viewer is 18 or older
+          (remembered on this device), like Steam's own age check */}
+      {gated && source && (
+        <div className="absolute inset-x-0 top-[22%] z-1 flex justify-center px-4">
+          <div className="max-w-[360px] w-full text-center rounded-sm border border-white/30 bg-slate-950/75 backdrop-blur-sm px-5 py-4">
+            <p className="text-xs font-semibold uppercase tracking-[.14em] text-slate-300">Mature trailer</p>
+            <p className="mt-1 text-sm text-slate-200">This game is rated for adults (M / 18+).</p>
+            <button type="button" onClick={onConfirmAge} className={`${GHOST_BUTTON_SM} mt-3`}>
+              I'm 18 or older: play it
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Shades so the words read over any video: the top (the feeds) and the bottom */}
@@ -218,14 +333,9 @@ const Slide = ({ game, now, active, muted, paused, votes, onTapVideo, onToggleMu
             </button>
             <button
               type="button"
-              // Down is also "not for me": the vote, then on to the next game
-              onClick={() => {
-                const down = votes?.mine !== -1;
-                onVote(down ? -1 : 0);
-                if (down) onNext();
-              }}
+              onClick={() => onVote(votes?.mine === -1 ? 0 : -1)}
               aria-pressed={votes?.mine === -1}
-              aria-label={`Thumbs down, not for me: ${votes?.down ?? 0}`}
+              aria-label={`Thumbs down: ${votes?.down ?? 0}`}
               className={RAIL}
             >
               <span className={`${RAIL_ICON} ${votes?.mine === -1 ? 'border-white bg-white/15' : ''}`}>
@@ -267,6 +377,15 @@ function Discover() {
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
   const [paused, setPaused] = useState(false); // the game on screen's trailer
+  const [matureOk, setMatureOk] = useState(readMatureOk);
+  const confirmAge = () => {
+    setMatureOk(true);
+    try {
+      localStorage.setItem(MATURE_OK, 'yes');
+    } catch { /* this visit only */ }
+  };
+  // The browser played the trailer muted after all: the speaker shows it
+  const soundBlocked = useCallback(() => setMuted(true), []);
   const [votes, setVotes] = useState({}); // gameId -> { up, down, mine }
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
@@ -394,9 +513,11 @@ function Discover() {
               paused={paused}
               votes={votes[game.id]}
               onTapVideo={tapVideo}
+              matureOk={matureOk}
+              onConfirmAge={confirmAge}
               onToggleMute={() => setMuted((m) => !m)}
+              onSoundBlocked={soundBlocked}
               onVote={(value) => vote(game.id, value)}
-              onNext={() => goTo(i + 1)}
             />
           </div>
         ))}

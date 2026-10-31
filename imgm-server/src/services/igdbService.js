@@ -493,6 +493,13 @@ const DISCOVER_FEEDS = {
 };
 export const DISCOVER_FEED_NAMES = Object.keys(DISCOVER_FEEDS);
 
+// Age ratings that mean adults only (IGDB /age_rating_categories ids): ESRB M and AO,
+// PEGI 18, CERO Z, USK 18, GRAC 18+ and 19+, ClassInd 18, ACB R18+. Not ACB M: that's
+// advice for 15 and up.
+const MATURE_RATINGS = new Set([6, 7, 12, 17, 22, 26, 33, 38, 40]);
+// The games' age ratings and their Steam app (IGDB external_games), on top of the usual
+const DISCOVER_FIELDS = GAME_FIELDS.replace(/;\s*$/, ', age_ratings.rating_category, external_games.uid, external_games.external_game_source;');
+
 // The game ids at the top of one of IGDB's popularity rankings, most popular first
 const topOfRanking = async (type) =>
   (await igdbRequest('popularity_primitives', `fields game_id; where popularity_type = ${type}; sort value desc; limit ${DISCOVER_RANKED};`))
@@ -511,12 +518,18 @@ export const getDiscoverGames = async (feed) => {
   const ids = [...rank.keys()];
   const now = Math.floor(Date.now() / 1000);
   // Main games, remakes and remasters, with a cover and a trailer to play
-  const body = `${GAME_FIELDS} where id = (${ids.join(',')}) & ${window(now)} & game_type = (0,8,9) & cover != null & videos != null; limit 500;`;
+  const body = `${DISCOVER_FIELDS} where id = (${ids.join(',')}) & ${window(now)} & game_type = (0,8,9) & cover != null & videos != null; limit 500;`;
   const raw = ids.length ? await igdbRequest('games', body) : [];
+  // Each game as usual, plus whether a rating board rates it adults only, and its
+  // Steam app (where its trailers can come from without YouTube's ads)
   const results = raw
     .sort((a, b) => rank.get(a.id) - rank.get(b.id))
     .slice(0, DISCOVER_LIMIT)
-    .map(mapIgdbGame);
+    .map((game) => ({
+      ...mapIgdbGame(game),
+      mature: (game.age_ratings ?? []).some((rating) => MATURE_RATINGS.has(rating.rating_category)),
+      steamAppId: Number((game.external_games ?? []).find((e) => e.external_game_source === STEAM_SOURCE)?.uid) || null,
+    }));
 
   discoverCache.set(feed, { expiresAt: Date.now() + DISCOVER_TTL, results });
   return results;
