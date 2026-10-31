@@ -34,6 +34,7 @@ import SearchBar from './SearchBar';
 import UserMenu from './UserMenu';
 import Logo from './Logo';
 import { usePlayNextAccess } from '../hooks/usePlayNextAccess';
+import { useDiscoverAccess } from '../hooks/useDiscoverAccess';
 
 // Ivory links. Hovering underlines one; the current page keeps a heavier underline. On
 // phones the row can scroll sideways, which would clip a focus ring drawn outside the
@@ -57,9 +58,6 @@ const BASE_LINKS = [
   // No Home link: the logo goes home. Games is the search page, which shows popular
   // games to pick from until something is typed (pages/Search.jsx).
   { to: '/search', label: 'Games' },
-  // Discover: the scrolling feed of new and coming games, IMGM's way to keep a visitor
-  // who isn't reviewing (second, so it's in view where the phone row has to scroll)
-  { to: '/discover', label: 'Discover' },
   { to: '/game-of-the-week', label: 'Game of the Week' },
   { to: '/hall-of-fame', label: 'Hall of Fame' },
   // Trending is hidden until it has real content (pages/Trending.jsx)
@@ -68,6 +66,10 @@ const BASE_LINKS = [
 // there or open their library from it. It comes before Play Next, so it stays in view
 // where the phone row has to scroll (and it stays underlined on /steam/library too).
 const STEAM_LINK = { to: '/steam', label: 'Steam' };
+// Discover: the scrolling feed of hot and upcoming games, IMGM's way to keep a visitor
+// who isn't reviewing. Second (after Games), so it's in view where the phone row has to
+// scroll; only for those who may use it (a closed beta until DISCOVER=on)
+const DISCOVER_LINK = { to: '/discover', label: 'Discover' };
 // Play Next keeps its lime star, IMGM's mark for its AI guide
 // One span around the star and the words, with a real space between them: in the link's
 // flex row, separate pieces (and a margin) would leave a gap in the underline
@@ -77,7 +79,9 @@ function Navbar() {
   const { data: session, isPending } = useSession();
   // Play Next shows for everyone after launch, before that only for beta players
   const playNext = usePlayNextAccess();
-  const LINKS = [...BASE_LINKS, STEAM_LINK, ...(playNext.enabled ? [PLAY_NEXT_LINK] : [])];
+  const discover = useDiscoverAccess();
+  const [games, ...rest] = BASE_LINKS;
+  const LINKS = [games, ...(discover.enabled ? [DISCOVER_LINK] : []), ...rest, STEAM_LINK, ...(playNext.enabled ? [PLAY_NEXT_LINK] : [])];
 
   // The phone's search row remembers the page it was opened on, so it closes by
   // itself once a search takes the player somewhere else (a result, or Enter)
