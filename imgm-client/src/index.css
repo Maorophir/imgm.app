@@ -18,6 +18,8 @@
 /* short: a screen 850px tall or less (1280×800 and 1366×768 laptops). The home hero's
    band steps down there, so its card still fits on the first screen. */
 @custom-variant short (@media (max-height: 850px));
+/* low: a phone on its side (500px tall or less). Discover's actions go in a row there. */
+@custom-variant low (@media (max-height: 500px));
 
 @layer base {
   /* Keyboard focus: an ivory outline. Lime is kept for the one primary action, so

@@ -33,8 +33,11 @@
  * "That's all for now" offers the top and the other feeds.
  *
  * On a phone the feed covers the whole screen, the site's header too, like an app: an X
- * at the top left leaves, and the first tap (sound on) also asks for the browser's full
- * screen where there is one (Android; not iPhones). On a computer, a button does that.
+ * at the top left leaves. A button beside the speaker asks for the browser's full screen
+ * (Android and computers; on an iPhone, which has none for a page, it says how to add the
+ * site to the Home Screen instead). On an upright screen the trailer shows whole (16:9)
+ * across the top, over its blurred key art, instead of cropped to its middle third;
+ * turned sideways, it fills the screen.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
@@ -85,6 +88,12 @@ const isPhone = () => window.matchMedia(PHONE).matches;
 // The browser's own full screen (no address bar): Android and computers; iPhones have
 // none for a page (there, Add to Home Screen opens the site without Safari's bars)
 const canFullScreen = () => Boolean(document.fullscreenEnabled);
+const isIPhone = () => /iPhone|iPod/.test(navigator.userAgent);
+const isHomeScreenApp = () => navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+// An upright screen: the trailer (16:9) shows whole, across the top, instead of cropped
+// to its middle third
+const PORTRAIT = '(orientation: portrait)';
+const isPortrait = () => window.matchMedia(PORTRAIT).matches;
 
 // 75 seconds as "1:15"
 const clock = (seconds) => {
@@ -284,9 +293,11 @@ const YouTubeTrailer = ({ video, title, muted, paused, seek, tries, onFail, onSo
 
 // A round action on the rail: icon over a short word, 44px+ to tap
 const RAIL = 'flex flex-col items-center gap-1 min-w-14 text-xs font-medium text-white [text-shadow:0_1px_3px_rgb(0_0_0/.8)]';
+// A round button over the top of the feed
+const TOP_BUTTON = 'grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white';
 const RAIL_ICON = 'grid place-items-center w-12 h-12 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
 
-const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onConfirmAge, onTapVideo, onToggleMute, onSoundBlocked, onVote, onRated }) => {
+const Slide = ({ game, now, active, muted, paused, clear, whole, votes, matureOk, onConfirmAge, onTapVideo, onSoundBlocked, onVote, onRated }) => {
   const backlog = useBacklog();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -361,12 +372,18 @@ const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onCon
 
   return (
     <section className="relative h-full snap-start snap-always overflow-hidden bg-slate-950 [container-type:size]" aria-label={game.title}>
+      {/* Upright, the screen behind the trailer: its key art, blurred and dimmed */}
+      {whole && art && <img src={art} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl opacity-50" />}
+
+      {/* The trailer's frame: the whole screen (cropped to fill it), or upright, the whole
+          16:9 picture across the top. It's the size the videos cover (cqw/cqh). */}
+      <div className={whole ? 'absolute inset-x-0 top-[68px] aspect-video overflow-hidden [container-type:size]' : 'absolute inset-0'}>
       {/* The key art, until (or instead of) the trailer */}
       {art && <img src={art} alt="" aria-hidden="true" className="absolute inset-0 w-full h-full object-cover" />}
 
-      {/* The trailer, edge to edge (only the game on screen loads it). A clear layer over
-          it keeps swipes and scrolls for the feed: its first tap turns the sound on,
-          then taps pause and play. */}
+      {/* The trailer (only the game on screen loads it). A clear layer over the slide
+          keeps swipes and scrolls for the feed: its first tap turns the sound on, then
+          taps pause and play. */}
       {active && !gated && source === 'steam' && (
         <SteamTrailer
           trailer={game.steamTrailer}
@@ -394,17 +411,18 @@ const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onCon
           onProgress={onProgress}
         />
       )}
+      {active && (paused || stuck) && source && !gated && (
+        <span aria-hidden="true" className="absolute z-1 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-20 h-20 rounded-full bg-slate-950/60 backdrop-blur-sm text-white pointer-events-none">
+          <Play className="w-9 h-9 translate-x-0.5" strokeWidth={1.6} />
+        </span>
+      )}
+      </div>
       <button
         type="button"
         onClick={stuck && !muted && !paused ? () => setTries((n) => n + 1) : onTapVideo}
         aria-label={stuck ? 'Play the trailer' : muted ? 'Turn the sound on' : paused ? 'Play the trailer' : 'Pause the trailer'}
         className="absolute inset-0 cursor-pointer"
       />
-      {active && (paused || stuck) && source && !gated && (
-        <span aria-hidden="true" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 grid place-items-center w-20 h-20 rounded-full bg-slate-950/60 backdrop-blur-sm text-white pointer-events-none">
-          <Play className="w-9 h-9 translate-x-0.5" strokeWidth={1.6} />
-        </span>
-      )}
 
       {/* The trailer's timeline along the bottom edge: drag it, or tap a spot, to move
           through the video (it stays above the tap layer, so it never pauses it) */}
@@ -457,7 +475,7 @@ const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onCon
       <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-[62%] bg-gradient-to-t from-slate-950 via-slate-950/70 to-transparent pointer-events-none" />
 
       {/* What it is, and the actions, over the bottom of the video */}
-      <div className="absolute inset-x-0 bottom-0 px-4 pb-16 sm:px-8 pointer-events-none">
+      <div className="absolute inset-x-0 bottom-0 px-4 pb-16 sm:px-8 low:pb-12 pointer-events-none">
         <div className="max-w-[1180px] mx-auto flex items-end gap-4">
           <div className="min-w-0 flex-1 pointer-events-auto">
             <p className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-200">
@@ -465,7 +483,7 @@ const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onCon
               <span>{releaseLine(game.releaseDate, now)}</span>
               {game.genres?.[0] && <span className="text-slate-300">{game.genres.slice(0, 2).join(' · ')}</span>}
             </p>
-            <h2 className="mt-2 font-display uppercase text-[44px] sm:text-[64px] leading-[.88] tracking-[.005em] text-white [text-wrap:balance]">
+            <h2 className="mt-2 font-display uppercase text-[44px] sm:text-[64px] low:text-[40px] leading-[.88] tracking-[.005em] text-white [text-wrap:balance]">
               <Link to={`/game/${game.id}`} className="hover:underline decoration-2 underline-offset-4">{game.title}</Link>
             </h2>
             <p className="mt-2 flex flex-wrap items-center gap-x-2.5 text-sm text-slate-300" style={rarity ? { '--ink': rarity.color } : undefined}>
@@ -485,7 +503,7 @@ const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onCon
               )}
               {game.platforms?.length > 0 && <span className="hidden sm:inline">· {game.platforms.slice(0, 4).join(', ')}</span>}
             </p>
-            {game.description && <p className="mt-2 max-w-[620px] text-sm text-slate-300 line-clamp-2">{game.description}</p>}
+            {game.description && <p className="mt-2 max-w-[620px] text-sm text-slate-300 line-clamp-2 low:line-clamp-1">{game.description}</p>}
 
             {/* Played it? One tap on a score saves it */}
             {rating && (
@@ -535,8 +553,8 @@ const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onCon
             )}
           </div>
 
-          {/* The actions */}
-          <div className="shrink-0 flex flex-col items-center gap-3 pointer-events-auto">
+          {/* The actions (in a row on a phone on its side: a column wouldn't fit) */}
+          <div className="shrink-0 flex flex-col low:flex-row items-center low:items-end gap-3 low:gap-2 pointer-events-auto">
             <button type="button" onClick={() => onVote(votes?.mine === 1 ? 0 : 1)} aria-pressed={votes?.mine === 1} aria-label={`Thumbs up: ${votes?.up ?? 0}`} className={RAIL}>
               <span className={`${RAIL_ICON} ${votes?.mine === 1 ? 'border-white bg-white/15' : ''}`}>
                 <ThumbsUp className="w-5 h-5" strokeWidth={1.8} fill={votes?.mine === 1 ? 'currentColor' : 'none'} />
@@ -582,10 +600,6 @@ const Slide = ({ game, now, active, muted, paused, clear, votes, matureOk, onCon
         </div>
       </div>
 
-      {/* Sound, for the whole feed */}
-      <button type="button" onClick={onToggleMute} aria-label={muted ? 'Turn the sound on' : 'Mute'} className="absolute top-3 right-4 sm:right-8 grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white">
-        {muted ? <VolumeX className="w-5 h-5" strokeWidth={1.8} /> : <Volume2 className="w-5 h-5" strokeWidth={1.8} />}
-      </button>
     </section>
   );
 };
@@ -613,6 +627,8 @@ function Discover() {
   const [height, setHeight] = useState(null);
   const [phone, setPhone] = useState(isPhone);
   const [full, setFull] = useState(false); // in the browser's full screen
+  const [portrait, setPortrait] = useState(isPortrait);
+  const [tip, setTip] = useState(false); // iPhone: how to get full screen there
   const page = useRef(null);
   const [now] = useState(() => Date.now()); // read once: what's out or coming, as of opening the page
   const scroller = useRef(null);
@@ -634,6 +650,7 @@ function Discover() {
     const fit = () => {
       const whole = isPhone() || document.fullscreenElement === page.current;
       setPhone(isPhone());
+      setPortrait(isPortrait());
       setFull(document.fullscreenElement === page.current);
       if (whole) setHeight('100dvh');
       else if (scroller.current) setHeight(window.innerHeight - scroller.current.getBoundingClientRect().top - window.scrollY);
@@ -658,10 +675,20 @@ function Discover() {
     };
   }, [phone]);
 
+  // Full screen is the player's choice (a button, never forced). iPhones have none for a
+  // page, so there the button says how: the site added to the Home Screen opens without
+  // Safari's bars.
+  const fullScreenButton = canFullScreen() ? 'real' : isIPhone() && !isHomeScreenApp() ? 'tip' : null;
   const toggleFullScreen = () => {
+    if (fullScreenButton === 'tip') return setTip((open) => !open);
     if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
     else page.current?.requestFullscreen?.({ navigationUI: 'hide' }).catch(() => {});
   };
+  useEffect(() => {
+    if (!tip) return undefined;
+    const close = setTimeout(() => setTip(false), 8000);
+    return () => clearTimeout(close);
+  }, [tip]);
   // Out of Discover, on a phone: back where the player came from on IMGM, or home
   const leave = () => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/'));
 
@@ -727,13 +754,11 @@ function Discover() {
     }
   };
 
-  // The first tap on a trailer turns the sound on (and, on a phone that can, goes full
-  // screen: no address bar, like an app); after that, taps pause and play
+  // The first tap on a trailer turns the sound on; after that, taps pause and play
   const tapVideo = () => {
     if (muted) {
       setMuted(false);
       setPaused(false);
-      if (phone && canFullScreen() && !document.fullscreenElement) toggleFullScreen();
     } else setPaused((p) => !p);
   };
 
@@ -768,18 +793,29 @@ function Discover() {
         </button>
       )}
 
-      {/* Full screen, where the browser has it (on a phone the first tap does it: no room
-          up here beside the feeds) */}
-      {!phone && canFullScreen() && (
-        <button
-          type="button"
-          onClick={toggleFullScreen}
-          aria-label={full ? 'Leave full screen' : 'Full screen'}
-          className="absolute top-3 right-[4.25rem] sm:right-[5.25rem] z-10 grid place-items-center w-11 h-11 rounded-full bg-slate-950/50 backdrop-blur-sm border border-white/40 text-white hover:border-white"
-        >
-          {full ? <Minimize className="w-5 h-5" strokeWidth={1.8} /> : <Maximize className="w-5 h-5" strokeWidth={1.8} />}
+      {/* Sound for the whole feed, and full screen (side by side, or on an upright phone,
+          one under the other: no room beside the feeds) */}
+      <div className="absolute top-3 right-4 sm:right-8 z-10 flex flex-col sm:flex-row-reverse gap-2">
+        <button type="button" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Turn the sound on' : 'Mute'} className={TOP_BUTTON}>
+          {muted ? <VolumeX className="w-5 h-5" strokeWidth={1.8} /> : <Volume2 className="w-5 h-5" strokeWidth={1.8} />}
         </button>
-      )}
+        {fullScreenButton && (
+          <button
+            type="button"
+            onClick={toggleFullScreen}
+            aria-label={full ? 'Leave full screen' : 'Full screen'}
+            aria-expanded={fullScreenButton === 'tip' ? tip : undefined}
+            className={TOP_BUTTON}
+          >
+            {full ? <Minimize className="w-5 h-5" strokeWidth={1.8} /> : <Maximize className="w-5 h-5" strokeWidth={1.8} />}
+          </button>
+        )}
+        {tip && (
+          <p role="status" className="absolute top-full right-0 mt-2 w-64 rounded-sm border border-white/30 bg-slate-950/90 backdrop-blur-sm px-4 py-3 text-sm text-slate-200 animate-fade-in">
+            iPhones keep Safari's bars on a website. For full screen, tap Share, then <span className="text-white">Add to Home Screen</span>, and open IMGM from there.
+          </p>
+        )}
+      </div>
 
       {/* Back to the feed's first game (the hottest ones are at the top). On a phone its
           place is the way out: the feed's own tab goes back to the top there. */}
@@ -828,11 +864,11 @@ function Discover() {
               muted={muted}
               paused={paused}
               clear={phone || full}
+              whole={portrait}
               votes={votes[game.id]}
               onTapVideo={tapVideo}
               matureOk={matureOk}
               onConfirmAge={confirmAge}
-              onToggleMute={() => setMuted((m) => !m)}
               onSoundBlocked={soundBlocked}
               onVote={(value) => vote(game.id, value)}
               onRated={(score) => setVotes((all) => ({ ...all, [game.id]: { up: 0, down: 0, mine: 0, ...all[game.id], myRating: score } }))}
