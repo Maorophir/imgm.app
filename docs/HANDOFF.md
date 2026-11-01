@@ -1,9 +1,9 @@
-# Handoff (2026-10-31, after Discover opened to everyone)
+# Handoff (2026-11-01, after the home page's Discover section)
 
 Read `.claude/CLAUDE.md` first: it explains how everything works. This file says where things stand.
 
 ## Where things are
-- **Live:** `main` = **27f11f9** (Vercel + Render), `development` = the same code plus these docs. Cloud Run `imgm-ai` is unchanged (imgm-ai-00008).
+- **Live:** `main` = **89796c6** (Vercel + Render), `development` = the same code plus these docs. Cloud Run `imgm-ai` is unchanged (imgm-ai-00008).
 - The site is a public beta. **Play Next** and **Discover** are open to every player.
 - **Discover is the newest feature** (built 2026-10-30/31, opened to everyone 2026-10-31): a TikTok-style feed of hot and upcoming games, one trailer per screen (Steam trailers first, YouTube as the fallback), with votes, comments, Want it, one-tap scores and Share. The user shaped the phone layout over many rounds; CLAUDE.md records each decision and what was turned down, so don't re-propose those.
 - **The share picture** (`imgm-client/public/og-image.png?v=2`): the site's real cards fanned (The Witcher 3 Legendary 10 in front, Ghost of Yōtei and Elden Ring) beside "I AM GAMING." and three features (rate and collect, Play Next, Discover). It was drawn by rendering `CollectibleCard` on a temporary Vite page and screenshotting it at 1200x630.
@@ -12,6 +12,8 @@ Read `.claude/CLAUDE.md` first: it explains how everything works. This file says
   - The home hero carousel (6 hand-picked games in `lib/homeShowcase.js`, never live data: the user wants full control of the first screen) and the Steam page carousel.
   - The checklist's new look (B4: rarity-ladder meters) across cards and the review quest; the soft glare on every card.
   - Discover: closed beta (90f0c5b), phones and comments (ea2576b, d23a233), the upright-phone redesign (8a30b31, dd99b87), open to everyone with smooth scrolling (78c1142), a retry for a feed that fails to load (27f11f9).
+- **2026-11-01:** the home page's Discover section (a phone playing the feed), Hot Now / Upcoming as words on computers too, and Safari's 480p-first trailer playlists (the likely cause of trailers freezing on iPhones). **Not yet checked on a real iPhone**: try Discover on mobile data.
+- **2026-11-01:** card backs fit a full checklist (all 11 answers) with no scrollbar (89796c6): the game page card's turn-back arrow sits by the reviewer's name (no "Flip back" row), "Length" and "PC specs" are card-only short names (`cardTitle` in `questOptions.js`), and the answers spread out when there's room (shrinkable spacers in `CardChecklist.jsx`).
 - **Migrations since 2026-10-17:** `steam_library`, `steam_shared_games`, `discover_votes`, `discover_comments` (Render runs them on start).
 
 ## The other machine (desktop)
@@ -34,15 +36,15 @@ The laptop is up to date. The desktop needs:
 
 ## Next
 1. **Watch Discover now that it's open:** comment reports arriving at `FEEDBACK_EMAIL` (check it's set on Render), iPhone sound, the paused-YouTube panel, Render's logs for Steam lookup failures. Ideas the user liked for later: a "For you" order from votes and scores (Play Next reading them is agent code: the user writes it), a "guess the game" card every few clips.
-2. **Tell roiegold** that Steam can now create accounts (his code said it never would).
-3. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
-4. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
+2. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
+3. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
    - Earlier test: 36/36 accuracy, ~0.25s vs Gemini's 0.6–1s.
    - Plan: pin `typesafe-sdk` 0.7.5, keep a Gemini fallback, add `TYPESAFE_API_KEY` as a Cloud Run secret (`--set-secrets`), and add TypeSafe to the Privacy Policy.
-5. **Branch cleanup** (the user runs it: Claude's branch deletions are blocked). Every local feature/hotfix branch is merged into `main`:
+4. **Branch cleanup** (the user runs it: Claude's branch deletions are blocked). Every local feature/hotfix branch is merged into `main`:
    ```bash
    git branch --merged origin/main --format='%(refname:short)' | grep -vE '^(main|development)$' | xargs git branch -d
-   git push origin --delete feature/sort-your-picks feature/steam-connect
+   git push origin --delete feature/sort-your-picks feature/steam-connect   # the remote is `imgm.app` on the desktop
+   # Not merged, delete only if unwanted: The-MVP-Race (local, Sept), feature/style-options (remote, the style switcher)
    ```
 
 ## How to release (see .claude/CLAUDE.md → Releasing)

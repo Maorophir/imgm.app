@@ -87,3 +87,59 @@ export const getSteamTrailers = async (appids) => {
   }
   return found;
 };
+
+// ── Safari's copy of a trailer's playlist ──
+// Steam lists each trailer's 1080p stream first, and Safari (every iPhone) starts with
+// whichever stream is listed first: a phone downloaded 2 MB pieces before the first
+// frame, and froze on mobile data until Safari stepped down. Safari gets this copy
+// instead: the same streams, still from Steam's video servers (only the 1 KB list is
+// ours), with 480p first. Safari moves up to HD by itself when the connection allows.
+// Other browsers play through hls.js, which starts low on its own.
+const STEAM_VIDEO_HOST = 'video.akamai.steamstatic.com';
+const START_HEIGHT = 480;
+const PLAYLIST_FOR = 24 * 60 * 60 * 1000;
+const MAX_PLAYLISTS = 500; // ~1 KB each; the oldest goes first
+const playlists = new Map(); // Steam's address -> { expiresAt, text }
+
+// Only Steam's own trailer playlists (never a way to fetch anything else through us)
+export const isSteamPlaylist = (src) => {
+  try {
+    const url = new URL(src);
+    return url.protocol === 'https:' && url.hostname === STEAM_VIDEO_HOST && url.pathname.startsWith('/store_trailers/') && url.pathname.endsWith('.m3u8');
+  } catch {
+    return false;
+  }
+};
+
+// Every address in the list made whole (they're written relative to Steam's), and the
+// stream closest to 480 lines tall moved to the top
+const rewritePlaylist = (text, src) => {
+  const lines = text.split(/\r?\n/);
+  const head = [];
+  const streams = []; // [tag line, address line]
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i].replace(/URI="([^"]+)"/, (_, uri) => `URI="${new URL(uri, src)}"`);
+    if (line.startsWith('#EXT-X-STREAM-INF')) {
+      streams.push([line, new URL(lines[i + 1].trim(), src).toString()]);
+      i += 1;
+    } else if (line && !line.startsWith('#')) head.push(new URL(line.trim(), src).toString());
+    else if (line) head.push(line);
+  }
+  const height = ([tag]) => Number(tag.match(/RESOLUTION=\d+x(\d+)/)?.[1] ?? 0);
+  const first = streams.reduce((best, s) => (best && Math.abs(height(best) - START_HEIGHT) <= Math.abs(height(s) - START_HEIGHT) ? best : s), null);
+  const ordered = first ? [first, ...streams.filter((s) => s !== first)] : streams;
+  return [...head, ...ordered.flat()].join('\n') + '\n';
+};
+
+// Safari's copy of one trailer's playlist (throws when Steam won't give it)
+export const getSafariPlaylist = async (src) => {
+  const known = playlists.get(src);
+  if (known && Date.now() < known.expiresAt) return known.text;
+  const response = await fetch(src, { signal: AbortSignal.timeout(TIMEOUT) });
+  if (!response.ok) throw new Error(`Steam's video server answered ${response.status}`);
+  const text = rewritePlaylist(await response.text(), src);
+  playlists.delete(src);
+  playlists.set(src, { expiresAt: Date.now() + PLAYLIST_FOR, text });
+  if (playlists.size > MAX_PLAYLISTS) playlists.delete(playlists.keys().next().value);
+  return text;
+};
