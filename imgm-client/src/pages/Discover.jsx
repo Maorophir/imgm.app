@@ -32,7 +32,8 @@
  * last 2 years, what people are into right now) and Upcoming (the next year's most
  * wishlisted, the hottest first).
  * Each feed reopens where the player left it (remembered on the device), or on the game a
- * link names (/discover?game=<id>, from the home page's Discover section); the arrow at
+ * link names (/discover?feed=upcoming&game=<id>, from the home page's Discover section;
+ * no feed = Hot Now); the arrow at
  * the top left, or the feed's own tab, goes back to its first game; after the last one,
  * "That's all for now" offers the top and the other feeds.
  *
@@ -57,7 +58,7 @@ import { useBacklog } from '../context/BacklogContext';
 import { pickVideos } from '../components/game/pickVideos';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
-import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, SEGMENTS, segment, TEXT_LINK } from '../lib/ui';
+import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../lib/ui';
 
 const DAY = 24 * 60 * 60 * 1000;
 // "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
@@ -328,10 +329,11 @@ const SOUND_BADGE = 'grid place-items-center w-14 h-14 rounded-full bg-slate-950
 // (at the top, under the feeds' tabs: the site's header is above it, so every pixel
 // counts on a phone)
 const UPRIGHT_FRAME = 'absolute inset-x-0 top-0 aspect-square overflow-hidden [container-type:size]';
-// On an upright phone the feeds are just words at the top, over the trailer, like
-// TikTok's: the one on screen in white with a short line under it, the other dimmed
-const feedWord = (on) =>
-  `relative h-9 px-1 text-[15px] font-semibold [text-shadow:0_1px_3px_rgb(0_0_0/.8)] transition-colors duration-120 ${
+// The feeds are just words at the top, over the trailer, like TikTok's: the one on
+// screen in white with a short line under it, the other dimmed (a bit bigger when
+// there's room: computers, a phone on its side)
+const feedWord = (on, big = false) =>
+  `relative h-9 px-1 ${big ? 'text-[17px]' : 'text-[15px]'} font-semibold [text-shadow:0_1px_3px_rgb(0_0_0/.8)] transition-colors duration-120 ${
     on ? 'text-white after:absolute after:left-1/2 after:-translate-x-1/2 after:bottom-1 after:w-6 after:h-0.5 after:bg-white' : 'text-white/60 hover:text-white'
   }`;
 const RAIL_ICON = 'grid place-items-center w-12 h-12 tight:w-10 tight:h-10 rounded-full border border-white/40 bg-slate-950/50 backdrop-blur-sm hover:border-white transition-colors duration-120';
@@ -728,7 +730,11 @@ const Slide = ({ game, now, active, next, muted, soundFlash, onFlashDone, paused
 };
 
 function Discover() {
-  const [feed, setFeed] = useState('hot');
+  // The feed a link names (?feed=upcoming, from the home page), else Hot Now
+  const [feed, setFeed] = useState(() => {
+    const named = new URLSearchParams(window.location.search).get('feed');
+    return FEEDS.some((f) => f.key === named) ? named : 'hot';
+  });
   const [lists, setLists] = useState({}); // feed -> games ([] if it couldn't load)
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
@@ -767,8 +773,9 @@ function Discover() {
   const userId = session?.user?.id ?? null;
   const navigate = useNavigate();
   const { pathname, search } = useLocation();
-  // A link to one game (the home page's pictures): Hot Now opens on it, once
+  // A link to one game (the home page's pictures): its feed opens on it, once
   const [linkedGame] = useState(() => Number(new URLSearchParams(search).get('game')) || null);
+  const [linkedFeed] = useState(feed);
   const [height, setHeight] = useState(null);
   const [phone, setPhone] = useState(isPhone);
   const [full, setFull] = useState(false); // in the browser's full screen
@@ -900,18 +907,18 @@ function Discover() {
   }, [list, feed]);
 
   // Opening a feed (this visit or a later one) starts where the player left it (or on
-  // the linked game, if it's in Hot Now), or at its first game when that game has left
+  // the linked game, if it's in the linked feed), or at its first game when that game has left
   // the feed
   const restored = useRef(null); // the feed whose place has been put back
   useEffect(() => {
     if (!games || restored.current === feed) return;
     restored.current = feed;
     const box = scroller.current;
-    const wanted = feed === 'hot' && linkedGame && list.some((g) => g.id === linkedGame) ? linkedGame : readPlaces()[feed];
+    const wanted = feed === linkedFeed && linkedGame && list.some((g) => g.id === linkedGame) ? linkedGame : readPlaces()[feed];
     const index = list.findIndex((g) => g.id === wanted);
     const slide = index > 0 ? box?.querySelector(`[data-index="${index}"]`) : null;
     box?.scrollTo({ top: slide ? slide.offsetTop : 0 });
-  }, [games, list, feed, linkedGame]);
+  }, [games, list, feed, linkedGame, linkedFeed]);
 
   // The votes on this feed's games, and the player's own (again after logging in or out)
   useEffect(() => {
@@ -1028,27 +1035,21 @@ function Discover() {
         </button>
       )}
 
-      {/* The feeds, floating over the top of the feed (on an upright phone, small words
-          under the menu's tab) */}
-      {!bare && tucks && (
-        <div className="absolute top-8 left-1/2 -translate-x-1/2 z-10 flex gap-4" role="tablist" aria-label="Discover feeds">
+      {/* The feeds: words over the top of the feed, like TikTok's, on every screen (on an
+          upright phone small, under the menu's tab; elsewhere in line with the round
+          buttons at the top corners) */}
+      {!bare && (
+        <div
+          className={`absolute left-1/2 -translate-x-1/2 z-10 flex gap-4 ${tucks ? 'top-8' : 'top-3 h-12 items-center gap-6'}`}
+          role="tablist"
+          aria-label="Discover feeds"
+        >
           {FEEDS.map((f) => (
-            <button key={f.key} type="button" role="tab" aria-selected={feed === f.key} onClick={() => pickFeed(f.key)} className={feedWord(feed === f.key)}>
+            <button key={f.key} type="button" role="tab" aria-selected={feed === f.key} onClick={() => pickFeed(f.key)} className={feedWord(feed === f.key, !tucks)}>
               {f.label}
             </button>
           ))}
         </div>
-      )}
-      {!bare && !tucks && (
-      <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 max-w-[calc(100%-120px)]">
-        <div className={`${SEGMENTS} bg-slate-950/60 backdrop-blur-sm`} role="tablist" aria-label="Discover feeds">
-          {FEEDS.map((f) => (
-            <button key={f.key} type="button" role="tab" aria-selected={feed === f.key} onClick={() => pickFeed(f.key)} className={`${segment(feed === f.key)} max-sm:px-3`}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
       )}
 
       {/* (no scrollbar: on a computer it pushed the actions out of line with the full
