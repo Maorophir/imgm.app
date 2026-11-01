@@ -37,6 +37,7 @@ import GameCardSkeleton from '../components/GameCardSkeleton';
 import LoadError from '../components/LoadError';
 import HomeHero from '../components/home/HomeHero';
 import RaritySection from '../components/home/RaritySection';
+import DiscoverSection from '../components/home/DiscoverSection';
 import { FreshReviews, ReviewPicks } from '../components/home/FreshReviews';
 import GotwStrip from '../components/home/GotwStrip';
 
@@ -163,6 +164,9 @@ const Home = () => {
       {/* The two big cards are a fixed showcase (lib/homeShowcase), not players' reviews;
           the captions under them carry their games' live IMGM numbers */}
       <HomeHero slides={HOME_SHOWCASE.heroes} stats={showcaseStats} onBrowse={browse} />
+
+      {/* TEMPORARY ?look=strip: the second Discover design, to compare the two */}
+      <DiscoverSection look={searchParams.get('look') === 'strip' ? 'strip' : 'phone'} />
 
       <RaritySection card={HOME_SHOWCASE.rarity.card} game={{ ...HOME_SHOWCASE.rarity.game, ...showcaseStats[HOME_SHOWCASE.rarity.game.id] }} />
 

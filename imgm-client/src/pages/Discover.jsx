@@ -31,7 +31,8 @@
  * Feeds (GET /api/games/discover, IGDB's popularity rankings): Hot Now (released in the
  * last 2 years, what people are into right now) and Upcoming (the next year's most
  * wishlisted, the hottest first).
- * Each feed reopens where the player left it (remembered on the device); the arrow at
+ * Each feed reopens where the player left it (remembered on the device), or on the game a
+ * link names (/discover?game=<id>, from the home page's Discover section); the arrow at
  * the top left, or the feed's own tab, goes back to its first game; after the last one,
  * "That's all for now" offers the top and the other feeds.
  *
@@ -765,7 +766,9 @@ function Discover() {
   const { data: session } = useSession();
   const userId = session?.user?.id ?? null;
   const navigate = useNavigate();
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
+  // A link to one game (the home page's pictures): Hot Now opens on it, once
+  const [linkedGame] = useState(() => Number(new URLSearchParams(search).get('game')) || null);
   const [height, setHeight] = useState(null);
   const [phone, setPhone] = useState(isPhone);
   const [full, setFull] = useState(false); // in the browser's full screen
@@ -896,17 +899,19 @@ function Discover() {
     return () => observer.disconnect();
   }, [list, feed]);
 
-  // Opening a feed (this visit or a later one) starts where the player left it, or at
-  // its first game when that game has left the feed
+  // Opening a feed (this visit or a later one) starts where the player left it (or on
+  // the linked game, if it's in Hot Now), or at its first game when that game has left
+  // the feed
   const restored = useRef(null); // the feed whose place has been put back
   useEffect(() => {
     if (!games || restored.current === feed) return;
     restored.current = feed;
     const box = scroller.current;
-    const index = list.findIndex((g) => g.id === readPlaces()[feed]);
+    const wanted = feed === 'hot' && linkedGame && list.some((g) => g.id === linkedGame) ? linkedGame : readPlaces()[feed];
+    const index = list.findIndex((g) => g.id === wanted);
     const slide = index > 0 ? box?.querySelector(`[data-index="${index}"]`) : null;
     box?.scrollTo({ top: slide ? slide.offsetTop : 0 });
-  }, [games, list, feed]);
+  }, [games, list, feed, linkedGame]);
 
   // The votes on this feed's games, and the player's own (again after logging in or out)
   useEffect(() => {
