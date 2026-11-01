@@ -48,7 +48,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, ChevronUp, Maximize, MessageCircle, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
-import { getDiscoverGames, getDiscoverVotes, getMyReview, saveReview, voteOnGame } from '../lib/api';
+import { getDiscoverGames, getDiscoverVotes, getMyReview, nativeTrailerUrl, saveReview, voteOnGame } from '../lib/api';
 import CollectibleCard from '../components/CollectibleCard';
 import DiscoverComments from '../components/discover/DiscoverComments';
 import { useSession } from '../lib/authClient';
@@ -58,9 +58,9 @@ import { useBacklog } from '../context/BacklogContext';
 import { pickVideos } from '../components/game/pickVideos';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
+import { clock, releaseLine } from '../components/discover/feedText';
 import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../lib/ui';
 
-const DAY = 24 * 60 * 60 * 1000;
 // "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
 const MATURE_OK = 'imgm.discover.matureOk';
 const readMatureOk = () => {
@@ -109,25 +109,6 @@ const exitFullScreen = () =>
 const PORTRAIT = '(orientation: portrait)';
 const isPortrait = () => window.matchMedia(PORTRAIT).matches;
 
-// 75 seconds as "1:15"
-const clock = (seconds) => {
-  const s = Math.max(0, Math.floor(seconds || 0));
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-};
-
-// When it's out, in words. IGDB marks a game known only by its year as out on 31 December.
-const releaseLine = (date, now) => {
-  if (!date) return null;
-  const when = new Date(date);
-  const days = Math.ceil((when.getTime() - now) / DAY);
-  if (days > 0) {
-    if (when.getUTCMonth() === 11 && when.getUTCDate() === 31) return `Coming ${when.getUTCFullYear()}`;
-    if (days === 1) return 'Out tomorrow';
-    if (days <= 60) return `Out in ${days} days`;
-    return `Out ${when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })}`;
-  }
-  return when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
-};
 
 // The trailer filling the screen like a phone video: 16:9, as big as it must be to cover
 // the slide either way (cqw/cqh: the slide's own size), a little bigger still so
@@ -159,16 +140,19 @@ const startVideo = (el, onSoundBlocked) =>
   });
 
 // A Steam trailer, streamed from Steam's own video servers (HLS: no ads, no logo).
-// Safari and iPhones play the stream themselves; other browsers through hls.js, loaded
-// only when it's needed. Sound and pausing are the video's own.
+// Safari and iPhones play the stream themselves, from our copy of its playlist (480p
+// first, so it starts fast; Steam's own if ours can't be had); other browsers through
+// hls.js, loaded only when it's needed. Sound and pausing are the video's own.
 const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBlocked, onProgress }) => {
   const video = useRef(null);
   const [ready, setReady] = useState(false);
+  const direct = useRef(false); // our playlist failed: Steam's is playing instead
   useEffect(() => {
     const el = video.current;
     let hls = null;
     let gone = false;
-    if (el.canPlayType('application/vnd.apple.mpegurl')) el.src = trailer.hls;
+    direct.current = false;
+    if (el.canPlayType('application/vnd.apple.mpegurl')) el.src = nativeTrailerUrl(trailer.hls);
     else {
       import('hls.js')
         .then(({ default: Hls }) => {
@@ -220,7 +204,12 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
       onCanPlay={() => !paused && startVideo(video.current, onSoundBlocked)}
       onPlaying={() => setReady(true)}
       onTimeUpdate={(e) => onProgress(e.currentTarget.currentTime, e.currentTarget.duration)}
-      onError={onFail}
+      onError={(e) => {
+        const el = e.currentTarget;
+        if (direct.current || !el.src.includes('/api/discover/stream.m3u8')) return onFail();
+        direct.current = true;
+        el.src = trailer.hls;
+      }}
       // Hidden until it plays, so the key art shows instead of a black box
       className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
     />
