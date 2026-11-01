@@ -59,6 +59,7 @@ import { pickVideos } from '../components/game/pickVideos';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
 import { clock, releaseLine } from '../components/discover/feedText';
+import { releaseVideo } from '../components/discover/releaseVideo';
 import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../lib/ui';
 
 // "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
@@ -168,6 +169,7 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
     return () => {
       gone = true;
       hls?.destroy();
+      releaseVideo(el);
     };
   }, [trailer.hls, onFail]);
   useEffect(() => {
