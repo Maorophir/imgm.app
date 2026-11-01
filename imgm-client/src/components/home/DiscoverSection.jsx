@@ -1,6 +1,6 @@
 /**
- * DiscoverSection — the home page's way into Discover (the trailer feed): "Hot right
- * now." and what Discover does, beside a phone showing the feed with a trailer playing,
+ * DiscoverSection — the home page's way into Discover (the trailer feed): "Discover
+ * games in a swipe." and what it does, beside a phone showing the feed with a trailer playing,
  * so a visitor sees what it is instead of reading about it.
  *
  * The phone's screen is Discover as it looks on an upright phone, drawn at a phone's
@@ -323,7 +323,7 @@ const DiscoverSection = () => {
             covers on the left, the phone beside them, close (not at the page's two edges). */}
         <div className="grid gap-y-12 lg:grid-cols-[minmax(0,540px)_auto] lg:grid-rows-[auto_1fr] lg:justify-center lg:gap-x-24 xl:gap-x-32">
           <div className="min-w-0 lg:self-end">
-            <h2 id="discover-title" className={SECTION_TITLE}>Hot right now.</h2>
+            <h2 id="discover-title" className={SECTION_TITLE}>Discover games in a swipe.</h2>
             <p className="mt-6 max-w-[480px] text-base leading-[1.6] text-white">
               The games everyone's playing, and the most wanted ones coming out, one trailer at a time.
             </p>
