@@ -13,7 +13,7 @@
  * art and busy cards never cut text off. Sizes are in cqi (a share of the card's
  * width), like CollectibleCard, so the card is the same design at any width.
  */
-import { Hourglass, Monitor } from 'lucide-react';
+import { Hourglass, Monitor, RotateCcw } from 'lucide-react';
 import ArtIcon from '../ArtIcon';
 import { useState } from 'react';
 import RarityMark from '../RarityMark';
@@ -237,14 +237,11 @@ const RarityCard = ({ review, game, artUrl }) => {
         {/* ── Back: the checklist ── */}
         {canFlip && (
           <Face rarity={rarity} className="card-face card-face-back">
+            {/* The whole card is the button; the arrow just says tapping turns it back */}
             <CardChecklist
               ticks={ticks}
               name={name}
-              footer={
-                <span className="mt-auto text-center text-[length:max(11px,3.6cqi)] font-medium text-white underline decoration-1 underline-offset-[3px] decoration-slate-500/80">
-                  Flip back
-                </span>
-              }
+              corner={<RotateCcw aria-hidden="true" className="shrink-0 w-[max(12px,4cqi)] h-[max(12px,4cqi)] text-white" strokeWidth={2} />}
             />
           </Face>
         )}

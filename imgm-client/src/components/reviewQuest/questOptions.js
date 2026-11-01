@@ -86,6 +86,8 @@ export const GOT_GOOD_AFTER = [
 //   kind 'neutral' = less → more, neither good nor bad (picked option is blue)
 // `na` (optional) = a "not applicable" answer shown apart from the ladder, in grey
 //   (e.g. no story in an online shooter, no price for a free-to-play game).
+// `cardTitle` (optional) = a shorter name for the back of a card, where the long one
+//   would wrap onto a second line and push the last answers off a full card.
 // `values` (plus 'na') must match CHECKLIST in the server's src/lib/reviewOptions.js.
 // Edit the jokes freely — only the `value` keys are stored.
 export const CHECKLIST = [
@@ -156,7 +158,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'gameLength', title: 'Game length', art: Hourglass, kind: 'neutral',
+    field: 'gameLength', title: 'Game length', cardTitle: 'Length', art: Hourglass, kind: 'neutral',
     na: { value: 'na', label: 'N/A · It\'s an endless online game' },
     options: [
       { value: 'coffee',   label: 'One cup of coffee' },
@@ -176,7 +178,7 @@ export const CHECKLIST = [
     ],
   },
   {
-    field: 'pcRequirements', title: 'PC requirements', art: Monitor, kind: 'neutral',
+    field: 'pcRequirements', title: 'PC requirements', cardTitle: 'PC specs', art: Monitor, kind: 'neutral',
     // Only for PC players — hidden when another platform was picked in Setup
     showIf: (answers) => !answers.platform || answers.platform === 'PC',
     options: [
