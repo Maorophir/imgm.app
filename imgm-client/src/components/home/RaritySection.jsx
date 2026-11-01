@@ -38,7 +38,8 @@ const RaritySection = ({ card, game, loading }) => {
   const withCard = Boolean(card) || loading;
 
   return (
-    <section aria-labelledby="rarity-title" className="mt-10 sm:mt-12">
+    // Spaced like the home page's other sections (it follows the Discover section)
+    <section aria-labelledby="rarity-title" className="mt-24 sm:mt-36">
       <div className={WRAP}>
         {/* Desktop: the card on the left, the words and ladder on the right. Smaller
             screens: the words first, then the card. */}

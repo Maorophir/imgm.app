@@ -200,6 +200,18 @@ body {
     from { transform: scale(1); }
     to { transform: scale(1.06); }
   }
+  /* The home page's Discover phone: the next game comes up from below and the last one
+     leaves at the top, like a swipe in the feed */
+  --animate-swipe-in: swipeIn 0.5s cubic-bezier(.2, .7, .2, 1);
+  --animate-swipe-out: swipeOut 0.5s cubic-bezier(.2, .7, .2, 1) forwards;
+  @keyframes swipeIn {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes swipeOut {
+    from { transform: translateY(0); }
+    to { transform: translateY(-100%); }
+  }
 }
 
 /* "static": the tokens below always exist as CSS variables (Tailwind otherwise only
