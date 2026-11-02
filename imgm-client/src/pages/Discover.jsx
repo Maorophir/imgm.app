@@ -45,7 +45,7 @@
  * across the top, over its blurred key art, instead of cropped to its middle third;
  * turned sideways, it fills the screen.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { ArrowUp, BookmarkCheck, BookmarkPlus, ChevronDown, ChevronUp, Maximize, MessageCircle, Minimize, Play, Share2, Star, ThumbsDown, ThumbsUp, Volume2, VolumeX, X } from 'lucide-react';
 import { getDiscoverGames, getDiscoverVotes, getMyReview, nativeTrailerUrl, saveReview, voteOnGame } from '../lib/api';
@@ -59,9 +59,7 @@ import { pickVideos } from '../components/game/pickVideos';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
 import { clock, releaseLine } from '../components/discover/feedText';
-import { playsStreamsItself, releaseVideo } from '../components/discover/trailerVideo';
-import PlaybackDebug from '../components/discover/PlaybackDebug';
-import { playbackDebugOn } from '../components/discover/debugSwitch';
+import { borrowVideo, playsStreamsItself, returnVideo, unlockVideos } from '../components/discover/trailerVideo';
 import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../lib/ui';
 
 // "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
@@ -130,7 +128,7 @@ const YT_PAUSED = 2;
 
 // A video is started as soon as it has its address, not once it has a frame: an iPhone
 // loads nothing past the video's details until play() is called, so waiting for a frame
-// left every trailer paused (seen with ?debug=1: readyState 1, the network idle)
+// left every trailer paused (seen on a real iPhone: readyState 1, the network idle)
 const hasSource = (el) => Boolean(el?.currentSrc || el?.getAttribute('src'));
 // How many games either side of the one on screen are drawn in full
 const NEAR = 2;
@@ -150,16 +148,40 @@ const startVideo = (el, onSoundBlocked) =>
 // iPhones play the stream themselves, from our copy of its playlist (480p first, so it
 // starts fast; the store's own if ours can't be had); every other browser through
 // hls.js, loaded only when it's needed (playsStreamsItself says why). Sound and pausing
-// are the video's own.
+// are the video's own. The <video> is one of the feed's shared players (borrowVideo, in
+// trailerVideo.js: so the sound turned on stays on with an iPhone), put in its place here.
+const VIDEO_LOOK = 'absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500';
 const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBlocked, onProgress }) => {
+  const box = useRef(null);
   const video = useRef(null);
   const [ready, setReady] = useState(false);
   const direct = useRef(false); // our playlist failed: Steam's is playing instead
+  // What the player's own listeners need, as it is now
+  const latest = useRef(null);
+  useLayoutEffect(() => {
+    latest.current = { trailer, paused, onFail, onSoundBlocked, onProgress };
+  });
+  // A shared player is borrowed, put here and given the stream; given back only once
+  // hls.js has let go of it (another trailer may borrow it next)
   useEffect(() => {
-    const el = video.current;
+    const el = borrowVideo();
     let hls = null;
     let gone = false;
     direct.current = false;
+    const listeners = {
+      // Started again once it knows the video, in case the first play() came too early
+      loadedmetadata: () => !latest.current.paused && startVideo(el, latest.current.onSoundBlocked),
+      playing: () => setReady(true),
+      timeupdate: () => latest.current.onProgress(el.currentTime, el.duration),
+      error: () => {
+        if (direct.current || !el.src.includes('/api/discover/stream.m3u8')) return latest.current.onFail();
+        direct.current = true;
+        el.src = latest.current.trailer.hls;
+      },
+    };
+    Object.entries(listeners).forEach(([type, listener]) => el.addEventListener(type, listener));
+    box.current.appendChild(el);
+    video.current = el;
     if (playsStreamsItself(el)) el.src = nativeTrailerUrl(trailer.hls);
     else {
       import('hls.js')
@@ -186,9 +208,18 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
     return () => {
       gone = true;
       hls?.destroy();
-      releaseVideo(el);
+      Object.entries(listeners).forEach(([type, listener]) => el.removeEventListener(type, listener));
+      returnVideo(el);
+      video.current = null;
     };
   }, [trailer.hls, onFail]);
+  // Hidden until it plays, so the key art shows instead of a black box
+  useEffect(() => {
+    video.current.className = `${VIDEO_LOOK} ${ready ? 'opacity-100' : 'opacity-0'}`;
+  }, [ready]);
+  useEffect(() => {
+    video.current.setAttribute('aria-label', title);
+  }, [title]);
   useEffect(() => {
     video.current.muted = muted;
   }, [muted]);
@@ -212,27 +243,7 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
   useEffect(() => {
     if (seek) video.current.currentTime = seek.to;
   }, [seek]);
-  return (
-    <video
-      ref={video}
-      aria-label={title}
-      muted
-      playsInline
-      loop
-      // Started again once it knows the video, in case the first play() came too early
-      onLoadedMetadata={() => !paused && startVideo(video.current, onSoundBlocked)}
-      onPlaying={() => setReady(true)}
-      onTimeUpdate={(e) => onProgress(e.currentTarget.currentTime, e.currentTarget.duration)}
-      onError={(e) => {
-        const el = e.currentTarget;
-        if (direct.current || !el.src.includes('/api/discover/stream.m3u8')) return onFail();
-        direct.current = true;
-        el.src = trailer.hls;
-      }}
-      // Hidden until it plays, so the key art shows instead of a black box
-      className={`absolute inset-0 w-full h-full object-cover pointer-events-none transition-opacity duration-500 ${ready ? 'opacity-100' : 'opacity-0'}`}
-    />
-  );
+  return <div ref={box} className="absolute inset-0 pointer-events-none" />;
 };
 
 // A YouTube trailer, edge to edge: for games Steam has no trailer of. Its address is fixed
@@ -746,7 +757,6 @@ function Discover() {
     return FEEDS.some((f) => f.key === named) ? named : 'hot';
   });
   const [lists, setLists] = useState({}); // feed -> games ([] if it couldn't load)
-  const [debug] = useState(playbackDebugOn); // ?debug=1: what the trailers are doing, over the page
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
   // The speaker that pops up in the middle when a tap turns the sound on (only then: it's
@@ -757,6 +767,7 @@ function Discover() {
   // sound waits for the speaker again (before that, the first tap turns it on)
   const [mutedByPlayer, setMutedByPlayer] = useState(false);
   const toggleMute = () => {
+    unlockVideos(); // a tap: every shared player may play with sound from now on
     setMuted(!muted);
     setMutedByPlayer(!muted);
   };
@@ -961,6 +972,7 @@ function Discover() {
 
   // The first tap on a trailer turns the sound on; after that, taps pause and play
   const tapVideo = () => {
+    unlockVideos(); // a tap: every shared player may play with sound from now on
     if (muted && !mutedByPlayer) {
       setMuted(false);
       setPaused(false);
@@ -1164,8 +1176,6 @@ function Discover() {
           Swipe for more <ChevronDown className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
-
-      {debug && <PlaybackDebug />}
     </main>
   );
 }
