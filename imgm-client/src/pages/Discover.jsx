@@ -59,7 +59,7 @@ import { pickVideos } from '../components/game/pickVideos';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
 import { clock, releaseLine } from '../components/discover/feedText';
-import { releaseVideo } from '../components/discover/releaseVideo';
+import { playsStreamsItself, releaseVideo } from '../components/discover/trailerVideo';
 import PlaybackDebug from '../components/discover/PlaybackDebug';
 import { playbackDebugOn } from '../components/discover/debugSwitch';
 import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../lib/ui';
@@ -128,12 +128,15 @@ const command = (frame, func, args = []) => tellPlayer(frame, { event: 'command'
 const YT_PLAYING = 1; // the player's states, as it reports them
 const YT_PAUSED = 2;
 
-const HAVE_CURRENT_DATA = 2; // a video's readyState once it has a frame to show
+// A video is started as soon as it has its address, not once it has a frame: an iPhone
+// loads nothing past the video's details until play() is called, so waiting for a frame
+// left every trailer paused (seen with ?debug=1: readyState 1, the network idle)
+const hasSource = (el) => Boolean(el?.currentSrc || el?.getAttribute('src'));
 // How many games either side of the one on screen are drawn in full
 const NEAR = 2;
 
 // Starts a video. Only the browser refusing sound without a tap (NotAllowedError) turns
-// the sound off for the feed; any other failure (nothing loaded yet) waits for canplay.
+// the sound off for the feed; any other failure (nothing loaded yet) is tried again.
 const startVideo = (el, onSoundBlocked) =>
   el.play().catch((error) => {
     if (error?.name !== 'NotAllowedError' || el.muted) return;
@@ -144,9 +147,10 @@ const startVideo = (el, onSoundBlocked) =>
 
 // A Steam trailer, streamed from Steam's own video servers (HLS: no ads, no logo), or
 // an Xbox one from Xbox's (a game Steam has none for: the same kind of stream).
-// Safari and iPhones play the stream themselves, from our copy of its playlist (480p
-// first, so it starts fast; the store's own if ours can't be had); other browsers through
-// hls.js, loaded only when it's needed. Sound and pausing are the video's own.
+// iPhones play the stream themselves, from our copy of its playlist (480p first, so it
+// starts fast; the store's own if ours can't be had); every other browser through
+// hls.js, loaded only when it's needed (playsStreamsItself says why). Sound and pausing
+// are the video's own.
 const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBlocked, onProgress }) => {
   const video = useRef(null);
   const [ready, setReady] = useState(false);
@@ -156,7 +160,7 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
     let hls = null;
     let gone = false;
     direct.current = false;
-    if (el.canPlayType('application/vnd.apple.mpegurl')) el.src = nativeTrailerUrl(trailer.hls);
+    if (playsStreamsItself(el)) el.src = nativeTrailerUrl(trailer.hls);
     else {
       import('hls.js')
         .then(({ default: Hls }) => {
@@ -164,12 +168,15 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
           if (!Hls.isSupported()) return onFail();
           hls = new Hls({ capLevelToPlayerSize: true }); // no 1080p stream for a phone
           hls.on(Hls.Events.ERROR, (_, data) => data.fatal && onFail());
-          // A playlist with its smallest stream first (Xbox's: 180p) starts on the one
-          // nearest 480p instead, not 7 blurry seconds; Steam's starts as it is
+          // A playlist with its smallest stream first (Xbox's: 180p) starts sharp instead,
+          // like Steam's (HD first): on the first stream as tall as the player is on screen
+          // (1080p on a computer), else the tallest (540p first still looked soft)
           hls.on(Hls.Events.MANIFEST_PARSED, (_, { levels }) => {
             if (!(levels[0]?.height < 360)) return;
-            const near = levels.reduce((best, level, i) => (Math.abs(level.height - 480) < Math.abs(levels[best].height - 480) ? i : best), 0);
-            hls.startLevel = near;
+            const needed = Math.max(el.clientHeight, (el.clientWidth * 9) / 16) * (window.devicePixelRatio || 1);
+            const tallest = levels.reduce((best, level, i) => (level.height > levels[best].height ? i : best), 0);
+            const covers = levels.reduce((best, level, i) => (level.height >= needed && (best === -1 || level.height < levels[best].height) ? i : best), -1);
+            hls.startLevel = covers === -1 ? tallest : covers;
           });
           hls.loadSource(trailer.hls);
           hls.attachMedia(el);
@@ -188,16 +195,16 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
   useEffect(() => {
     const el = video.current;
     if (paused) el.pause();
-    else if (el.readyState >= HAVE_CURRENT_DATA) startVideo(el, onSoundBlocked); // else onCanPlay starts it
+    else if (hasSource(el)) startVideo(el, onSoundBlocked); // else the nudge below starts it
   }, [paused, onSoundBlocked]);
-  // A start can be cut off (hls.js switching the stream's quality interrupts play()), and
-  // canplay doesn't come again: while it should be playing, a stopped video is started
-  // again every so often, so a trailer never sits frozen on its first frame
+  // A start can be cut off (hls.js switching the stream's quality interrupts play(), or
+  // play() came before the stream was attached): while it should be playing, a stopped
+  // video is started again every so often, so a trailer never sits frozen
   useEffect(() => {
     if (paused) return undefined;
     const nudge = setInterval(() => {
       const el = video.current;
-      if (el?.paused && el.readyState >= HAVE_CURRENT_DATA) startVideo(el, onSoundBlocked);
+      if (el?.paused && hasSource(el)) startVideo(el, onSoundBlocked);
     }, 700);
     return () => clearInterval(nudge);
   }, [paused, onSoundBlocked]);
@@ -212,8 +219,8 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
       muted
       playsInline
       loop
-      // Started here, once there's something to play (not before: that "fails" too early)
-      onCanPlay={() => !paused && startVideo(video.current, onSoundBlocked)}
+      // Started again once it knows the video, in case the first play() came too early
+      onLoadedMetadata={() => !paused && startVideo(video.current, onSoundBlocked)}
       onPlaying={() => setReady(true)}
       onTimeUpdate={(e) => onProgress(e.currentTarget.currentTime, e.currentTarget.duration)}
       onError={(e) => {
