@@ -60,6 +60,8 @@ import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
 import { clock, releaseLine } from '../components/discover/feedText';
 import { releaseVideo } from '../components/discover/releaseVideo';
+import PlaybackDebug from '../components/discover/PlaybackDebug';
+import { playbackDebugOn } from '../components/discover/debugSwitch';
 import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../lib/ui';
 
 // "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
@@ -727,6 +729,7 @@ function Discover() {
     return FEEDS.some((f) => f.key === named) ? named : 'hot';
   });
   const [lists, setLists] = useState({}); // feed -> games ([] if it couldn't load)
+  const [debug] = useState(playbackDebugOn); // ?debug=1: what the trailers are doing, over the page
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
   // The speaker that pops up in the middle when a tap turns the sound on (only then: it's
@@ -1144,6 +1147,8 @@ function Discover() {
           Swipe for more <ChevronDown className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
+
+      {debug && <PlaybackDebug />}
     </main>
   );
 }
