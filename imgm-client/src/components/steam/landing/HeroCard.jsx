@@ -105,7 +105,7 @@ const HeroCard = ({ mine, samples, waiting, connected }) => {
           />
         }
       />
-      <p className="mt-6 text-sm text-slate-400 text-center lg:text-left">
+      <p className="mt-6 text-sm text-slate-400 text-center">
         {own ? (
           <>
             {count > 1 ? "Your most played games you haven't rated." : "Your most played game you haven't rated."}{' '}
@@ -121,9 +121,9 @@ const HeroCard = ({ mine, samples, waiting, connected }) => {
       </p>
 
       {/* One dot per game: the shown one is a longer ivory bar (lime is the page's one
-          main action), and each is a 44px tap target */}
+          main action), and each is a 44px tap target. Centred under the card on every screen */}
       {count > 1 && (
-        <div className="flex justify-center lg:justify-start -ml-3">
+        <div className="flex justify-center">
           {games.map((item, i) => (
             <button
               key={item.gameId ?? item.title}

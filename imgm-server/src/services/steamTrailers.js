@@ -4,13 +4,15 @@
  * logo or title bar. Also what Steam says about the game's age: 17+, or adult content.
  *
  * Steam's store data (store.steampowered.com/api/appdetails) needs no key, but it's
- * shared by everyone, so: each game is looked up once a day (a failure is tried again
- * after an hour), a few at a time, and a game Steam won't tell us about just keeps its
- * YouTube trailer.
+ * shared by everyone, so: each game is looked up once a day, a few at a time, and a
+ * game Steam won't tell us about just keeps its YouTube trailer. A failed lookup is
+ * tried again after 5 minutes: Steam sometimes turns this server's address away, and
+ * after a restart (a release) every game is looked up at once, so an hour's wait left
+ * the top games on YouTube for that long.
  */
 const STORE_API = 'https://store.steampowered.com/api/appdetails';
 const FOUND_FOR = 24 * 60 * 60 * 1000;
-const FAILED_FOR = 60 * 60 * 1000;
+const FAILED_FOR = 5 * 60 * 1000;
 const AT_ONCE = 6;
 const TIMEOUT = 8_000;
 // Steam's content descriptors for adult sexual content (3 adult only, 4 frequent nudity)
