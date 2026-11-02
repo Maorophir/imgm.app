@@ -33,6 +33,7 @@ import { getDiscoverGames, getDiscoverVotes, nativeTrailerUrl } from '../../lib/
 import { useDiscoverAccess } from '../../hooks/useDiscoverAccess';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { clock, releaseLine } from '../discover/feedText';
+import { releaseVideo } from '../discover/releaseVideo';
 import { getRarity } from '../reviewQuest/questOptions';
 import RarityMark from '../RarityMark';
 import { PowerIcon } from '../Logo';
@@ -108,6 +109,7 @@ const LoopingTrailer = ({ trailer, still, onProgress }) => {
       gone = true;
       seen.disconnect();
       hls?.destroy();
+      releaseVideo(el);
     };
   }, [trailer.hls, still]);
   return (
