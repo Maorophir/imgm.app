@@ -60,8 +60,6 @@ import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
 import { clock, releaseLine } from '../components/discover/feedText';
 import { borrowVideo, playsStreamsItself, returnVideo, unlockVideos } from '../components/discover/trailerVideo';
-import PlaybackDebug from '../components/discover/PlaybackDebug';
-import { playbackDebugOn } from '../components/discover/debugSwitch';
 import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../lib/ui';
 
 // "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
@@ -130,7 +128,7 @@ const YT_PAUSED = 2;
 
 // A video is started as soon as it has its address, not once it has a frame: an iPhone
 // loads nothing past the video's details until play() is called, so waiting for a frame
-// left every trailer paused (seen with ?debug=1: readyState 1, the network idle)
+// left every trailer paused (seen on a real iPhone: readyState 1, the network idle)
 const hasSource = (el) => Boolean(el?.currentSrc || el?.getAttribute('src'));
 // How many games either side of the one on screen are drawn in full
 const NEAR = 2;
@@ -759,7 +757,6 @@ function Discover() {
     return FEEDS.some((f) => f.key === named) ? named : 'hot';
   });
   const [lists, setLists] = useState({}); // feed -> games ([] if it couldn't load)
-  const [debug] = useState(playbackDebugOn); // ?debug=1: what the trailers are doing, over the page
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
   // The speaker that pops up in the middle when a tap turns the sound on (only then: it's
@@ -1179,8 +1176,6 @@ function Discover() {
           Swipe for more <ChevronDown className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
-
-      {debug && <PlaybackDebug />}
     </main>
   );
 }
