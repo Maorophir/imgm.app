@@ -35,8 +35,9 @@ const kindOf = (name) => {
   return i === -1 ? KINDS.length : i;
 };
 // The best of a game's Steam videos, or null if none is the game itself (then the
-// feed plays its YouTube trailer, chosen by the same rules)
-const pickMovie = (movies) =>
+// feed plays its YouTube trailer, chosen by the same rules). Xbox's are picked with it
+// too (xboxTrailers.js).
+export const pickMovie = (movies) =>
   movies
     .map((movie, order) => ({ movie, name: movie.name ?? '', order }))
     .filter(({ movie, name }) => typeof movie.hls_h264 === 'string' && movie.hls_h264.startsWith('https://') && !SKIP.test(name) && !CJK.test(name))
@@ -118,17 +119,24 @@ export const getSteamTrailers = async (appids) => {
 // instead: the same streams, still from Steam's video servers (only the 1 KB list is
 // ours), with 480p first. Safari moves up to HD by itself when the connection allows.
 // Other browsers play through hls.js, which starts low on its own.
+// Xbox's trailers (xboxTrailers.js) get the same copy: they list 180p first, and a
+// phone sat on the blurry 180p for 7 seconds.
 const STEAM_VIDEO_HOST = 'video.akamai.steamstatic.com';
+const XBOX_VIDEO_HOST = 'cdn.trailers.xboxservices.com';
 const START_HEIGHT = 480;
 const PLAYLIST_FOR = 24 * 60 * 60 * 1000;
 const MAX_PLAYLISTS = 500; // ~1 KB each; the oldest goes first
 const playlists = new Map(); // Steam's address -> { expiresAt, text }
 
-// Only Steam's own trailer playlists (never a way to fetch anything else through us)
-export const isSteamPlaylist = (src) => {
+// Only Steam's and Xbox's own trailer playlists (never a way to fetch anything else
+// through us)
+export const isTrailerPlaylist = (src) => {
   try {
     const url = new URL(src);
-    return url.protocol === 'https:' && url.hostname === STEAM_VIDEO_HOST && url.pathname.startsWith('/store_trailers/') && url.pathname.endsWith('.m3u8');
+    const store =
+      (url.hostname === STEAM_VIDEO_HOST && url.pathname.startsWith('/store_trailers/')) ||
+      (url.hostname === XBOX_VIDEO_HOST && url.pathname.startsWith('/trailers/'));
+    return url.protocol === 'https:' && store && url.pathname.endsWith('.m3u8');
   } catch {
     return false;
   }
@@ -154,7 +162,7 @@ const rewritePlaylist = (text, src) => {
   return [...head, ...ordered.flat()].join('\n') + '\n';
 };
 
-// Safari's copy of one trailer's playlist (throws when Steam won't give it)
+// Safari's copy of one trailer's playlist (throws when the store won't give it)
 export const getSafariPlaylist = async (src) => {
   const known = playlists.get(src);
   if (known && Date.now() < known.expiresAt) return known.text;
