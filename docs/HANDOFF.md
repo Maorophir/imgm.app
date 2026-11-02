@@ -1,9 +1,9 @@
-# Handoff (2026-11-01, after the home page's Discover section)
+# Handoff (2026-11-02, after the iPhone players fix)
 
 Read `.claude/CLAUDE.md` first: it explains how everything works. This file says where things stand.
 
 ## Where things are
-- **Live:** `main` = **89796c6** (Vercel + Render), `development` = the same code plus these docs. Cloud Run `imgm-ai` is unchanged (imgm-ai-00008).
+- **Live:** `main` = **f2d627a3** (Vercel + Render), `development` = the same code plus these docs. Cloud Run `imgm-ai` is unchanged (imgm-ai-00008).
 - The site is a public beta. **Play Next** and **Discover** are open to every player.
 - **Discover is the newest feature** (built 2026-10-30/31, opened to everyone 2026-10-31): a TikTok-style feed of hot and upcoming games, one trailer per screen (Steam trailers first, YouTube as the fallback), with votes, comments, Want it, one-tap scores and Share. The user shaped the phone layout over many rounds; CLAUDE.md records each decision and what was turned down, so don't re-propose those.
 - **The share picture** (`imgm-client/public/og-image.png?v=2`): the site's real cards fanned (The Witcher 3 Legendary 10 in front, Ghost of Yōtei and Elden Ring) beside "I AM GAMING." and three features (rate and collect, Play Next, Discover). It was drawn by rendering `CollectibleCard` on a temporary Vite page and screenshotting it at 1200x630.
@@ -14,6 +14,7 @@ Read `.claude/CLAUDE.md` first: it explains how everything works. This file says
   - Discover: closed beta (90f0c5b), phones and comments (ea2576b, d23a233), the upright-phone redesign (8a30b31, dd99b87), open to everyone with smooth scrolling (78c1142), a retry for a feed that fails to load (27f11f9).
 - **2026-11-01:** the home page's Discover section (a phone playing the feed), Hot Now / Upcoming as words on computers too, and Safari's 480p-first trailer playlists (the likely cause of trailers freezing on iPhones). **Not yet checked on a real iPhone**: try Discover on mobile data.
 - **2026-11-01:** card backs fit a full checklist (all 11 answers) with no scrollbar (89796c6): the game page card's turn-back arrow sits by the reviewer's name (no "Flip back" row), "Length" and "PC specs" are card-only short names (`cardTitle` in `questOptions.js`), and the answers spread out when there's room (shrinkable spacers in `CardChecklist.jsx`).
+- **2026-11-02:** every trailer's video is emptied when it leaves the page (Safari kept removed ones loading, and an iPhone allows only a few players: the likely reason Upcoming, watched second, barely played on the user's iPhone); Steam trailer lookups that fail are retried after 5 minutes, not an hour; the Steam page card's caption and dots are centred under it. **Waiting on the user's iPhone test** (Upcoming, on mobile data). If it's still bad, the offered next step is anonymous playback reports (start time, stalls, errors) in the server logs.
 - **Migrations since 2026-10-17:** `steam_library`, `steam_shared_games`, `discover_votes`, `discover_comments` (Render runs them on start).
 
 ## The other machine (desktop)
