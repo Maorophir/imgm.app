@@ -33,7 +33,7 @@ import { getDiscoverGames, getDiscoverVotes, nativeTrailerUrl } from '../../lib/
 import { useDiscoverAccess } from '../../hooks/useDiscoverAccess';
 import { usePrefersReducedMotion } from '../../hooks/usePrefersReducedMotion';
 import { clock, releaseLine } from '../discover/feedText';
-import { releaseVideo } from '../discover/releaseVideo';
+import { playsStreamsItself, releaseVideo } from '../discover/trailerVideo';
 import { getRarity } from '../reviewQuest/questOptions';
 import RarityMark from '../RarityMark';
 import { PowerIcon } from '../Logo';
@@ -76,7 +76,7 @@ const feedWord = (on) =>
 
 // A Steam trailer playing on its own: muted, from where the action starts (and back
 // there when it ends), and only while on screen (a video off screen still costs a phone
-// its data). Safari plays the stream itself, from our copy of its playlist (480p first:
+// its data). An iPhone plays the stream itself, from our copy of its playlist (480p first:
 // it starts fast; Steam's own if ours can't be had); other browsers through hls.js,
 // loaded only when it's needed (as in Discover).
 const LoopingTrailer = ({ trailer, still, onProgress }) => {
@@ -91,7 +91,7 @@ const LoopingTrailer = ({ trailer, still, onProgress }) => {
     // Set here too: React doesn't always put `muted` on the element, and a phone only
     // starts a video by itself when it's muted
     el.muted = true;
-    if (el.canPlayType('application/vnd.apple.mpegurl')) el.src = nativeTrailerUrl(trailer.hls);
+    if (playsStreamsItself(el)) el.src = nativeTrailerUrl(trailer.hls);
     else {
       import('hls.js').then(({ default: Hls }) => {
         if (gone || !Hls.isSupported()) return;
