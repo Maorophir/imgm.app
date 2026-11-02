@@ -121,9 +121,10 @@ const HeroCard = ({ mine, samples, waiting, connected }) => {
       </p>
 
       {/* One dot per game: the shown one is a longer ivory bar (lime is the page's one
-          main action), and each is a 44px tap target. Centred under the card on every screen */}
+          main action), and each is a 44px tap target. Centred under the card, nudged right to
+          sit under its middle as the eye reads it */}
       {count > 1 && (
-        <div className="flex justify-center">
+        <div className="flex justify-center translate-x-3">
           {games.map((item, i) => (
             <button
               key={item.gameId ?? item.title}
