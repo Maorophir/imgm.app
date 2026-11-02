@@ -60,6 +60,8 @@ import { getRarity } from '../components/reviewQuest/questOptions';
 import RarityMark from '../components/RarityMark';
 import { clock, releaseLine } from '../components/discover/feedText';
 import { releaseVideo } from '../components/discover/releaseVideo';
+import PlaybackDebug from '../components/discover/PlaybackDebug';
+import { playbackDebugOn } from '../components/discover/debugSwitch';
 import { GHOST_BUTTON, GHOST_BUTTON_SM, PRIMARY_BUTTON, TEXT_LINK } from '../lib/ui';
 
 // "I'm 18 or older", remembered on this device (storage can be off: then it's asked again)
@@ -140,9 +142,10 @@ const startVideo = (el, onSoundBlocked) =>
     el.play().catch(() => {});
   });
 
-// A Steam trailer, streamed from Steam's own video servers (HLS: no ads, no logo).
+// A Steam trailer, streamed from Steam's own video servers (HLS: no ads, no logo), or
+// an Xbox one from Xbox's (a game Steam has none for: the same kind of stream).
 // Safari and iPhones play the stream themselves, from our copy of its playlist (480p
-// first, so it starts fast; Steam's own if ours can't be had); other browsers through
+// first, so it starts fast; the store's own if ours can't be had); other browsers through
 // hls.js, loaded only when it's needed. Sound and pausing are the video's own.
 const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBlocked, onProgress }) => {
   const video = useRef(null);
@@ -161,6 +164,13 @@ const SteamTrailer = ({ trailer, title, muted, paused, seek, onFail, onSoundBloc
           if (!Hls.isSupported()) return onFail();
           hls = new Hls({ capLevelToPlayerSize: true }); // no 1080p stream for a phone
           hls.on(Hls.Events.ERROR, (_, data) => data.fatal && onFail());
+          // A playlist with its smallest stream first (Xbox's: 180p) starts on the one
+          // nearest 480p instead, not 7 blurry seconds; Steam's starts as it is
+          hls.on(Hls.Events.MANIFEST_PARSED, (_, { levels }) => {
+            if (!(levels[0]?.height < 360)) return;
+            const near = levels.reduce((best, level, i) => (Math.abs(level.height - 480) < Math.abs(levels[best].height - 480) ? i : best), 0);
+            hls.startLevel = near;
+          });
           hls.loadSource(trailer.hls);
           hls.attachMedia(el);
         })
@@ -358,20 +368,22 @@ const Slide = ({ game, now, active, next, muted, soundFlash, onFlashDone, paused
   const onProgress = useCallback((time, duration) => setProgress({ time, duration: Number.isFinite(duration) ? duration : 0 }), []);
   const shownTime = scrubbing ?? progress.time;
   const video = useMemo(() => pickVideos(game.videos ?? [], 1)[0] ?? null, [game.videos]);
-  // Steam's trailer first (no ads), YouTube's when there's none or it won't play
+  // A store's trailer first (no ads: Steam's, else Xbox's), YouTube's when there's none
+  // or it won't play
+  const storeTrailer = game.steamTrailer ?? game.xboxTrailer ?? null;
   const [steamFailed, setSteamFailed] = useState(false);
   const [youtubeFailed, setYoutubeFailed] = useState(false);
   const failSteam = useCallback(() => setSteamFailed(true), []);
   const failYoutube = useCallback(() => setYoutubeFailed(true), []);
   const [stuck, setStuck] = useState(false); // a trailer that didn't start by itself
   const [tries, setTries] = useState(0); // taps on it to start it (with the sound already on)
-  const source = game.steamTrailer && !steamFailed ? 'steam' : video && !youtubeFailed ? 'youtube' : null;
+  const source = storeTrailer && !steamFailed ? 'steam' : video && !youtubeFailed ? 'youtube' : null;
   // A game rated for adults waits for the viewer to say they're 18 or older
   const gated = game.mature && !matureOk;
   const art = game.artworks?.[0] ?? game.screenshots?.[0] ?? game.coverUrl;
   // Upright (and not cleared for full screen): the trailer across the top, the art below
   const upright = whole && !bare;
-  const still = game.steamTrailer?.poster ?? game.screenshots?.[0] ?? art;
+  const still = storeTrailer?.poster ?? game.screenshots?.[0] ?? art;
   const score = game.ratings?.imgm;
   const rarity = typeof score === 'number' && game.reviewCount > 0 ? getRarity(score) : null;
   const saved = backlog?.has(game.id);
@@ -445,8 +457,8 @@ const Slide = ({ game, now, active, next, muted, soundFlash, onFlashDone, paused
           at once; it's the same player when its game comes on screen) */}
       {(active || next) && !gated && source === 'steam' && (
         <SteamTrailer
-          trailer={game.steamTrailer}
-          title={`${game.title}: ${game.steamTrailer.name}`}
+          trailer={storeTrailer}
+          title={`${game.title}: ${storeTrailer.name}`}
           muted={muted}
           paused={paused || !active}
           seek={seek}
@@ -727,6 +739,7 @@ function Discover() {
     return FEEDS.some((f) => f.key === named) ? named : 'hot';
   });
   const [lists, setLists] = useState({}); // feed -> games ([] if it couldn't load)
+  const [debug] = useState(playbackDebugOn); // ?debug=1: what the trailers are doing, over the page
   const [active, setActive] = useState(0);
   const [muted, setMuted] = useState(true);
   // The speaker that pops up in the middle when a tap turns the sound on (only then: it's
@@ -1144,6 +1157,8 @@ function Discover() {
           Swipe for more <ChevronDown className="w-4 h-4" aria-hidden="true" />
         </button>
       )}
+
+      {debug && <PlaybackDebug />}
     </main>
   );
 }

@@ -42,8 +42,9 @@ export const searchGames = (query, signal) =>
 export const getFeaturedGames = (signal) => fetchJson('/api/games/featured', { signal });
 // Discover's feeds, one game per screen with its trailer: 'hot' | 'upcoming'
 export const getDiscoverGames = (feed, signal) => fetchJson(`/api/games/discover?feed=${feed}`, { signal });
-// A Steam trailer's playlist for browsers that play streams themselves (Safari, every
-// iPhone): our copy lists 480p first, so it starts fast (the video is still Steam's)
+// A Steam or Xbox trailer's playlist for browsers that play streams themselves (Safari,
+// every iPhone): our copy lists 480p first, so it starts fast and sharp (the video is
+// still the store's)
 export const nativeTrailerUrl = (hls) => `${API_BASE}/api/discover/stream.m3u8?src=${encodeURIComponent(hls)}`;
 // Discover's thumbs up / down: { [gameId]: { up, down, mine } } for these games, and a vote
 // (1 up, -1 down, 0 to take it back) → that game's new { up, down, mine }
