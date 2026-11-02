@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { getSessionUser, requireUser } from '../lib/session.js';
 import { canUseDiscover, discoverEnabled } from '../lib/config.js';
-import { getSafariPlaylist, isSteamPlaylist } from '../services/steamTrailers.js';
+import { getSafariPlaylist, isTrailerPlaylist } from '../services/steamTrailers.js';
 import {
   getVotes, setVote, getComments, getReplies, postComment, deleteComment, likeComment, reportComment,
 } from '../controllers/discoverController.js';
@@ -68,16 +68,16 @@ router.get('/access', async (req, res) => {
   res.json({ enabled: Boolean(user && canUseDiscover(user.id)) });
 });
 
-// GET /api/discover/stream.m3u8?src=<a Steam trailer's playlist> — the copy Safari plays,
+// GET /api/discover/stream.m3u8?src=<a Steam or Xbox trailer's playlist> — the copy Safari plays,
 // 480p first (services/steamTrailers.js says why)
 router.get('/stream.m3u8', playlistLimiter, async (req, res) => {
   const src = String(req.query.src ?? '');
-  if (!isSteamPlaylist(src)) return res.status(400).json({ error: 'Not a Steam trailer' });
+  if (!isTrailerPlaylist(src)) return res.status(400).json({ error: 'Not a store trailer' });
   try {
     const text = await getSafariPlaylist(src);
     res.set({ 'Content-Type': 'application/vnd.apple.mpegurl', 'Cache-Control': 'public, max-age=3600' }).send(text);
   } catch (error) {
-    console.error('Steam trailer playlist failed:', error.message);
+    console.error('Trailer playlist failed:', error.message);
     res.status(502).json({ error: "Couldn't get the trailer" });
   }
 });
