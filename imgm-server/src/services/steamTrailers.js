@@ -3,17 +3,20 @@
  * from Steam's own video servers (HLS), so the feed plays it without YouTube's ads,
  * logo or title bar. Also what Steam says about the game's age: 17+, or adult content.
  *
- * Steam's store data (store.steampowered.com/api/appdetails) needs no key, but it's
- * shared by everyone, so: each game is looked up once a day, a few at a time, and a
- * game Steam won't tell us about just keeps its YouTube trailer. A failed lookup is
- * tried again after 5 minutes: Steam sometimes turns this server's address away, and
- * after a restart (a release) every game is looked up at once, so an hour's wait left
- * the top games on YouTube for that long.
+ * The games come from Steam's Web API (IStoreBrowseService/GetItems, no key), up to 50
+ * in one request. The store's own appdetails, one request per game, turned this
+ * server away: on Render, no Upcoming game got its Steam trailer (all 40 played
+ * YouTube, the heavy player iPhones choke on), while a home connection got 37.
+ * Each game is looked up once a day, and a game Steam won't tell us about just keeps
+ * its YouTube trailer. A failed lookup is tried again after 5 minutes, keeping what
+ * Steam said last time until then.
  */
-const STORE_API = 'https://store.steampowered.com/api/appdetails';
+const STORE_API = 'https://api.steampowered.com/IStoreBrowseService/GetItems/v1/';
+const VIDEOS = 'https://video.akamai.steamstatic.com/store_trailers/';
+const PICTURES = 'https://shared.akamai.steamstatic.com/store_item_assets/';
 const FOUND_FOR = 24 * 60 * 60 * 1000;
 const FAILED_FOR = 5 * 60 * 1000;
-const AT_ONCE = 6;
+const PER_REQUEST = 50; // ~1.8 KB of address
 const TIMEOUT = 8_000;
 // Steam's content descriptors for adult sexual content (3 adult only, 4 frequent nudity)
 const ADULT_DESCRIPTORS = new Set([3, 4]);
@@ -44,50 +47,68 @@ const pickMovie = (movies) =>
 
 const cache = new Map(); // appid -> { expiresAt, info: { trailer, mature } | null }
 
-// One app's trailer ({ name, hls, poster }) and age, or null when Steam has none to give
-const lookUp = async (appid) => {
-  const response = await fetch(`${STORE_API}?appids=${appid}&filters=basic,movies`, {
-    headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; IMGM/1.0; +https://imgm.app)' },
-    signal: AbortSignal.timeout(TIMEOUT),
-  });
-  if (!response.ok) throw new Error(`Steam's store answered ${response.status}`);
-  const data = (await response.json())?.[appid]?.data;
-  if (!data) return null;
-  const movie = pickMovie(data.movies ?? []);
-  const descriptors = data.content_descriptors?.ids ?? [];
+// A GetItems trailer as pickMovie reads it (the shape of the store's own movie list).
+// Steam's highlights are the ones its store page shows first.
+const asMovie = (trailer, highlight) => {
+  const hls = trailer.adaptive_trailers?.find((a) => a.encoding === 'hls_h264')?.cdn_path;
   return {
-    trailer: movie ? { name: movie.name ?? 'Trailer', hls: movie.hls_h264, poster: movie.thumbnail ?? null } : null,
-    mature: Number(data.required_age) >= 17 || descriptors.some((id) => ADULT_DESCRIPTORS.has(id)),
+    name: trailer.trailer_name,
+    hls_h264: hls ? `${VIDEOS}${hls}` : null,
+    thumbnail: trailer.screenshot_medium && trailer.trailer_url_format
+      ? `${PICTURES}${trailer.trailer_url_format.replace('${FILENAME}', trailer.screenshot_medium)}`
+      : null,
+    highlight,
   };
 };
 
-const cachedLookUp = async (appid) => {
-  const known = cache.get(appid);
-  if (known && Date.now() < known.expiresAt) return known.info;
-  try {
-    const info = await lookUp(appid);
-    cache.set(appid, { expiresAt: Date.now() + FOUND_FOR, info });
-    return info;
-  } catch (error) {
-    console.error(`Steam trailer lookup for app ${appid} failed:`, error.message);
-    cache.set(appid, { expiresAt: Date.now() + FAILED_FOR, info: null });
-    return null;
-  }
+// One store item's trailer ({ name, hls, poster }) and age, or null when Steam has none
+// to give. The US store, so the English and ESRB versions of a trailer, wherever this
+// server is.
+const infoOf = (item) => {
+  if (item?.success !== 1) return null;
+  const { highlights = [], other_trailers: others = [] } = item.trailers ?? {};
+  const movie = pickMovie([...highlights.map((t) => asMovie(t, true)), ...others.map((t) => asMovie(t, false))]);
+  return {
+    trailer: movie ? { name: movie.name ?? 'Trailer', hls: movie.hls_h264, poster: movie.thumbnail } : null,
+    mature: Number(item.game_rating?.required_age) >= 17 || (item.content_descriptorids ?? []).some((id) => ADULT_DESCRIPTORS.has(id)),
+  };
+};
+
+// Several apps at once: Map(appid -> info | null)
+const lookUp = async (appids) => {
+  const input = {
+    ids: appids.map((appid) => ({ appid })),
+    context: { language: 'english', country_code: 'US' },
+    data_request: { include_trailers: true, include_ratings: true },
+  };
+  const response = await fetch(`${STORE_API}?input_json=${encodeURIComponent(JSON.stringify(input))}`, {
+    headers: { Accept: 'application/json', 'User-Agent': 'Mozilla/5.0 (compatible; IMGM/1.0; +https://imgm.app)' },
+    signal: AbortSignal.timeout(TIMEOUT),
+  });
+  if (!response.ok) throw new Error(`Steam answered ${response.status}`);
+  const items = (await response.json())?.response?.store_items;
+  if (!Array.isArray(items)) throw new Error('Steam sent no store items');
+  return new Map(items.map((item) => [item.appid ?? item.id, infoOf(item)]));
 };
 
 /**
- * Steam's trailer and age for each app id, a few at a time: Map(appid -> { trailer,
- * mature } | null). Never throws: what Steam can't tell, the feed does without.
+ * Steam's trailer and age for each app id: Map(appid -> { trailer, mature } | null).
+ * Never throws: what Steam can't tell, the feed does without.
  */
 export const getSteamTrailers = async (appids) => {
   const unique = [...new Set(appids.filter(Boolean))];
-  const found = new Map();
-  for (let i = 0; i < unique.length; i += AT_ONCE) {
-    const batch = unique.slice(i, i + AT_ONCE);
-    const infos = await Promise.all(batch.map(cachedLookUp));
-    batch.forEach((appid, j) => found.set(appid, infos[j]));
+  const missing = unique.filter((appid) => !(Date.now() < cache.get(appid)?.expiresAt));
+  for (let i = 0; i < missing.length; i += PER_REQUEST) {
+    const batch = missing.slice(i, i + PER_REQUEST);
+    try {
+      const infos = await lookUp(batch);
+      batch.forEach((appid) => cache.set(appid, { expiresAt: Date.now() + FOUND_FOR, info: infos.get(appid) ?? null }));
+    } catch (error) {
+      console.error(`Steam trailer lookup for ${batch.length} apps failed:`, error.message);
+      batch.forEach((appid) => cache.set(appid, { expiresAt: Date.now() + FAILED_FOR, info: cache.get(appid)?.info ?? null }));
+    }
   }
-  return found;
+  return new Map(unique.map((appid) => [appid, cache.get(appid)?.info ?? null]));
 };
 
 // ── Safari's copy of a trailer's playlist ──
