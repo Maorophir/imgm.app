@@ -4,6 +4,7 @@ the checker (plain code that enforces the rules a prompt can only ask for).
 """
 
 import logging
+import os
 import re
 import time
 import unicodedata
@@ -12,9 +13,11 @@ from langchain_ollama import ChatOllama
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableConfig
 from langgraph.graph import END
+from langsmith import traceable
+from typesafe_sdk import RetryPolicy, TypeSafeClient
 
-from imgm_ai.agent.prompts import CHAT_PROMPT, FORMAT_PROMPT, SCREEN_PROMPT, build_system_prompt
-from imgm_ai.agent.schemas import Recommendations, Screening
+from imgm_ai.agent.prompts import CHAT_PROMPT, FIRST_CHAT_PROMPT, FORMAT_PROMPT, SCREEN_PROMPT, build_system_prompt
+from imgm_ai.agent.schemas import ROUTE_QUESTION, LANGUAGE_QUESTION, Recommendations, Screening
 from imgm_ai.agent.state import (
     CHECK_FEEDBACK,
     GAME_LENGTH_TEXT,
@@ -90,10 +93,24 @@ screener = get_model(
     timeout=15,  # a one-word decision, normally ~1s
 )
 FIND, CHAT_ROUTE, OFF_TOPIC = "find", "chat", "off_topic"
-DEFAULT_DECLINE = (
-    "I can only help with games. Tell me what you're in the mood to play, and I'll find "
-    "you something great."
+
+# The off-topic reply, fixed (no model call), in the player's language. English for any
+# language not listed here.
+DECLINES = {
+    "english": "I can only help with games. Tell me what you're in the mood to play, and "
+    "I'll find you something great.",
+    "hebrew": "אני כאן רק בשביל משחקים. ספרו לי מה מתחשק לכם לשחק, ואמצא לכם משהו מעולה.",
+}
+DEFAULT_DECLINE = DECLINES["english"]
+
+# Jev (TypeSafe) screens first: ~0.2s, against Gemini's 1-3s. One quick try and no
+# retries, because Gemini is the fallback. Without a key, Gemini screens alone.
+jev = (
+    TypeSafeClient(timeout=3, retry=RetryPolicy(max_retries=0))
+    if os.getenv("TYPESAFE_API_KEY", "").strip()
+    else None
 )
+JEV_SURE = 0.7  # below this, Gemini decides (clear answers came 0.74-1.00; an unsure one 0.56)
 
 
 def searched_before(messages: list) -> bool:
@@ -105,6 +122,23 @@ def searched_before(messages: list) -> bool:
     return any(isinstance(m, ToolMessage) and m.name == "search_games" for m in earlier)
 
 
+@traceable(name="jev_screen")
+def jev_screen(latest: str, earlier: str | None) -> tuple[str, str] | None:
+    """Jev's verdict on a message: (route, language) when it's sure, else None (Gemini decides)."""
+    if jev is None:
+        return None
+    state = {"latest message": latest, "earlier message": earlier or "none: this is their first message"}
+    try:
+        result = jev.system_one(state=state, questions={"route": ROUTE_QUESTION, "language": LANGUAGE_QUESTION})
+    except Exception:
+        log.warning("Jev failed; Gemini screens instead", exc_info=True)
+        return None
+    route = result.choices["route"]
+    if route.confidence < JEV_SURE:
+        return None
+    return route.choice, result.choices["language"].choice
+
+
 def screen_question(state: RecommenderState) -> dict:
     """The screen node, before the agent: what does the latest message need?
 
@@ -114,35 +148,39 @@ def screen_question(state: RecommenderState) -> dict:
                  no search, the picks stay as they are
       off_topic  "I only help with games", and the run ends there
 
-    Code makes the calls that must never go wrong: a card button always finds, and a
-    chat with no picks yet always finds (there's nothing to chat about). If the screen
-    itself fails, the message is searched for: a real player is never blocked.
+    Jev decides first (jev_screen), and Gemini when Jev is unsure or down. Code makes the
+    call that must never go wrong: a card button always finds. A chat before any picks
+    ("hi!") stays a chat: the chat node then asks what they'd like to play, instead of
+    five games nobody asked for. If the screen itself fails, the message is searched for:
+    a real player is never blocked.
     """
     if state.get("force_find"):
         return {"route": FIND}
     questions = [m.text for m in state["messages"] if is_player_question(m)]
-    prompt = SCREEN_PROMPT.format(
-        latest=questions[-1] if questions else "",
-        earlier=questions[-2] if len(questions) > 1 else "None: this is their first message.",
-    )
-    try:
-        result = screener.invoke([HumanMessage(content=prompt)])
-    except Exception:
-        log.warning("The screen failed; searching as usual", exc_info=True)
-        return {"route": FIND}
-    verdict = result["parsed"]
-    if verdict is None:  # not the form: read a plain "no" / "chat" answer instead
-        raw = getattr(result["raw"], "text", "").strip().lower()
-        route = OFF_TOPIC if raw.startswith(("no", "off")) else CHAT_ROUTE if raw.startswith("chat") else FIND
-        verdict = Screening(route=route)
+    latest = questions[-1] if questions else ""
+    earlier = questions[-2] if len(questions) > 1 else None
 
-    route = verdict.route
-    if route == CHAT_ROUTE and not searched_before(state["messages"]):
-        route = FIND  # nothing has been recommended yet: this IS the request
+    verdict = jev_screen(latest, earlier)  # (route, language), or None when Gemini should decide
+    route, language = verdict or (None, "english")
+    reply = DECLINES.get(language, DEFAULT_DECLINE)
+    if route is None:
+        prompt = SCREEN_PROMPT.format(latest=latest, earlier=earlier or "None: this is their first message.")
+        try:
+            result = screener.invoke([HumanMessage(content=prompt)])
+        except Exception:
+            log.warning("The screen failed; searching as usual", exc_info=True)
+            return {"route": FIND}
+        verdict = result["parsed"]
+        if verdict is None:  # not the form: read a plain "no" / "chat" answer instead
+            raw = getattr(result["raw"], "text", "").strip().lower()
+            route = OFF_TOPIC if raw.startswith(("no", "off")) else CHAT_ROUTE if raw.startswith("chat") else FIND
+            verdict = Screening(route=route)
+        route, reply = verdict.route, verdict.reply
+
     if route != OFF_TOPIC:
         return {"route": route}
 
-    text = verdict.reply.strip()
+    text = reply.strip()
     if len(text) < 20:  # a weak model sometimes writes just "no": use the standard line
         text = DEFAULT_DECLINE
     return {"route": OFF_TOPIC, "messages": [AIMessage(content=text, name=OFF_TOPIC)]}
@@ -162,9 +200,11 @@ def chat_reply(state: RecommenderState) -> dict:
     """The chat node: a short answer to a follow-up about the picks, without searching.
 
     It sees the conversation like the agent does (past turns condensed), so it knows
-    the games it recommended and why. The picks themselves stay as they were.
+    the games it recommended and why. The picks themselves stay as they were. Before
+    any picks ("hi!"), it answers and asks what they'd like to play (FIRST_CHAT_PROMPT).
     """
-    response = chatter.invoke([SystemMessage(content=CHAT_PROMPT)] + model_context(state["messages"]))
+    prompt = CHAT_PROMPT if searched_before(state["messages"]) else FIRST_CHAT_PROMPT
+    response = chatter.invoke([SystemMessage(content=prompt)] + model_context(state["messages"]))
     return {"messages": [AIMessage(content=response.text, name=CHAT_REPLY, id=response.id)]}
 
 
