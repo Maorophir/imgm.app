@@ -1,10 +1,9 @@
-# Handoff (2026-11-03, after the iPhone fixes and the README draft)
+# Handoff (2026-11-03, after Jev became the screen node)
 
 Read `.claude/CLAUDE.md` first: it explains how everything works. This file says where things stand.
 
 ## Where things are
-- **Live:** `main` = **20c2ca9d** (Vercel + Render), `development` = the same code plus these docs. Cloud Run `imgm-ai` is unchanged (imgm-ai-00008).
-- **Not merged:** `feature/readme` (pushed): the new README, waiting for the user's look (see Next).
+- **Live:** `main` = **db5f65b9** (Vercel + Render), `development` = the same code plus these docs. Cloud Run `imgm-ai` redeployed 2026-11-03 with Jev (the user ran it; secret `imgm-ai-typesafe-key`).
 - The site is a public beta. **Play Next** and **Discover** are open to every player.
 - **Discover is the newest feature** (built 2026-10-30/31, opened to everyone 2026-10-31): a TikTok-style feed of hot and upcoming games, one trailer per screen (Steam trailers first, then Xbox, YouTube as the last resort), with votes, comments, Want it, one-tap scores and Share. The user shaped the phone layout over many rounds; CLAUDE.md records each decision and what was turned down, so don't re-propose those.
 - **The share picture** (`imgm-client/public/og-image.png?v=2`): the site's real cards fanned (The Witcher 3 Legendary 10 in front, Ghost of Yōtei and Elden Ring) beside "I AM GAMING." and three features (rate and collect, Play Next, Discover). It was drawn by rendering `CollectibleCard` on a temporary Vite page and screenshotting it at 1200x630.
@@ -21,6 +20,10 @@ Read `.claude/CLAUDE.md` first: it explains how everything works. This file says
   - **Xbox trailers** as the second source (7436bd22, `xboxTrailers.js`): GTA VI plays Xbox's trailer. Only `cdn.trailers.xboxservices.com` (Microsoft's other host refuses by location).
   - **Trailers start on iPhones** (100cab74): play() as soon as a video has its address (an iPhone loads nothing until play(); waiting for a frame left every trailer paused). hls.js everywhere but iPhones (Chrome on a computer plays HLS itself but starts on the smallest stream), and Xbox trailers start at 1080p on a computer.
   - **Sound stays on from game to game on iPhones** (20c2ca9d): 4 shared players kept for the visit, unlocked by every tap (`trailerVideo.js`). The user saw trailers play on the iPhone after 100cab74 (14 of 14 in the panel); **the sound fix is waiting on the user's iPhone test.**
+- **2026-11-03**, released:
+  - **The new README** (d2d3cd9d): animations of the quest, the card and Discover, two Mermaid diagrams, screenshots, problems worth reading about (improved by another session). CLAUDE.md → Conventions → The README says how the images were made.
+  - **Jev (TypeSafe) screens Play Next messages** (db5f65b9 + the Cloud Run redeploy): route and language in one call, ~0.2s; Gemini decides under 0.7 confidence, on a failure or without a key. Off-topic replies are fixed lines (English, Hebrew). "hello" before any picks gets a welcome and a question, not five games. The user wrote steps 1–2 of the agent code; Claude applied the fixes when asked. Production smoke test passed: hello 6.7s (welcome, no picks), off topic 0.4–0.5s, a real request 5 good picks.
+  - **The Privacy Policy** names TypeSafe (Play Next messages, the text only) and Microsoft's Xbox (trailers), effective November 3, 2026.
 - **Migrations since 2026-10-17:** `steam_library`, `steam_shared_games`, `discover_votes`, `discover_comments` (Render runs them on start).
 
 ## The other machine (laptop)
@@ -38,15 +41,13 @@ Work on 2026-11-02/03 was on the desktop, which is up to date. The laptop needs 
 - Shared Steam games played before connecting (and not in the last two weeks) can't be fetched: Steam's Families API needs a user token.
 
 ## Next
-1. **The README** (`feature/readme`, [on GitHub](https://github.com/Maorophir/imgm.app/blob/feature/readme/README.md)): the user reviews it. Open: a Play Next picture (the user's screenshot of a real answer, or a local Gemini run if they say so), and whether to upload MP4s in GitHub's editor for inline video (the scratch recordings). Then merge to `development`; it reaches the front page with the next release. CLAUDE.md → Conventions → The README says how the images were made.
+1. **Jev suggesting the agent's path** (the user's idea, next for the agent): Jev answers a few questions about a find request (does it name a game, is it about new or upcoming games, does it set limits), and the agent gets hints (or the code calls `get_game_family` itself when a game is named), saving a model turn. Jev suggests, the model decides, the check enforces; measure it in traces (agent turns, time, pick quality). The user writes it, one small step at a time. Other Jev ideas: a fit judge in the check, Discover comment moderation (Express side), review summary themes.
 2. **Watch Discover now that it's open:** comment reports arriving at `FEEDBACK_EMAIL` (check it's set on Render), iPhone sound, the paused-YouTube panel, Render's logs for Steam lookup failures. Ideas the user liked for later: a "For you" order from votes and scores (Play Next reading them is agent code: the user writes it), a "guess the game" card every few clips.
 3. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
-4. **Jev (TypeSafe) as the screen node.** The user implements it, with Claude's help.
-   - Earlier test: 36/36 accuracy, ~0.25s vs Gemini's 0.6–1s.
-   - Plan: pin `typesafe-sdk` 0.7.5, keep a Gemini fallback, add `TYPESAFE_API_KEY` as a Cloud Run secret (`--set-secrets`), and add TypeSafe to the Privacy Policy.
-5. **Branch cleanup** (the user runs it: Claude's branch deletions are blocked). Every local feature/hotfix branch is merged into `main`:
+4. **Branch cleanup** (the user runs it: Claude's branch deletions are blocked). Every local feature/hotfix branch is merged into `main`:
    ```bash
-   git branch --merged origin/main --format='%(refname:short)' | grep -vE '^(main|development)$' | xargs git branch -d   # also clears the 2026-11-02 branches (discover-release-video, steam-dots, steam-trailers-batch, discover-debug, discover-xbox, iphone-play, shared-video, remove-debug)
+   git branch --merged origin/main --format='%(refname:short)' | grep -vE '^(main|development)$' | xargs git branch -d   # also clears the 2026-11-02/03 branches (discover-release-video, steam-dots, steam-trailers-batch, discover-debug, discover-xbox, iphone-play, shared-video, remove-debug, readme, jev-screen, privacy-typesafe)
+   git push origin --delete feature/readme   # merged; the remote is `imgm.app` on the desktop
    git push origin --delete feature/sort-your-picks feature/steam-connect   # the remote is `imgm.app` on the desktop
    # Not merged, delete only if unwanted: The-MVP-Race (local, Sept), feature/style-options (remote, the style switcher)
    ```
