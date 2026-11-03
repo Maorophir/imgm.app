@@ -12,7 +12,7 @@ import { TEXT_LINK } from '../lib/ui';
 const Privacy = () => (
   <LegalPage
     title="Privacy Policy"
-    effective="October 31, 2026"
+    effective="November 3, 2026"
     intro="This policy explains what IMGM (I Am Gaming, imgm.app) collects about you, why, who helps us run the site, and the choices you have. We keep it as short and plain as we can."
   >
     <S title="1. Who we are">
@@ -47,7 +47,7 @@ const Privacy = () => (
     </S>
 
     <S title="5. AI features">
-      <p>When you use Play Next, your question, your quest answers and your IMGM reviews are sent to Google's Gemini AI to pick games for you. AI summaries are made from public reviews. Profile pictures are checked by Google Cloud Vision before they're shown, to keep IMGM safe. We send only what's needed for the answer: never your email address or real name. Some requests use Google's free AI tier, under which Google may use the data to improve its services.</p>
+      <p>When you use Play Next, your question, your quest answers and your IMGM reviews are sent to Google's Gemini AI to pick games for you. Your latest message (and the one before it) is first sent to TypeSafe's Jev AI, which only sorts it: a request for games, a question about them, or off topic. AI summaries are made from public reviews. Profile pictures are checked by Google Cloud Vision before they're shown, to keep IMGM safe. We send only what's needed for the answer: never your email address or real name. Some requests use Google's free AI tier, under which Google may use the data to improve its services.</p>
     </S>
 
     <S title="6. Who helps us run IMGM">
@@ -56,9 +56,10 @@ const Privacy = () => (
         <li>Vercel (website hosting and anonymous analytics) and Render (server hosting);</li>
         <li>Neon (database);</li>
         <li>Google Cloud (Gemini AI, Cloud Vision, and the AI service's hosting) and Google sign-in;</li>
+        <li>TypeSafe (Jev AI, which sorts Play Next messages: it gets the message text only, never your email address, name or account);</li>
         <li>Resend (account emails);</li>
         <li>IGDB/Twitch (game information; we don't send them your personal data);</li>
-        <li>YouTube (Google) and Valve's Steam, for game trailers: when a trailer plays, your browser loads it from their servers, which see your IP address. We send them nothing about you; YouTube's trailers play in its privacy-enhanced mode;</li>
+        <li>YouTube (Google), Valve's Steam and Microsoft's Xbox, for game trailers: when a trailer plays, your browser loads it from their servers, which see your IP address. We send them nothing about you; YouTube's trailers play in its privacy-enhanced mode;</li>
         <li>Valve, only if you connect Steam (Steam sign-in, and your Steam library). You log in on Steam's own site, under <a href="https://store.steampowered.com/privacy_agreement/" target="_blank" rel="noopener noreferrer" className={`font-medium text-white ${TEXT_LINK}`}>Valve's privacy policy</a>; we send Valve only your Steam ID, to ask for your games.</li>
       </ul>
       {/* TODO(owner): name the country where IMGM's database (Neon) stores data, e.g.
