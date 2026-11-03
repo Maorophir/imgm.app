@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="840" height="96" viewBox="0 0 840 96" role="img" aria-label="IMGM's rarity ladder: Junk 1 to 2, Common 3 to 4, Uncommon 5, Rare 6 to 7, Epic 8 to 9, Legendary 10">
+  <rect width="840" height="96" rx="10" fill="#100f0d"/>
+  <g font-family="Inter, Segoe UI, Helvetica, Arial, sans-serif" text-anchor="middle">
+    <g transform="translate(70 0)">
+      <rect x="-56" y="62" width="112" height="6" rx="3" fill="#8a8378"/>
+      <text y="36" font-size="17" font-weight="600" fill="#8a8378">Junk</text>
+      <text y="54" font-size="12" fill="#8a8378">1–2</text>
+    </g>
+    <g transform="translate(210 0)">
+      <rect x="-56" y="62" width="112" height="6" rx="3" fill="#d6cfc2"/>
+      <text y="36" font-size="17" font-weight="600" fill="#d6cfc2">Common</text>
+      <text y="54" font-size="12" fill="#8a8378">3–4</text>
+    </g>
+    <g transform="translate(350 0)">
+      <rect x="-56" y="62" width="112" height="6" rx="3" fill="#5dbe94"/>
+      <text y="36" font-size="17" font-weight="600" fill="#5dbe94">Uncommon</text>
+      <text y="54" font-size="12" fill="#8a8378">5</text>
+    </g>
+    <g transform="translate(490 0)">
+      <rect x="-56" y="62" width="112" height="6" rx="3" fill="#6b9ae8"/>
+      <text y="36" font-size="17" font-weight="600" fill="#6b9ae8">Rare</text>
+      <text y="54" font-size="12" fill="#8a8378">6–7</text>
+    </g>
+    <g transform="translate(630 0)">
+      <rect x="-56" y="62" width="112" height="6" rx="3" fill="#b276d6"/>
+      <text y="36" font-size="17" font-weight="600" fill="#b276d6">Epic</text>
+      <text y="54" font-size="12" fill="#8a8378">8–9</text>
+    </g>
+    <g transform="translate(770 0)">
+      <rect x="-56" y="62" width="112" height="6" rx="3" fill="#e2b65e"/>
+      <text y="36" font-size="17" font-weight="600" fill="#e2b65e">Legendary</text>
+      <text y="54" font-size="12" fill="#8a8378">10</text>
+    </g>
+  </g>
+</svg>
