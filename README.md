@@ -42,13 +42,13 @@
   <tr>
     <td width="40%" align="center"><img src="docs/readme/quest.webp" alt="The review quest on a phone: drag the stars to 9 (Epic), pick your setup and the game's vibe, write a line, and the review becomes a purple Epic card." width="300"></td>
     <td>
-      <p>A review on IMGM isn't a form. It's a <b>quest</b>: up to nine quick screens, every one skippable.</p>
+      <p>A review on IMGM isn't a form. It's a <b>quest</b>: nine quick screens, and only the rating is required.</p>
       <ul>
         <li><b>Your rating:</b> tap or drag across ten stars.</li>
         <li><b>Your setup:</b> platform, hours, finished or still playing, solo or co-op.</li>
         <li><b>The vibe:</b> cozy, chaotic, atmospheric, rage-inducing…</li>
-        <li><b>When did it get good?</b> Instantly, or after many hours.</li>
-        <li><b>The checklist:</b> graphics, gameplay, audio, story, difficulty, grind, length, PC specs, price, in plain words like <i>"One more match" (it's 4 AM)</i>.</li>
+        <li><b>When did it get good?</b> Instantly, after a few hours, or never.</li>
+        <li><b>The checklist:</b> graphics, gameplay, audio, story, difficulty, grind, length, bugs, PC specs, price and replay, in plain words like <i>"One more match" (it's 4 AM)</i>.</li>
         <li><b>It's like ___ meets ___</b>, pros and cons, best and worst moment, and final words.</li>
       </ul>
       <p>Every screen earns XP toward your level, and reviews unlock badges. In a hurry? <b>Quick review</b> is just the score.</p>
@@ -65,7 +65,7 @@
       <p><img src="docs/readme/rarity.svg" alt="The rarity ladder: Junk 1–2, Common 3–4, Uncommon 5, Rare 6–7, Epic 8–9, Legendary 10" width="100%"></p>
       <ul>
         <li>The card tilts toward your pointer, with a soft glare across it.</li>
-        <li><b>Flip it</b> and its back is <b>the verdict</b>: every checklist answer on a meter in the rarity colours.</li>
+        <li><b>Flip it</b> and its back is the verdict: every checklist answer on a meter in the rarity colours.</li>
         <li>Pick the art from the game's covers and screenshots, then <b>share</b> it as a picture.</li>
         <li>A game's IMGM score is its players' average, with the same rarity.</li>
       </ul>
@@ -103,7 +103,8 @@ It's a **LangGraph** agent in Python, with its own tools:
 flowchart LR
     Q([Your question]) --> S{screen}
     S -- find games --> A[agent]
-    S -- just chatting --> C([a short reply])
+    S -- about your picks --> C([a reply, no search])
+    S -- off topic --> X([a polite no])
     A <--> T[[tools]]
     A --> F[format<br/>5 structured picks]
     F --> K{check}
@@ -116,13 +117,13 @@ flowchart LR
 | `get_my_taste` | Your reviews: what you loved, what you didn't, the vibes you pick. |
 | `search_imgm_reviews` | Searches every IMGM review by meaning (RAG over **pgvector**). |
 | `search_games` | Searches IGDB's catalogue through the IMGM server. |
-| `get_game_profile` | One game in depth: genres, modes, length, IMGM score. |
-| `get_game_family` | A game's series and its studio's similar games, so new releases aren't missed. |
+| `get_game_profile` | What IMGM players think of one game: its score, top vibes, when it gets good, the checklist verdicts. |
+| `get_game_family` | A game's series, its studio's games that play like it, and similar games, so new releases aren't missed. |
 | `search_web` | A web search (Tavily) for what's too new for the rest, at most twice an answer. |
 
 **The prompt asks, the code enforces.** Every hard rule lives in plain Python in [`check_answer()`](imgm-ai/src/imgm_ai/agent/nodes.py): five different games, each one found by a real search, nothing you've already reviewed or turned down, playable on your platforms, no longer than you asked for, never the game you named, at most one from its series, and exactly one Best Pick. A broken rule sends the draft back to the agent to fix. The agent never sees your user id as something it could change: its tools read it from the graph's config, so a prompt injection can't make it look at someone else's reviews.
 
-Then you **sort your picks**: mark the ones you've played or don't want, and one search replaces them all.
+The answer comes as **shelves**: your five picks and a few honorable mentions, grouped by what you'd want from them, and *If you only play one* at the end. Then you **sort your picks**: mark the ones you've played or don't want, and one search replaces just those.
 
 ## And the rest of IMGM
 
@@ -165,16 +166,35 @@ flowchart LR
 | Database | PostgreSQL with pgvector | Neon |
 
 <details>
-<summary><b>A few problems worth reading about</b></summary>
+<summary><b>Problems worth reading about</b></summary>
 
 <br>
 
-- **Steam login without a Steam SDK.** Steam speaks OpenID 2.0, which Better Auth doesn't, so [`steamAuth.js`](imgm-server/src/lib/steamAuth.js) is a Better Auth plugin written for it: connect, log in, sign up (Steam gives no email, so it asks for one), and disconnect. Every check on Steam's answer is in one place.
-- **Trailers without YouTube's ads.** Discover asks Steam's Web API for a whole feed's trailers in one request (one request per game got Render's address turned away), and Microsoft's store catalog for games that aren't on Steam. Both stream HLS from their own servers.
-- **iPhones and video.** Safari starts a stream on the first quality it's listed with, and Steam lists 1080p first: the server serves a copy of the playlist with 480p first (the video still comes from Steam). An iPhone loads nothing until `play()`, and only plays sound from a `<video>` a tap once started: Discover starts every trailer at once and keeps four shared players that the first tap unlocks.
+**Making an AI agent follow the rules**
+
+- **The prompt asks, the code enforces.** A model will happily recommend a game you've already played, one that isn't on your console, or the very game you asked about. So every hard rule is plain Python in [`check_answer()`](imgm-ai/src/imgm_ai/agent/nodes.py), which reads the real search results and sends a broken answer back with the exact problems, up to two rounds. The player never saw that draft, so the fixed answer is told to read as a first answer, never *"I swapped out…"*.
+- **It missed the obvious next game.** Asked for games like *It Takes Two*, the agent never found *Split Fiction*, the same studio's 2025 game: it was newer than the model, and a "sequel" web search came back with noise. Now a tool asks IGDB for the game's series and its studio's other games, keeping a studio game only if it shares a genre *and* a game mode (FromSoftware also made a Hello Kitty game). The check then allows one game from the series and three from the whole family, so the other picks are discoveries.
+- **Your id is never the model's to choose.** The tools read the player from LangGraph's config, which the model can't see or set, so no prompt injection can open someone else's reviews.
+- **What the model never sees, it can't repeat.** Swearing in review quotes is masked before the agent reads them, so it can't quote it back to you.
+- **AI summaries that can't make things up.** A game's *what players think* block gets its facts from code (counts, majority answers); the model only writes the words, and a theme survives only if two real reviews back it. A broken answer gets one retry with the exact problems, and if that fails too the old summary stays.
+
+**Running on other people's servers**
+
+- **Two Googles that reject each other's work.** Gemini 3 signs every tool call it makes, and Vertex AI and AI Studio each refuse the other's signatures (*"Invalid thought signature"*). When the fallback chain switches system in the middle of an answer, every message remembers which one wrote it, and the other's signatures are removed before it's sent.
+- **A minute of silence.** A Vertex call once took the request and never answered: the player waited out a 60-second timeout, and the backup model then did the same job in 4.5 seconds. Each job now has its own limit (25s to build the cards, 15s to route a message), and a model that fails is skipped for a while instead of being tried again by every call.
+- **Every agent shares Google's address.** Play Next's agent calls the API from Cloud Run, so a limit per IP address would have been one limit for every player. Limits count per player instead: the agent's requests carry the player's id, trusted only with a shared secret.
+- **IGDB search ranks by spelling.** IGDB orders search results by text match only, so *"hades"* came back with a 1995 shooter before Supergiant's Hades. The server re-ranks them by popularity on a log scale, plus a bonus for an exact title, so the famous game wins without drowning out the right one.
+
+**Video on phones**
+
+- **Trailers without YouTube's ads.** Discover asks Steam's Web API for a whole feed's trailers in one request (asking per game got Render's address turned away), and Microsoft's store catalog for games that aren't on Steam. Both stream HLS from their own servers.
+- **iPhones and video.** Safari starts a stream on the first quality it's listed with, and Steam lists 1080p first, so the server serves a copy of the playlist with 480p first (the video still comes from Steam). An iPhone loads nothing until `play()`, and only plays sound from a `<video>` a tap once started: Discover starts every trailer at once, and keeps four shared players that the first tap unlocks.
 - **Smooth on a phone.** Only the games next to the one on screen are drawn in full, and the next trailer loads in advance, so a swipe starts it in about 0.15s.
+
+**Accounts and community**
+
+- **Steam login without a Steam SDK.** Steam speaks OpenID 2.0, which Better Auth doesn't, so [`steamAuth.js`](imgm-server/src/lib/steamAuth.js) is a Better Auth plugin written for it: connect, log in, sign up (Steam gives no email, so it asks for one) and disconnect, with every check on Steam's answer in one place.
 - **Comments that stay civil.** Links, slurs and "kys" are refused after folding l33t speak and accents, by whole words, so Scunthorpe still gets through.
-- **AI that fails over.** Gemini runs as a chain (Vertex AI first, then a paid key), each job with its own timeout, and a model that fails is skipped for a while.
 
 </details>
 
