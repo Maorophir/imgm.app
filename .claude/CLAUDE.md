@@ -11,7 +11,7 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
 | `imgm-ai` | Python 3.12, FastAPI, LangGraph, LangChain, uv | Google Cloud Run, deployed separately (see Releasing) |
 
 - **The AI service is not public.** Express proxies to it and sends `X-User-Id` + `X-Internal-Key`. The agent's tools get the player's id from the LangGraph `config`, never as a tool argument the model controls (prompt-injection safety).
-- **The Play Next graph:** `screen` (find / chat / off_topic) → `agent` ⇄ `tools` → `format` (structured `Recommendations`) → `check`. The check is plain code that enforces the rules and sends problems back, up to 2 fix rounds.
+- **The Play Next graph:** `screen` (find / chat / off_topic; Jev decides, Gemini as the fallback: see Decisions) → `agent` ⇄ `tools` → `format` (structured `Recommendations`) → `check`. The check is plain code that enforces the rules and sends problems back, up to 2 fix rounds.
   - The code is in `imgm-ai/src/imgm_ai/agent/`: `nodes.py`, `prompts.py`, `schemas.py`, `tools.py`.
   - The rule: **the prompt asks, the code enforces.** Every hard rule lives in `check_answer()`.
 - **Tools:**
@@ -97,11 +97,11 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
   - Play Next picks: the frame is the game's IMGM score rarity (`scoreFrame.js`); the rank is a flat corner tab (`RankTab.jsx`: gold/silver/bronze, then plain). Never colour a pick by its rank.
   - Buttons come from `lib/ui.js`.
   - Text is ivory/white, not italic in long passages.
-- **The README** (rebuilt 2026-11-03 on `feature/readme`, for GitHub visitors: developers and the people the user sends there from LinkedIn): the share picture as a banner, shields.io badges in Noir colours, one section per feature with an animation or screenshot beside it (HTML tables), two Mermaid diagrams (Play Next's graph, the architecture; GitHub draws them), fold-out notes on interesting problems, running it locally, credits (roiegold for Noir), the license. No emoji, like the site. Images live in `docs/readme/`:
+- **The README** (rebuilt and released 2026-11-03, for GitHub visitors: developers and the people the user sends there from LinkedIn): the share picture as a banner, shields.io badges in Noir colours, one section per feature with an animation or screenshot beside it (HTML tables), two Mermaid diagrams (Play Next's graph, the architecture; GitHub draws them), fold-out notes on interesting problems, running it locally, credits (roiegold for Noir), the license. No emoji, like the site. Images live in `docs/readme/`:
   - **Animations are animated WebP** (`quest`, `card`, `discover`: 0.5–2.4 MB; as GIFs they were ~10 MB). GitHub doesn't play an `.mp4` from the repo, only one uploaded in its web editor.
   - **How they were made** (scratch scripts, Playwright + screencast): a phone bezel page (`phone.html`: 390×720 screen) with the real site in an iframe (imgm.app allows framing); Discover from imgm.app with each trailer moved a fifth in (past the ratings and logos) and the next one moved before the swipe; the quest recorded locally with a `delivered+readme@resend.dev` account (deleted after), its frame page served at the site's own address with `page.route` so the login cookie goes along; the card from the home hero (pointer drifting over it, Flip, then the dots).
   - Screenshots: 1440×900 from imgm.app, the Feedback button hidden, saved as WebP (60–180 KB). `rarity.svg` is the rarity ladder in the `--color-rarity-*` colours.
-  - Still open: a Play Next picture (needs a real answer: the user's screenshot, or a local Gemini run after asking, it costs a few cents).
+  - Still open: a Play Next picture (needs a real answer: the user's screenshot, or a local Gemini run after asking, it costs a few cents), and MP4s uploaded in GitHub's editor if the user wants inline video.
 - **Code style:** match the surrounding comment density. Comments say *why*, in plain English.
 - **Working with the user:**
   - Small steps, explained simply.
@@ -119,11 +119,12 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
 2. If `imgm-ai` changed, redeploy it on Cloud Run:
    - project `gen-lang-client-0029420490` ("Premium IMGM"), region `europe-west3`, service `imgm-ai`;
    - deploy a clean copy of the committed code: `git archive main imgm-ai | tar -x -C <scratch dir>`, then `gcloud run deploy imgm-ai --source <scratch dir>/imgm-ai --project … --region europe-west3`;
-   - `--source` keeps the service's env values and secrets. New settings need `--set-env-vars` / `--set-secrets`;
+   - `--source` keeps the service's env values and secrets. A new one needs `--update-env-vars` / `--update-secrets` (the `--set-…` forms replace the whole list and would drop the others). A new secret is made in Secret Manager first (console → Security → Secret Manager), and the service's account `imgm-ai-runner@gen-lang-client-0029420490.iam.gserviceaccount.com` gets `roles/secretmanager.secretAccessor` on that secret (`gcloud secrets add-iam-policy-binding`), or the deploy fails with "Permission denied on secret";
    - the gcloud CLI is `~/google-cloud-sdk/bin/gcloud` on the desktop. It needs `gcloud auth login` (in the user's terminal); the auto-mode classifier blocks Claude's deploy, so the user runs it.
 3. Smoke test on imgm.app with a `delivered+<tag>@resend.dev` account, deleted afterwards with `DELETE /api/users/me` (password + reason). Check: a real answer, the shelves and spotlight, Sort your picks → Replace, no page errors.
 
 ## Decisions (and why)
+- **Jev (TypeSafe) screens Play Next messages, Gemini is the fallback** (live 2026-11-03): in a side-by-side test both got 12/12 routes, Jev in ~0.2s against Gemini's 1–3s. `jev_screen()` in `nodes.py` asks the route and the language in one `system_one` call (`ROUTE_QUESTION`, `LANGUAGE_QUESTION` in `schemas.py`); under `JEV_SURE` 0.7 (clear answers came 0.74–1.00), a failure (3s timeout, no retries) or no `TYPESAFE_API_KEY`, Gemini's screen decides as before. Off-topic replies are fixed lines (`DECLINES`: English, Hebrew in the plural, English for any other language), no model call (~0.4s round trip). A greeting before any picks is a chat (the old "chat with no picks → find" rule gave "hello" five games): the chat node uses `FIRST_CHAT_PROMPT` until something was searched. `typesafe-sdk` pinned to 0.7.5; Cloud Run secret `imgm-ai-typesafe-key`; TypeSafe is in the Privacy Policy. Jev sees the latest message and the one before it only (whether there are picks is code: `searched_before`). Next idea the user liked: Jev suggesting the agent's path (does the request name a game → `get_game_family`; is it about new games → `search_web`), as hints, measured in traces.
 - **Vertex in production, not the free Gemini key:** 20 free calls a day isn't enough, because one answer makes 6–13 calls.
 - **`get_game_family` instead of a "sequel" web search:** a web search missed new games by the same studio (Split Fiction for It Takes Two). The tool's limits:
   - Studio games count only if they share a genre AND a game mode with the named game, so unrelated games stay out (Hello Kitty for Elden Ring).
