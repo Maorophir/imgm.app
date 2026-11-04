@@ -1,0 +1,28 @@
+# IMGM (I Am Gaming)
+
+> IMGM is a community game review site, in public beta. Players rate the games they play in a quick "review quest", and every rating becomes a collectible card whose rarity is set by the score. Play Next, an AI agent, picks a player's next five games from their taste and the community's reviews, and Discover is a feed of hot and upcoming games, one trailer per screen.
+
+- A review is a quest of nine short screens, and only the score is required: platform and hours, the game's vibe, when it gets good, a checklist (graphics, gameplay, audio, story, difficulty, grind, length, bugs, PC specs, price, replay), "it's like ___ meets ___", pros and cons, best and worst moments, and final words. Reviews earn XP toward a player's level, and badges.
+- Card rarity follows the score: Junk 1–2, Common 3–4, Uncommon 5, Rare 6–7, Epic 8–9, Legendary 10. A game's IMGM score is the average of its players' scores, with the same rarity.
+- Play Next is a LangGraph agent using Gemini. It reads the player's own reviews, searches IMGM's reviews by meaning and IGDB's catalogue, and checks its answer in code before showing it (five different real games, none already reviewed, playable on the player's platforms).
+- Game data comes from IGDB. Trailers stream from Steam and Xbox, with YouTube as the fallback.
+- IMGM is built by one developer (Maorophir). The "Noir" design is by roiegold.
+
+## Main pages
+
+- [Home](https://imgm.app/): what IMGM is, the rarity ladder, a taste of Discover, featured games, and the latest reviews
+- [Discover](https://imgm.app/discover): Hot Now (the most visited games of the last two years) and Upcoming (the most wanted games of the next year), trailer by trailer, with votes and comments
+- [Hall of Fame](https://imgm.app/hall-of-fame): the best-rated games on IMGM, by platform
+- [Game of the Week](https://imgm.app/game-of-the-week): chosen by the community's votes every week
+- [Play Next](https://imgm.app/play-next): the AI agent that picks a player's next five games (needs an account)
+- [Steam](https://imgm.app/steam): connect a Steam library, with hours played, to rate those games
+
+## Game pages
+
+- Every game has a page at `https://imgm.app/game/<IGDB id>`: its IMGM score and rarity, the players' reviews, an AI summary of what players praise and criticize (once it has a few reviews), trailers and screenshots, and where to buy it. The full list is in the [sitemap](https://imgm.app/sitemap.xml).
+
+## Optional
+
+- [Source code](https://github.com/Maorophir/imgm.app): the website (React), the API (Express, Prisma, Postgres) and Play Next (Python, LangGraph), under the PolyForm Noncommercial license
+- [Privacy Policy](https://imgm.app/privacy)
+- [Terms of Use](https://imgm.app/terms)
