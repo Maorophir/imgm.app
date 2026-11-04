@@ -165,10 +165,12 @@ const Home = () => {
           the captions under them carry their games' live IMGM numbers */}
       <HomeHero slides={HOME_SHOWCASE.heroes} stats={showcaseStats} onBrowse={browse} />
 
+      {/* How a score becomes a card's rarity: the hero's promise ("every rating becomes a
+          collectible card") explained right under it, then Discover */}
+      <RaritySection card={HOME_SHOWCASE.rarity.card} game={{ ...HOME_SHOWCASE.rarity.game, ...showcaseStats[HOME_SHOWCASE.rarity.game.id] }} />
+
       {/* The way into Discover: a phone playing the feed */}
       <DiscoverSection />
-
-      <RaritySection card={HOME_SHOWCASE.rarity.card} game={{ ...HOME_SHOWCASE.rarity.game, ...showcaseStats[HOME_SHOWCASE.rarity.game.id] }} />
 
       {/* ── Featured Games: the heading on the left, the shelf of game tiles on the right ──
           The section is where "Browse games" lands (tabIndex -1 lets it take focus);
