@@ -27,7 +27,7 @@ const Privacy = () => (
         <li><strong className="text-white">What you post and do:</strong> reviews and their answers, ratings, helpful votes, Game of the Week votes and nominations, your Backlog, Discover votes and comments (and comments you like or report), the players you follow, your daily Guess the game results, Play Next chats and quest answers, and feedback you send. We also note which days you used IMGM while logged in (the date only), to count how many players come back.</li>
         <li><strong className="text-white">Notifications and email choices:</strong> the lines in your notification bell (for example that another player replied to your comment, or that a game in your Backlog came out), which emails you chose to get, and a record of the ones we sent you (so we never send one twice).</li>
         <li><strong className="text-white">Technical:</strong> a login cookie, and your IP address, used briefly for security and to limit abuse (for example rate limits).</li>
-        <li><strong className="text-white">Anonymous visit counts:</strong> Vercel Analytics counts page views without cookies and without identifying you.</li>
+        <li><strong className="text-white">Anonymous visit counts:</strong> Vercel Analytics counts page views without cookies and without identifying you. IMGM also counts visits itself, logged in or not, the same way: for each page you open, your browser sends the page (without any ids in its address), the site that sent you there, and whether you're on a phone, tablet or computer, and our server notes your browser, your system (like iOS or Windows) and your country. To count each visitor once a day, your IP address and browser details are turned into a code that changes every day and is never stored, so you can't be followed from one day to the next. Your IP address is never kept, only daily totals are, and nothing is sent if your browser asks sites not to track it (Do Not Track or Global Privacy Control).</li>
       </ul>
     </S>
 
@@ -76,7 +76,7 @@ const Privacy = () => (
         <li>Your Steam connection and Steam library: until you disconnect Steam in your profile's settings or delete your account. Disconnecting deletes them; your reviews and Backlog stay.</li>
         <li>Play Next chats: 30 days after your last message, then they're deleted.</li>
         <li>Notifications: read ones for 60 days, any for 180 days. The record of emails we sent you: 60 days.</li>
-        <li>The days you used IMGM while logged in: 13 months.</li>
+        <li>The days you used IMGM while logged in, and the daily visit totals: 13 months.</li>
         <li>The moderation log's copy of a removed review or comment: until its writer deletes their account.</li>
         <li>Feedback and security logs: as long as needed to handle them, usually a few months.</li>
         <li>After you delete your account, your data is removed within days; backups may keep a copy for a short time.</li>
