@@ -32,6 +32,10 @@ model User {
   // cache-buster: the picture's address carries this time, so a new one shows at once
   avatarUpdatedAt   DateTime?
   avatar            UserAvatar?
+  // 'player', or 'admin' for IMGM's owner (the /admin pages). Set only by hand in the
+  // database: no route changes it, and Better Auth's update routes can't (auth.js)
+  role              String    @default("player")
+  activeDays        PlayerDay[]
   backlog           BacklogItem[]
   feedback          Feedback[]
   accounts      Account[]
@@ -496,4 +500,38 @@ model DiscoverCommentReport {
   createdAt DateTime        @default(now())
 
   @@id([userId, commentId])
+}
+
+// -----------------------------------------------------------------------------
+// The admin pages (/admin): who used the site on which days, for the stats, and a log
+// of every moderation action
+// -----------------------------------------------------------------------------
+
+// One row per player per day they used the site logged in (a UTC date). Nothing about
+// logged-out visitors. History starts the day this table shipped.
+model PlayerDay {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day    DateTime @db.Date
+
+  @@id([userId, day])
+  @@index([day])
+}
+
+// What an admin did: hid, kept or deleted a comment, deleted a review. `snapshot` keeps
+// what was removed, so it can be put back by hand; it's cleared if that player deletes
+// their account (accountCleanup.js).
+model AdminAction {
+  id           String   @id @default(cuid())
+  adminId      String
+  action       String   // comment.hide | comment.keep | comment.delete | review.delete
+  targetType   String   // comment | review
+  targetId     String
+  targetUserId String?  // whose comment or review it was
+  note         String?
+  snapshot     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetUserId])
 }

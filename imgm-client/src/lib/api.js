@@ -260,3 +260,13 @@ export async function streamGuide(body, { signal, onEvent }) {
     }
   }
 }
+
+// ── The admin pages (/admin): only an admin gets answers, everyone else a 404 ──
+export const getAdminStats = (signal) => fetchJson('/api/admin/stats', { signal });
+export const getAdminReports = (signal) => fetchJson('/api/admin/reports', { signal });
+export const getAdminComments = (q, signal) => fetchJson(`/api/admin/comments?q=${encodeURIComponent(q ?? '')}`, { signal });
+export const getAdminReviews = (q, signal) => fetchJson(`/api/admin/reviews?q=${encodeURIComponent(q ?? '')}`, { signal });
+export const setAdminCommentHidden = (id, hidden, note) =>
+  fetchJson(`/api/admin/comments/${id}/hidden`, { method: 'PUT', body: { hidden, note } });
+export const deleteAdminComment = (id, note) => fetchJson(`/api/admin/comments/${id}`, { method: 'DELETE', body: { note } });
+export const deleteAdminReview = (id, note) => fetchJson(`/api/admin/reviews/${id}`, { method: 'DELETE', body: { note } });
