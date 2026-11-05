@@ -102,8 +102,15 @@ export const sendOptInEmail = async ({ user, kind, key, build }) => {
   if (!user.emailVerified) return 'skipped';
   const row = await prisma.emailSettings.findUnique({ where: { userId: user.id } });
   if (!row?.[kind]) return 'skipped';
-  const recent = await prisma.emailSend.count({ where: { userId: user.id, sentAt: { gte: new Date(Date.now() - 7 * DAY) } } });
-  if (recent >= WEEKLY_CAP) return 'skipped';
+  // At most WEEKLY_CAP in any 7 days, and the Sunday roundup always has its place: it's
+  // the one email people asked for by name, so it never counts against the others. For a
+  // player who gets it, the other emails share the one slot left; the rest wait for it.
+  if (kind !== 'weekly') {
+    const others = await prisma.emailSend.count({
+      where: { userId: user.id, kind: { not: 'weekly' }, sentAt: { gte: new Date(Date.now() - 7 * DAY) } },
+    });
+    if (others >= (row.weekly ? WEEKLY_CAP - 1 : WEEKLY_CAP)) return 'skipped';
+  }
 
   // Claim it first: if it's already claimed (sent before, or being sent), stop
   try {
