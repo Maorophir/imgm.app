@@ -60,7 +60,10 @@ export const MatchResult = ({ name, data }) => {
             <tr className="text-sm text-slate-400 border-b border-slate-700">
               <th scope="col" className="font-normal px-3 sm:px-4 h-10">Game</th>
               <th scope="col" className="font-normal px-2 h-10 text-right w-16">You</th>
-              <th scope="col" className="font-normal px-3 sm:px-4 h-10 text-right w-24 break-all">{name}</th>
+              <th scope="col" className="font-normal px-3 sm:px-4 h-10 text-right">
+                {/* One line: a long gamer tag is cut short rather than split mid-name */}
+                <span className="block max-w-32 ml-auto truncate" title={name}>{name}</span>
+              </th>
             </tr>
           </thead>
           <tbody>
