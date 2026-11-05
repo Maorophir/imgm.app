@@ -297,7 +297,7 @@ const ReviewCard = ({ review, sharedBy, onCardChange }) => {
         tilt={false}
         rest={0}
         className="w-full sm:w-[min(208px,100%)]"
-        front={<CollectibleCard variant="mini" title={review.game.title} score={review.rating} coverUrl={review.game.coverUrl} />}
+        front={<CollectibleCard variant="mini" title={review.game.title} score={review.rating} coverUrl={review.game.coverUrl} firstEdition={review.badges?.includes('first_reviewer')} />}
       />
       {review.snippet && (
         // The opening quote mark hangs into the margin, so the words line up (the box

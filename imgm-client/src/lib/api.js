@@ -193,6 +193,10 @@ export const getFollowingReviews = (signal) => fetchJson('/api/users/me/followin
 export const getTasteMatch = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/taste`, { signal });
 // A player's compare link (/compare/<tag>): { player, games, yours, isYou }
 export const getCompareGames = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/compare`, { signal });
+// Card sets (yours, or a player's by gamer tag): { sets: [{ key, name, kind, badge, total,
+// collected, complete, games: [{ id, title, coverUrl, rating, firstEdition }] }] }
+export const getMySets = (signal) => fetchJson('/api/users/me/sets', { signal });
+export const getPlayerSets = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/sets`, { signal });
 // Profile picture: a data URL from resizeToAvatar (checked by the server before it's saved)
 export const uploadAvatar = (image) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { image } });
 // The avatar window opened: wake the photo check's AI service now (never waited on)

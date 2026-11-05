@@ -35,6 +35,10 @@
  *   quote      a line from the review, in italic serif; the card adds the quote marks
  *              (share edition only)
  *   badges     the review's badge keys, e.g. ['deep_diver'] (site edition only)
+ *   firstEdition  the game's first review on IMGM: the card comes in foil (see below).
+ *              Defaults to whether badges include 'first_reviewer', so a card that
+ *              gets its review's badges needs nothing more; others (a mini card, a
+ *              share card) pass it
  *   edition    'site' (the default) or 'share', see above
  *   variant    'full' (the default) or 'mini'
  *   className  the card's width and placement, e.g. "w-[min(380px,100%)]"
@@ -47,6 +51,13 @@
  *
  * On a stage that tilts (CardStage), a Legendary's gilt follows the pointer through
  * the --gilt-at CSS variable the stage sets.
+ *
+ * First Edition: the first review of a game (the same reviews that earn the First
+ * Reviewer badge) prints its card in foil, the tier's own ink as polished metal
+ * (.card-foil in index.css), in a frame as wide as the gilt's, and its shine follows
+ * the tilt like the gilt does. "First Edition" is printed in the small print (a "1st"
+ * stamp on a mini card). A Legendary 10 already wears the gilt, so it keeps it and
+ * gets the words only.
  */
 import { useState } from 'react';
 import RarityMark from './RarityMark';
@@ -75,8 +86,10 @@ const SIZES = {
     stock: 'p-[2.4cqi]',
     frame: 'p-[max(1px,.55cqi)]',
     frameGilt: 'p-[1.3cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(40,28,6,.6)]',
+    frameFoil: 'p-[1.3cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(0,0,0,.45)]',
     face: 'pt-[3cqi] px-[3.2cqi] pb-[2.6cqi] rounded-[2.1cqi/1.5cqi]',
     faceGilt: 'pt-[3cqi] px-[3.2cqi] pb-[2.6cqi] rounded-[1.6cqi/1.15cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(40,28,6,.5)]',
+    faceFoil: 'pt-[3cqi] px-[3.2cqi] pb-[2.6cqi] rounded-[1.6cqi/1.15cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(0,0,0,.4)]',
     title: 'mt-[.6cqi] text-[length:9cqi]',
     score: 'text-[length:16cqi]',
     // The art window is about 85% of the card's width
@@ -86,8 +99,10 @@ const SIZES = {
     stock: 'p-[2.6cqi]',
     frame: 'p-[max(1px,.7cqi)]',
     frameGilt: 'p-[1.6cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(40,28,6,.6)]',
+    frameFoil: 'p-[1.6cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(0,0,0,.45)]',
     face: 'pt-[3.6cqi] px-[3.6cqi] pb-[3.2cqi] rounded-[2cqi/1.43cqi]',
     faceGilt: 'pt-[3.6cqi] px-[3.6cqi] pb-[3.2cqi] rounded-[2cqi/1.43cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(40,28,6,.5)]',
+    faceFoil: 'pt-[3.6cqi] px-[3.6cqi] pb-[3.2cqi] rounded-[2cqi/1.43cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(0,0,0,.4)]',
     title: 'mt-[.8cqi] text-[length:10cqi]',
     score: 'text-[length:17cqi]',
     sizes: '(min-width: 640px) 200px, 45vw',
@@ -96,6 +111,19 @@ const SIZES = {
 
 // The hairline between the parts of the card (ivory at 14%, never thinner than 1px)
 const HAIRLINE = 'border-white/14';
+
+// The frame and face classes (and the frame's style) for a card's metal: the gilt for a
+// Legendary, the foil for a First Edition, else the flat ink
+const frameOf = (size, legendary, foil) => {
+  if (legendary) return { frame: size.frameGilt, face: size.faceGilt, style: GILT };
+  if (foil) return { frame: `${size.frameFoil} card-foil`, face: size.faceFoil };
+  return { frame: `${size.frame} bg-(--ink)`, face: size.face };
+};
+
+// The mini card's "1st" stamp: a hairline box in the tier's ink (short, so it fits
+// beside "Legendary" on a 110px card)
+const FIRST_STAMP =
+  'shrink-0 px-[1.4cqi] py-[.9cqi] rounded-[.6cqi] border-[length:max(1px,.3cqi)] border-[color-mix(in_srgb,var(--ink)_60%,transparent)] text-[length:max(8px,4.2cqi)] font-semibold leading-none tracking-[.04em] uppercase text-(--ink)';
 
 // The small print along the bottom of every card face ("Beta · imgm.app")
 const SMALL_PRINT = `flex justify-between gap-[2cqi] pt-[1.6cqi] border-t-[length:max(1px,.22cqi)] ${HAIRLINE} text-[length:max(9px,2.8cqi)] leading-none text-slate-400`;
@@ -120,6 +148,7 @@ const CollectibleCard = ({
   date,
   quote,
   badges = [],
+  firstEdition = badges.includes('first_reviewer'),
   edition = 'site',
   variant = 'full',
   className = '',
@@ -134,6 +163,7 @@ const CollectibleCard = ({
   const size = SIZES[mini ? 'mini' : 'full'];
   const rarity = score == null ? UNRATED : getRarity(score);
   const legendary = rarity.key === 'legendary';
+  const metal = frameOf(size, legendary, firstEdition);
   const shown = scoreText(score);
   const showArt = Boolean(coverUrl) && brokenUrl !== coverUrl;
 
@@ -144,6 +174,7 @@ const CollectibleCard = ({
   // What a screen reader hears for the whole card
   const label = [
     score == null ? `A card for ${title}, not rated yet.` : `Review card: ${title}, ${shown} out of 10, ${rarity.label}.`,
+    firstEdition && 'First Edition.',
     reviewer && `Reviewed by ${reviewer}${hasDate ? ` on ${longDate(when)}` : ''}.`,
     !share && earned.length > 0 && `Badges: ${earned.map((key) => BADGES[key].label).join(', ')}.`,
   ].filter(Boolean).join(' ');
@@ -157,12 +188,10 @@ const CollectibleCard = ({
         // frame, --deep for the panel behind a card with no art
         style={{ '--ink': rarity.color, '--deep': rarity.deep }}
       >
-        {/* The frame: the tier's ink (or the gilt) showing around the face */}
-        <div
-          className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${legendary ? size.frameGilt : `${size.frame} bg-(--ink)`}`}
-          style={legendary ? GILT : undefined}
-        >
-          <div className={`flex-1 min-w-0 flex flex-col bg-slate-900 ${legendary ? size.faceGilt : size.face}`}>
+        {/* The frame: the tier's ink (or the gilt, or a First Edition's foil) showing
+            around the face */}
+        <div className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${metal.frame}`} style={metal.style}>
+          <div className={`flex-1 min-w-0 flex flex-col bg-slate-900 ${metal.face}`}>
             {/* Title and score */}
             <div className="flex items-start justify-between gap-[3cqi]">
               <p className={`${size.title} min-w-0 font-display leading-[.9] tracking-[.01em] uppercase text-balance break-words line-clamp-3`}>
@@ -251,6 +280,7 @@ const CollectibleCard = ({
               {!mini && credit && score != null && (
                 <span className="min-w-0 truncate text-[length:max(9px,2.8cqi)] leading-none text-slate-400">{credit}</span>
               )}
+              {mini && firstEdition && <span aria-hidden="true" className={FIRST_STAMP}>1st</span>}
             </div>
 
             {!mini && share && quote && (
@@ -281,8 +311,17 @@ const CollectibleCard = ({
                 )}
                 {/* The small print along the bottom of every card */}
                 <p className={`${SMALL_PRINT} ${reviewer || hasDate ? 'mt-[1.8cqi]' : ''}`}>
-                  <span>Beta</span>
-                  <span>imgm.app</span>
+                  {firstEdition ? (
+                    <>
+                      <span className="font-semibold tracking-[.04em] uppercase text-(--ink)">First Edition</span>
+                      <span>Beta · imgm.app</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Beta</span>
+                      <span>imgm.app</span>
+                    </>
+                  )}
                 </p>
               </div>
             )}
@@ -348,20 +387,18 @@ export const CardBack = ({ className = '', small = false }) => {
  * card has). A review without a checklist turns over to CardBack instead. Give it a
  * width, like the front.
  * Props: score (sets the frame), ticks (from tickedChecklist), name (the reviewer),
- * className.
+ * firstEdition (the front's foil, so both sides match), className.
  */
-export const ChecklistBack = ({ score, ticks, name, className = '' }) => {
+export const ChecklistBack = ({ score, ticks, name, firstEdition = false, className = '' }) => {
   const rarity = getRarity(score);
   const legendary = rarity.key === 'legendary';
   const size = SIZES.full;
+  const metal = frameOf(size, legendary, firstEdition);
   return (
     <div className={`@container ${className}`}>
       <article aria-label={`${name}'s checklist`} className={`${STOCK} ${size.stock}`} style={{ '--ink': rarity.color }}>
-        <div
-          className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${legendary ? size.frameGilt : `${size.frame} bg-(--ink)`}`}
-          style={legendary ? GILT : undefined}
-        >
-          <div className={`flex-1 min-w-0 min-h-0 flex flex-col bg-slate-900 ${legendary ? size.faceGilt : size.face}`}>
+        <div className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${metal.frame}`} style={metal.style}>
+          <div className={`flex-1 min-w-0 min-h-0 flex flex-col bg-slate-900 ${metal.face}`}>
             {/* The answers scroll if a small card can't fit them all; the small print
                 stays at the bottom, as on the front */}
             <div className="flex-1 min-h-0">

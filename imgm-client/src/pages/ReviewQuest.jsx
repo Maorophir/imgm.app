@@ -465,6 +465,8 @@ const Quest = ({ id }) => {
     reviewer: session?.user?.displayUsername,
     date: existing.review?.createdAt ?? result?.postedAt,
     quote: result?.cardQuote ?? answers.reviewText?.trim(), // the most quotable sentence (or theirs)
+    // Its badges: the game's first review gets its card as a First Edition foil
+    badges: result?.badges ?? existing.review?.badges ?? [],
   });
 
   return (
@@ -554,7 +556,7 @@ const Quest = ({ id }) => {
                 // Turned over: the checklist they just filled in (or the shared back if they skipped it)
                 back={
                   cardTicks.length > 0
-                    ? <ChecklistBack score={answers.rating} ticks={cardTicks} name={session.user.displayUsername ?? 'You'} />
+                    ? <ChecklistBack score={answers.rating} ticks={cardTicks} name={session.user.displayUsername ?? 'You'} firstEdition={rewardCard.badges.includes('first_reviewer')} />
                     : <CardBack />
                 }
               />

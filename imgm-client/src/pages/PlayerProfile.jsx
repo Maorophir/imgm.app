@@ -23,6 +23,7 @@ import { LevelCard, PlayerReviews, StatsGrid } from '../components/profile/Profi
 import ShareCardButton from '../components/ShareCardButton';
 import FollowBar from '../components/profile/FollowBar';
 import TasteMatch from '../components/profile/TasteMatch';
+import CardSets from '../components/profile/CardSets';
 import LoadError from '../components/LoadError';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSearchIndexing } from '../hooks/useSearchIndexing';
@@ -132,6 +133,7 @@ const PlayerProfileContent = ({ username }) => {
       <StatsGrid stats={stats} />
 
       {!isYou && <TasteMatch username={name} name={name} loggedIn={Boolean(session)} />}
+      <CardSets username={username} />
 
       <section className="flex flex-col gap-8">
         <h2 className={SECTION_TITLE}>

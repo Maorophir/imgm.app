@@ -414,6 +414,16 @@ export const getGameDetails = async (id) => {
 };
 
 /**
+ * Fetches several games' full details at once (up to 500 ids), in no particular order.
+ * Ids IGDB doesn't know are simply missing from the answer.
+ */
+export const getGamesByIds = async (ids) => {
+  if (ids.length === 0) return [];
+  const rows = await igdbRequest('games', `${GAME_FIELDS} where id = (${ids.map(Number).join(',')}); limit ${ids.length};`);
+  return rows.map(mapIgdbGame);
+};
+
+/**
  * Fetches just the cover art URL for a game.
  */
 export const getCoverArt = async (id, size = 't_cover_big') => {

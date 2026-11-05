@@ -15,6 +15,7 @@ import { LevelCard, PlayerReviews, ProfilePicture, StatsGrid } from '../componen
 import ShareCardButton from '../components/ShareCardButton';
 import FollowBar from '../components/profile/FollowBar';
 import CompareInvite from '../components/profile/CompareInvite';
+import CardSets from '../components/profile/CardSets';
 import { useMyProgress } from '../hooks/useMyProgress';
 import { SECTION_TITLE, TEXT_LINK } from '../lib/ui';
 
@@ -89,6 +90,7 @@ function Profile() {
       {profile && <StatsGrid stats={profile.stats} own />}
 
       {profile && current && <CompareInvite name={current} hasReviews={profile.stats.reviews > 0} />}
+      {profile && <CardSets own key={`sets-${reload}`} />}
 
       {profile && (
         <section className="flex flex-col gap-8">
