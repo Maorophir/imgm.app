@@ -1,7 +1,8 @@
 /**
  * The notification jobs: what's said at a time of day rather than when someone acts.
  * All on Israel time, like Game of the Week:
- *   every day         old bell lines are cleared
+ *   every day         old bell lines are cleared, and visit days and visitor counts
+ *                     older than 13 months
  *   every day, 9:00   the release radar: backlog games that came out (the bell for
  *                     everyone, an email for those who chose it)
  *   every day, 18:00  "Replies and likes" emails: what's new since the last one, and
@@ -17,6 +18,7 @@
  */
 import { prisma } from './db.js';
 import { addNews, nameOf, pruneOld } from './notifications.js';
+import { pruneVisits } from './visits.js';
 import { esc, optInLayout, sendOptInEmail, siteUrl } from './optInEmails.js';
 import { currentWeek, tallyOf, TIME_ZONE } from './gotw.js';
 import { cardQuoteOf } from './cardQuote.js';
@@ -272,6 +274,13 @@ const prune = async () => {
   await pruneOld();
   // Sent emails are kept only as long as they matter (the 7-day cap, the day's key)
   await prisma.emailSend.deleteMany({ where: { sentAt: { lt: new Date(Date.now() - 60 * DAY) } } });
+  // The stats' visit days and the visitor counts are kept 13 months: enough to compare a
+  // month with the same month last year
+  const keepFrom = new Date();
+  keepFrom.setUTCMonth(keepFrom.getUTCMonth() - 13);
+  keepFrom.setUTCHours(0, 0, 0, 0);
+  await prisma.playerDay.deleteMany({ where: { day: { lt: keepFrom } } });
+  await pruneVisits(keepFrom);
 };
 
 // ── The timer ─────────────────────────────────────────────

@@ -12,6 +12,7 @@ import { prisma } from '../lib/db.js';
 import { CHECKLIST } from '../lib/reviewOptions.js';
 import { removeReview } from '../lib/reviewRemoval.js';
 import { utcDay } from '../lib/activity.js';
+import { DIMENSIONS, flushVisits } from '../lib/visits.js';
 
 const DAY = 24 * 60 * 60 * 1000;
 const WEEKS = 8;
@@ -90,6 +91,66 @@ export const getStats = async (req, res) => {
     });
   } catch (error) {
     console.error('Error building admin stats:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// GET /api/admin/visitors — the visitor counter (lib/visits.js), logged in or not.
+// A visitor is only recognised within a day, so a week's "visitors" are its days'
+// visitors added up: someone who came on three days counts three times.
+export const getVisitors = async (req, res) => {
+  try {
+    await flushVisits(); // include the last minute's views
+    const todayStr = utcDay();
+    const today = new Date(`${todayStr}T00:00:00Z`);
+    const weekStart = new Date(today.getTime() - 6 * DAY);
+
+    const [weekRows, [firstDay], counts] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT ((${todayStr}::date - "day") / 7)::int AS week,
+               sum("views")::int AS views, sum("visitors")::int AS visitors
+        FROM "VisitDay"
+        WHERE "day" > ${todayStr}::date - ${WEEKS * 7}::int
+        GROUP BY 1`,
+      prisma.visitDay.findMany({ orderBy: { day: 'asc' }, take: 1, select: { day: true } }),
+      prisma.visitCount.groupBy({
+        by: ['dimension', 'value'],
+        where: { day: { gte: weekStart } },
+        _sum: { views: true, visitors: true },
+      }),
+    ]);
+    const todayRow = await prisma.visitDay.findUnique({ where: { day: today } });
+
+    const byWeek = new Map(weekRows.map((r) => [r.week, r]));
+    const weeks = Array.from({ length: WEEKS }, (_, i) => {
+      const back = WEEKS - 1 - i;
+      return {
+        start: utcDay(new Date(today.getTime() - (back * 7 + 6) * DAY)),
+        visitors: byWeek.get(back)?.visitors ?? 0,
+        views: byWeek.get(back)?.views ?? 0,
+      };
+    });
+
+    // This week's top values in each dimension, most visitors first
+    const top = Object.fromEntries(DIMENSIONS.map((dimension) => [
+      dimension,
+      counts
+        .filter((c) => c.dimension === dimension)
+        .map((c) => ({ value: c.value, views: c._sum.views ?? 0, visitors: c._sum.visitors ?? 0 }))
+        .sort((a, b) => b.visitors - a.visitors || b.views - a.views)
+        .slice(0, 8),
+    ]));
+
+    res.json({
+      since: firstDay ? utcDay(firstDay.day) : null,
+      today: { visitors: todayRow?.visitors ?? 0, views: todayRow?.views ?? 0 },
+      thisWeek: weeks[WEEKS - 1],
+      lastWeek: weeks[WEEKS - 2],
+      weeks,
+      top,
+    });
+  } catch (error) {
+    console.error('Error building the visitor counts:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

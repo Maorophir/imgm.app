@@ -37,9 +37,11 @@ import discoverRouter from './src/routes/discover.js';
 import socialRouter from './src/routes/social.js';
 import adminRouter from './src/routes/admin.js';
 import dailyRouter from './src/routes/daily.js';
+import visitsRouter from './src/routes/visits.js';
 import notificationsRouter from './src/routes/notifications.js';
 import emailsRouter from './src/routes/emails.js';
 import { startNotifyJobs } from './src/lib/notifyJobs.js';
+import { startVisitCounter } from './src/lib/visits.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/lib/auth.js';
 
@@ -60,6 +62,7 @@ app.use('/api/gotw', gotwRouter);
 app.use('/api/backlog', backlogRouter);
 app.use('/api/discover', discoverRouter); // Discover's thumbs up / down
 app.use('/api/daily', dailyRouter); // the daily Guess the game
+app.use('/api/visits', visitsRouter); // the visitor counter's page-view beacon (lib/visits.js)
 app.use('/api/feedback', feedbackRouter);
 // A connected Steam account's library (connecting itself is on the login server, /api/auth/steam)
 app.use('/api/steam', steamRouter);
@@ -76,4 +79,5 @@ app.use('/api/emails', emailsRouter);
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
   startNotifyJobs(); // the release radar, reminders and opt-in emails (lib/notifyJobs.js)
+  startVisitCounter(); // writes the gathered visitor counts once a minute
 });

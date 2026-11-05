@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/react';
 
 // Layout components
 import Navbar from './components/Navbar';
+import VisitCounter from './components/VisitCounter';
 
 // Page components (one per route)
 import Home from './pages/Home';
@@ -139,6 +140,8 @@ function App() {
         {/* Navbar renders on EVERY page — it's outside <Routes> */}
         <Navbar />
         <RouteTitle />
+        {/* IMGM's own cookie-free page-view count, for /admin's Visitors tab */}
+        <VisitCounter />
         <ScrollToTop />
 
         {/* Only the matched route renders here. The gate sends logged-in users
