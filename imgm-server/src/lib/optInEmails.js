@@ -9,7 +9,7 @@
  *
  * The promises, kept in code:
  *   - only to a confirmed email address
- *   - at most WEEKLY_CAP of these emails in any 7 days, whatever is switched on
+ *   - at most WEEKLY_CAP of these emails in any 7 days, the Sunday roundup always among them
  *   - never the same email twice: each one is claimed in EmailSend first (a unique
  *     player + kind + key), so a restart or a second run sends nothing new
  *   - every email can be stopped in one click without logging in: a link in it (the
