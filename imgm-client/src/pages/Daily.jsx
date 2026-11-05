@@ -21,10 +21,10 @@ import GamePicker from '../components/reviewQuest/GamePicker';
 import LoadError from '../components/LoadError';
 import { getDaily, giveUpDaily, guessDaily } from '../lib/api';
 import { useSession } from '../lib/authClient';
+// The browser's game today (also read by the home page's strip)
+import { DAILY_GAME_KEY as GAME, localDailyGame as localGame } from '../lib/dailyGame';
 import { WRAP, SECTION_TITLE, PRIMARY_BUTTON, GHOST_BUTTON, GHOST_BUTTON_TALL, TEXT_LINK, TEXT_BUTTON_SM, LABEL } from '../lib/ui';
 
-const TIME_ZONE = 'Asia/Jerusalem'; // the puzzle's days (the server's too)
-const GAME = 'imgm.daily'; // a logged-out player's game today: { day, guesses, gaveUp }
 const HISTORY = 'imgm.daily.history'; // and their past days: { "2026-11-05": tries, … } (0 = not solved)
 const SHARE_AT = 'imgm.app/daily';
 const SHARED_FOR = 2000; // ms "Copied" stays up
@@ -46,18 +46,9 @@ const writeStore = (key, value) => {
   }
 };
 
-// "2026-11-05", today in Israel
-const israelToday = () =>
-  new Intl.DateTimeFormat('en-CA', { timeZone: TIME_ZONE, year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date());
 const dayBefore = (day) => {
   const [y, m, d] = day.split('-').map(Number);
   return new Date(Date.UTC(y, m - 1, d - 1)).toISOString().slice(0, 10);
-};
-
-// Today's game from this browser, if it's today's (a new day starts fresh)
-const localGame = () => {
-  const game = readStore(GAME);
-  return game?.day === israelToday() ? game : null;
 };
 
 // A logged-out player's streak: days in a row solved, still alive until today is lost

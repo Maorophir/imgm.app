@@ -38,6 +38,7 @@ import LoadError from '../components/LoadError';
 import HomeHero from '../components/home/HomeHero';
 import RaritySection from '../components/home/RaritySection';
 import DiscoverSection from '../components/home/DiscoverSection';
+import DailySection from '../components/home/DailySection';
 import { FreshReviews, ReviewPicks } from '../components/home/FreshReviews';
 import FollowingReviews from '../components/home/FollowingReviews';
 import GotwStrip from '../components/home/GotwStrip';
@@ -172,6 +173,9 @@ const Home = () => {
 
       {/* The way into Discover: a phone playing the feed */}
       <DiscoverSection />
+
+      {/* Today's Guess the game: its blurred first picture and how everyone's doing */}
+      <DailySection />
 
       {/* ── Featured Games: the heading on the left, the shelf of game tiles on the right ──
           The section is where "Browse games" lands (tabIndex -1 lets it take focus);
