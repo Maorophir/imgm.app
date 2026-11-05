@@ -695,9 +695,14 @@ export const getGameFamily = async (id) => {
 // the famous ones are), as they do on game pages.
 const EROTIC_THEME = 42;
 const ADULTS_ONLY_RATINGS = new Set([7]); // ESRB AO (IGDB /age_rating_categories)
+// A rating board's warning about nudity, in any board's words ("Nudity", "Partial
+// Nudity", "Nudez"): those games never come up (the user's call; a screenshot could show
+// it). Sexual content alone doesn't count: it took out Breath of the Wild and Stardew
+// Valley too.
+const NUDITY = /nud/i;
 const DAILY_POOL_FIELDS = GAME_FIELDS.replace(
   /;\s*$/,
-  ', total_rating_count, game_type, remasters, age_ratings.rating_category, screenshots.width, screenshots.height;'
+  ', total_rating_count, game_type, remasters, age_ratings.rating_category, age_ratings.rating_content_descriptions.description, screenshots.width, screenshots.height;'
 );
 
 /**
@@ -710,7 +715,9 @@ export const getDailyPool = async () => {
     & version_parent = null & parent_game = null & game_type = (0,8,9) & first_release_date < ${now}
     & themes != (${EROTIC_THEME}); sort total_rating_count desc; limit 500;`;
   return (await igdbRequest('games', body))
-    .filter((raw) => !(raw.age_ratings ?? []).some((rating) => ADULTS_ONLY_RATINGS.has(rating.rating_category)))
+    .filter((raw) => !(raw.age_ratings ?? []).some((rating) =>
+      ADULTS_ONLY_RATINGS.has(rating.rating_category) ||
+      (rating.rating_content_descriptions ?? []).some((d) => NUDITY.test(d.description ?? ''))))
     .map((raw) => ({
       game: mapIgdbGame(raw),
       shots: (raw.screenshots ?? []).filter((s) => s.image_id && s.width > s.height).map((s) => s.image_id),

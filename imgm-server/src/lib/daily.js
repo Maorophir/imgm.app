@@ -26,6 +26,10 @@ import { upsertGame } from '../services/gameStore.js';
 export const MAX_TRIES = 6;
 const SHOTS = 4; // screenshots per puzzle
 const POOL_SIZE = 300; // the day's game is one of the 300 most rated games not used yet
+// Every third day is a classic (a game from before 2005), so the old favourites come up
+// as often as the new ones (the most rated games lean recent)
+const CLASSIC_EVERY = 3;
+const CLASSIC_BEFORE = 2005;
 
 // The picture before each try (stage n = after n wrong guesses): which screenshot, its
 // blur as a share of the picture's width (so a phone and a computer see the same blur),
@@ -85,16 +89,20 @@ const makePuzzle = async (day) => {
     .slice(0, POOL_SIZE);
   if (pool.length === 0) throw new Error('No games left for the daily puzzle');
 
-  const pick = pool[randomInt(pool.length)];
+  const last = await prisma.dailyPuzzle.findFirst({ orderBy: { number: 'desc' }, select: { number: true } });
+  const number = (last?.number ?? 0) + 1;
+  const classics = pool.filter((c) => c.game.releaseDate && new Date(c.game.releaseDate).getUTCFullYear() < CLASSIC_BEFORE);
+  // A classic day with no classics left falls back to the whole pool
+  const from = number % CLASSIC_EVERY === 0 && classics.length > 0 ? classics : pool;
+  const pick = from[randomInt(from.length)];
   // A remaster looks like its original (and the other way round), so either is right
   const originals = pick.isRemaster ? await igdb.getRemasterOriginals(pick.game.id).catch(() => []) : [];
   await upsertGame(pick.game); // the answer links to its game page
-  const last = await prisma.dailyPuzzle.findFirst({ orderBy: { number: 'desc' }, select: { number: true } });
   try {
     return await prisma.dailyPuzzle.create({
       data: {
         day,
-        number: (last?.number ?? 0) + 1,
+        number,
         gameId: pick.game.id,
         acceptIds: [...new Set([...pick.remasters, ...originals])],
         shots: shuffled(pick.shots).slice(0, SHOTS),
