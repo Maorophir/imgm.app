@@ -10,6 +10,7 @@ import { notifyReviewChanged } from '../lib/aiIndex.js';
 import { castVote } from '../lib/reviewVotes.js';
 import { refreshGameSummary } from '../lib/aiSummary.js';
 import { cacheAtEdge } from '../lib/cdnCache.js';
+import { removeReview } from '../lib/reviewRemoval.js';
 import { ART_SELECT, artChoices, reviewArt } from '../lib/reviewArt.js';
 import { cardQuoteOf, sentencesOf } from '../lib/cardQuote.js';
 import { CHECKLIST } from '../lib/reviewOptions.js';
@@ -273,9 +274,7 @@ export const deleteMyReview = async (req, res) => {
     if (!review) {
       return res.status(404).json({ error: "You haven't reviewed this game." });
     }
-    await prisma.review.delete({ where: { id: review.id } });
-    notifyReviewChanged(review.id); // and Play Next's search forgets it
-    refreshGameSummary(gameId); // and its summary, if that changed enough
+    await removeReview({ id: review.id, gameId }); // Play Next and the summary follow
 
     res.status(204).end(); // 204 = done, nothing to send back
   } catch (error) {

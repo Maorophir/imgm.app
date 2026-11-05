@@ -8,6 +8,7 @@ import { clientOrigins } from "./config.js";
 import { resetPasswordEmail, sendEmail, welcomeEmail, welcomeVerifyEmail } from "./email.js";
 import { steam } from "./steamAuth.js";
 import { disconnectSteam } from "./steamAccount.js";
+import { recordActivity } from "./activity.js";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000",
@@ -42,6 +43,11 @@ export const auth = betterAuth({
       if (!field) return;
       const [problem] = passwordProblems(ctx.body?.[field]);
       if (problem) throw new APIError("BAD_REQUEST", { message: problem, code: "WEAK_PASSWORD" });
+    }),
+    // The site asks for the session on every page load: that counts the player's day for
+    // the admin stats (activity.js), also on pages that call nothing else
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/get-session") recordActivity(ctx.context.returned?.user?.id);
     }),
   },
   socialProviders: {
@@ -93,6 +99,9 @@ export const auth = betterAuth({
       displayUsername: { type: "string", required: false, input: false },
       usernameChangedAt: { type: "date", required: false, input: false },
       avatarUpdatedAt: { type: "date", required: false, input: false }, // set by /api/users/me/avatar
+      // 'player' or 'admin' (set by hand in the database). The session carries it so
+      // the site can show an admin their menu link; the admin routes read it fresh.
+      role: { type: "string", required: false, input: false },
     },
   },
 });

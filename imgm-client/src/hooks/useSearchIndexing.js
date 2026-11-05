@@ -26,6 +26,7 @@ const NOINDEX = new Set([
   '/forgot-password',
   '/reset-password',
   '/oauth-success',
+  '/admin', // the admin's own pages
 ]);
 const isPrivate = (path) =>
   NOINDEX.has(path) ||

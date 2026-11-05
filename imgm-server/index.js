@@ -35,6 +35,7 @@ import guideRouter from './src/routes/guide.js';
 import steamRouter from './src/routes/steam.js';
 import discoverRouter from './src/routes/discover.js';
 import socialRouter from './src/routes/social.js';
+import adminRouter from './src/routes/admin.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/lib/auth.js';
 
@@ -60,6 +61,8 @@ app.use('/api/steam', steamRouter);
 app.use('/api', sitemapRouter); // /api/sitemap.xml (imgm.app/sitemap.xml forwards here)
 // Always mounted: the routes themselves check who may use Play Next (everyone, or the beta list)
 app.use('/api/guide', guideRouter);
+// The admin pages (stats, moderation): only for admins, a 404 for everyone else
+app.use('/api/admin', adminRouter);
 
 // Start server
 app.listen(PORT, () => {
