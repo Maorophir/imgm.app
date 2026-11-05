@@ -21,6 +21,7 @@ import { getProgress } from '../lib/levels';
 import { Avatar } from '../components/reviewCard/RarityCard';
 import { LevelCard, PlayerReviews, StatsGrid } from '../components/profile/ProfileParts';
 import ShareCardButton from '../components/ShareCardButton';
+import CardSets from '../components/profile/CardSets';
 import LoadError from '../components/LoadError';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSearchIndexing } from '../hooks/useSearchIndexing';
@@ -127,6 +128,8 @@ const PlayerProfileContent = ({ username }) => {
       <LevelCard progress={{ ...getProgress(stats.xp), reviews: stats.reviews }} />
 
       <StatsGrid stats={stats} />
+
+      <CardSets username={username} />
 
       <section className="flex flex-col gap-8">
         <h2 className={SECTION_TITLE}>

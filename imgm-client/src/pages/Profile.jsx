@@ -13,6 +13,7 @@ import { useSession } from '../lib/authClient';
 import { getMyProfile, getMyReviews } from '../lib/api';
 import { LevelCard, PlayerReviews, ProfilePicture, StatsGrid } from '../components/profile/ProfileParts';
 import ShareCardButton from '../components/ShareCardButton';
+import CardSets from '../components/profile/CardSets';
 import { useMyProgress } from '../hooks/useMyProgress';
 import { SECTION_TITLE, TEXT_LINK } from '../lib/ui';
 
@@ -84,6 +85,8 @@ function Profile() {
       {progress && <LevelCard progress={progress} own />}
 
       {profile && <StatsGrid stats={profile.stats} own />}
+
+      {profile && <CardSets own key={`sets-${reload}`} />}
 
       {profile && (
         <section className="flex flex-col gap-8">
