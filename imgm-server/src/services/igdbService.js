@@ -658,3 +658,80 @@ export const getGameFamily = async (id) => {
   familyCache.set(id, { expiresAt: Date.now() + POPULAR_CACHE_TTL, family });
   return family;
 };
+
+// ---------------------------------------------------------------------------
+// The daily Guess the game (lib/daily.js)
+// ---------------------------------------------------------------------------
+
+// The games a day's puzzle can be: the most rated games on IGDB (ones most players
+// have at least heard of), main games, remakes and remasters, out already, with a
+// cover and screenshots. Not erotic games (IGDB theme 42) or ones rated adults only
+// (ESRB AO): their screenshots are shown to everyone. M-rated games stay in (most of
+// the famous ones are), as they do on game pages.
+const EROTIC_THEME = 42;
+const ADULTS_ONLY_RATINGS = new Set([7]); // ESRB AO (IGDB /age_rating_categories)
+const DAILY_POOL_FIELDS = GAME_FIELDS.replace(
+  /;\s*$/,
+  ', total_rating_count, game_type, remasters, age_ratings.rating_category, screenshots.width, screenshots.height;'
+);
+
+/**
+ * The candidates, most rated first: [{ game (our Game shape), shots (screenshot image
+ * ids, landscape ones only), remasters (IGDB ids), isRemaster }]. One IGDB request.
+ */
+export const getDailyPool = async () => {
+  const now = Math.floor(Date.now() / 1000);
+  const body = `${DAILY_POOL_FIELDS} where total_rating_count > 300 & cover != null & screenshots != null
+    & version_parent = null & parent_game = null & game_type = (0,8,9) & first_release_date < ${now}
+    & themes != (${EROTIC_THEME}); sort total_rating_count desc; limit 500;`;
+  return (await igdbRequest('games', body))
+    .filter((raw) => !(raw.age_ratings ?? []).some((rating) => ADULTS_ONLY_RATINGS.has(rating.rating_category)))
+    .map((raw) => ({
+      game: mapIgdbGame(raw),
+      shots: (raw.screenshots ?? []).filter((s) => s.image_id && s.width > s.height).map((s) => s.image_id),
+      remasters: raw.remasters ?? [],
+      isRemaster: raw.game_type === 9,
+    }));
+};
+
+// The games a remaster was made from (IGDB only links the other way: game.remasters)
+export const getRemasterOriginals = async (id) =>
+  (await igdbRequest('games', `fields id; where remasters = (${Number(id)}); limit 10;`)).map((g) => g.id);
+
+// What a guess is compared with: its genres, year, studio and series. Cached a day
+// (a game's facts don't change), so replaying a day's guesses costs no requests.
+const FACTS_FIELDS = `fields name, cover.image_id, first_release_date, genres.name, collections, version_parent,
+  involved_companies.developer, involved_companies.porting, involved_companies.company.name;`;
+const FACTS_TTL = 24 * 60 * 60 * 1000;
+const MAX_FACTS = 2000; // a few hundred bytes each; the oldest goes first
+const factsCache = new Map(); // id -> { expiresAt, facts }
+
+const factsOf = (raw) => ({
+  id: raw.id,
+  title: raw.name,
+  coverUrl: igdbImageUrl(raw.cover?.image_id, 't_cover_big'),
+  year: raw.first_release_date ? new Date(raw.first_release_date * 1000).getUTCFullYear() : null,
+  genres: (raw.genres ?? []).map((g) => g.name),
+  // The studios that made it (not the ones that only ported it)
+  developers: (raw.involved_companies ?? []).filter((ic) => ic.developer && !ic.porting).map((ic) => ic.company?.name).filter(Boolean),
+  seriesIds: raw.collections ?? [],
+  versionParent: raw.version_parent ?? null,
+});
+
+/**
+ * Map(id → { id, title, coverUrl, year, genres, developers, seriesIds, versionParent })
+ * for up to 10 games in one request. A game IGDB doesn't know is missing from the map.
+ */
+export const getGuessFacts = async (ids) => {
+  const wanted = [...new Set(ids.map(Number).filter((id) => Number.isSafeInteger(id) && id > 0))];
+  const missing = wanted.filter((id) => !(Date.now() < factsCache.get(id)?.expiresAt));
+  if (missing.length) {
+    const rows = await igdbRequest('games', `${FACTS_FIELDS} where id = (${missing.join(',')}); limit ${missing.length};`);
+    for (const raw of rows) {
+      factsCache.delete(raw.id);
+      factsCache.set(raw.id, { expiresAt: Date.now() + FACTS_TTL, facts: factsOf(raw) });
+    }
+    while (factsCache.size > MAX_FACTS) factsCache.delete(factsCache.keys().next().value);
+  }
+  return new Map(wanted.filter((id) => factsCache.has(id)).map((id) => [id, factsCache.get(id).facts]));
+};

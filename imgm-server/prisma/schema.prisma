@@ -50,6 +50,7 @@ model User {
   reviewVotes   ReviewVote[]
   gotwVotes     GotwVote[]
   gotwNominations GotwNomination[]
+  dailyGuesses  DailyGuess[] // the daily Guess the game (/daily)
 }
 
 model Session {
@@ -496,4 +497,35 @@ model DiscoverCommentReport {
   createdAt DateTime        @default(now())
 
   @@id([userId, commentId])
+}
+
+// -----------------------------------------------------------------------------
+// The daily Guess the game (/daily, lib/daily.js)
+// -----------------------------------------------------------------------------
+
+// One game a day, the same for everyone. The day's first visit (Israel time) picks it,
+// and it's kept, so a game never comes back
+model DailyPuzzle {
+  day       String       @id // the Israeli calendar day, "2026-11-05"
+  number    Int          @unique // #1, #2…: the number in the share line
+  gameId    Int          @unique // the answer (an IGDB id; the game is saved in Game too)
+  acceptIds Int[] // also right: the answer's remasters, or the game it remasters (same pictures)
+  shots     String[] // IGDB screenshot image ids, in the order they're shown
+  createdAt DateTime     @default(now())
+  guesses   DailyGuess[]
+}
+
+// A logged-in player's game of the day (logged-out players keep theirs in the browser)
+model DailyGuess {
+  day        String
+  puzzle     DailyPuzzle @relation(fields: [day], references: [day], onDelete: Cascade)
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guesses    Int[] // IGDB ids, in the order they were guessed
+  solved     Boolean     @default(false)
+  finishedAt DateTime? // solved, out of tries, or given up
+  createdAt  DateTime    @default(now())
+
+  @@id([day, userId])
+  @@index([userId, day])
 }
