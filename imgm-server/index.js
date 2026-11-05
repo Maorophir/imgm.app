@@ -34,6 +34,7 @@ import usersRouter from './src/routes/users.js';
 import guideRouter from './src/routes/guide.js';
 import steamRouter from './src/routes/steam.js';
 import discoverRouter from './src/routes/discover.js';
+import socialRouter from './src/routes/social.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/lib/auth.js';
 
@@ -49,6 +50,7 @@ app.use("/api/auth", toNodeHandler(auth));
 app.use('/api/games', gamesRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/users', usersRouter);
+app.use('/api/users', socialRouter); // following players, and taste matches
 app.use('/api/gotw', gotwRouter);
 app.use('/api/backlog', backlogRouter);
 app.use('/api/discover', discoverRouter); // Discover's thumbs up / down

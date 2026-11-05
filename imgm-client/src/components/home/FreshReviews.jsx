@@ -28,8 +28,9 @@ import { WRAP, TEXT_LINK, SECTION_TITLE } from '../../lib/ui';
 const FRESH_COUNT = 4; // newest reviews shown
 const FIRSTS_COUNT = 6; // games in Played these? Rate them.
 
-// One review: its mini card (on its painted edge, standing still), the words, who and when
-const FreshCard = ({ review }) => {
+// One review: its mini card (on its painted edge, standing still), the words, who and when.
+// Also the cards of From players you follow (FollowingReviews).
+export const FreshCard = ({ review }) => {
   const rarity = getRarity(review.rating);
   const author = review.author ?? 'A player';
   return (

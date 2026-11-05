@@ -39,6 +39,7 @@ import HomeHero from '../components/home/HomeHero';
 import RaritySection from '../components/home/RaritySection';
 import DiscoverSection from '../components/home/DiscoverSection';
 import { FreshReviews, ReviewPicks } from '../components/home/FreshReviews';
+import FollowingReviews from '../components/home/FollowingReviews';
 import GotwStrip from '../components/home/GotwStrip';
 
 const PAGE_SIZE = 10; // games per carousel page (2 rows on desktop)
@@ -241,6 +242,7 @@ const Home = () => {
       {/* ── What the community is saying, the game it picked this week (and the vote
           for next week's), and games waiting for their first review ── */}
       <FreshReviews reviews={freshReviews} />
+      <FollowingReviews />
       <GotwStrip />
       <ReviewPicks avoidArt={HERO_GAME_IDS} />
     </main>

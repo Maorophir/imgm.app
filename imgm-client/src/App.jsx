@@ -8,6 +8,7 @@ import Navbar from './components/Navbar';
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import PlayerProfile from './pages/PlayerProfile';
+import Compare from './pages/Compare';
 import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
@@ -141,6 +142,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           {/* Anyone's public profile, by gamer tag */}
           <Route path="/u/:username" element={<PlayerProfile />} />
+          <Route path="/compare/:username" element={<Compare />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/backlog" element={<Backlog />} />
           {/* Steam: what connecting gives you (anyone), then your library (players) */}
