@@ -1,14 +1,17 @@
 /**
  * Navbar — the site header on every page: logo, game search, the main links (Games ·
- * Discover · Game of the Week · Hall of Fame · Steam · Play Next) and the account: the player's
+ * Discover · Community ▾ · Steam · Play Next, where Community opens the daily game, Game of
+ * the Week and the Hall of Fame: CommunityMenu) and the account: the player's
  * menu, or for visitors "Log in" and "Sign up". Noir: a solid warm-black bar on a hairline.
  *
- * Desktop (xl+, 1280px and up): one 72px row: logo · search (centred) · links ·
- * account, the links 20px apart, so all six leave the search its 200px. There the search
- * counts as 200px wide when the row decides whether to wrap (a flex row wraps by each
- * box's starting width), then grows into what's left, up to 380px.
- * Tablet and laptop (sm–xl): the same, with the links wrapped onto a second row
- * underneath (six don't fit beside the search below 1280px).
+ * Desktop (75rem+, 1200px and up): one 72px row: logo · search (centred) · links ·
+ * account, the links 20px apart, so all five leave the search its 200px (logo 154 +
+ * search 200 + links 432 + a player's bell and menu with a long tag about 250 + gaps
+ * and margins: about 1150px, so 1200px leaves room). There the search counts as 200px wide when the row
+ * decides whether to wrap (a flex row wraps by each box's starting width), then grows
+ * into what's left, up to 380px. (With six links, before Community, this was 1280px.)
+ * Tablet and laptop (sm–75rem): the same, with the links wrapped onto a second row
+ * underneath (they don't fit beside the search below 1200px).
  * Phone: a 56px row (logo · search button · account), then the links on a row of their
  * own in 14px type, as in the design: no menu to open. Below 400px wide they're 13px
  * with 12px gaps (about 315px of words + 48px of gaps for all five). Where they don't
@@ -37,6 +40,7 @@ import { WRAP } from '../lib/ui';
 import SearchBar from './SearchBar';
 import UserMenu from './UserMenu';
 import NotificationBell from './NotificationBell';
+import CommunityMenu from './CommunityMenu';
 import Logo from './Logo';
 import { usePlayNextAccess } from '../hooks/usePlayNextAccess';
 import { useDiscoverAccess } from '../hooks/useDiscoverAccess';
@@ -59,14 +63,13 @@ const logInClass =
 const iconButtonClass =
   'sm:hidden w-11 h-11 shrink-0 grid place-items-center rounded-sm text-white hover:text-slate-50 transition-colors duration-120';
 
-const BASE_LINKS = [
-  // No Home link: the logo goes home. Games is the search page, which shows popular
-  // games to pick from until something is typed (pages/Search.jsx).
-  { to: '/search', label: 'Games' },
-  { to: '/game-of-the-week', label: 'Game of the Week' },
-  { to: '/hall-of-fame', label: 'Hall of Fame' },
-  // Trending is hidden until it has real content (pages/Trending.jsx)
-];
+// No Home link: the logo goes home. Games is the search page, which shows popular
+// games to pick from until something is typed (pages/Search.jsx). (Trending is hidden
+// until it has real content, pages/Trending.jsx.)
+const GAMES_LINK = { to: '/search', label: 'Games' };
+// Community: the daily game, Game of the Week and the Hall of Fame, in one dropdown
+// (CommunityMenu), so the menu is five links
+const COMMUNITY = 'community';
 // Steam is for everyone: visitors land on the page that explains it, players connect
 // there or open their library from it. It comes before Play Next, so it stays in view
 // where the phone row has to scroll (and it stays underlined on /steam/library too).
@@ -85,8 +88,8 @@ function Navbar() {
   // Play Next shows for everyone after launch, before that only for beta players
   const playNext = usePlayNextAccess();
   const discover = useDiscoverAccess();
-  const [games, ...rest] = BASE_LINKS;
-  const LINKS = [games, ...(discover.enabled ? [DISCOVER_LINK] : []), ...rest, STEAM_LINK, ...(playNext.enabled ? [PLAY_NEXT_LINK] : [])];
+  const LINKS = [GAMES_LINK, ...(discover.enabled ? [DISCOVER_LINK] : []), COMMUNITY, STEAM_LINK, ...(playNext.enabled ? [PLAY_NEXT_LINK] : [])];
+  const linksRef = useRef(null);
 
   // The phone's search row remembers the page it was opened on, so it closes by
   // itself once a search takes the player somewhere else (a result, or Enter)
@@ -127,7 +130,7 @@ function Navbar() {
     // (Discover on an upright phone tucks it away, and its tab lays it over the page)
     <header className={`${navMode === 'over' ? 'fixed inset-x-0' : 'sticky'} top-0 z-50 bg-slate-950 border-b border-slate-700 ${navMode === 'hidden' ? 'hidden' : ''}`}>
       <nav aria-label="Main">
-        <div className={`${WRAP} flex flex-wrap items-center gap-x-2 sm:gap-x-4 min-h-14 pt-1.5 sm:pt-3.5 sm:pb-1 xl:py-0 xl:min-h-[72px]`}>
+        <div className={`${WRAP} flex flex-wrap items-center gap-x-2 sm:gap-x-4 min-h-14 pt-1.5 sm:pt-3.5 sm:pb-1 min-[75rem]:py-0 min-[75rem]:min-h-[72px]`}>
           {/* Logo, with a small "beta" up by the top of the wordmark. The tiniest phones
               drop the "beta" (the footer still says it) so the row doesn't overflow, and
               for visitors so do phones below 400px, to fit "Log in" beside "Sign up". */}
@@ -155,7 +158,7 @@ function Navbar() {
           <div
             id="nav-search"
             ref={searchRef}
-            className={`${searchOpen ? 'flex' : 'hidden'} order-last basis-full pt-1 pb-2.5 sm:flex sm:order-none sm:basis-auto sm:p-0 sm:mx-auto sm:flex-[0_1_380px] sm:min-w-[200px] xl:flex-[1_1_200px] xl:max-w-[380px]`}
+            className={`${searchOpen ? 'flex' : 'hidden'} order-last basis-full pt-1 pb-2.5 sm:flex sm:order-none sm:basis-auto sm:p-0 sm:mx-auto sm:flex-[0_1_380px] sm:min-w-[200px] min-[75rem]:flex-[1_1_200px] min-[75rem]:max-w-[380px]`}
           >
             <SearchBar />
           </div>
@@ -163,9 +166,13 @@ function Navbar() {
           {/* Links: their own row on phones and tablets (14px type on phones, 13px with
               tighter gaps below 400px, scrolling sideways where they don't fit; from
               tablets up they always fit, so nothing clips their focus ring), in the bar
-              from lg, a little closer together below xl so the search keeps its room */}
-          <ul className="flex order-last basis-full gap-4 pb-1.5 text-sm overflow-x-auto [scrollbar-width:none] max-[25rem]:gap-3 max-[25rem]:text-[13px] sm:overflow-visible sm:gap-6 sm:text-base xl:order-none xl:basis-auto xl:gap-5 xl:pb-0">
-            {LINKS.map((l) => (
+              from 1200px, a little closer together there so the search keeps its room */}
+          <ul ref={linksRef} className="flex order-last basis-full gap-4 pb-1.5 text-sm overflow-x-auto [scrollbar-width:none] max-[25rem]:gap-3 max-[25rem]:text-[13px] sm:overflow-visible sm:gap-6 sm:text-base min-[75rem]:order-none min-[75rem]:basis-auto min-[75rem]:gap-5 min-[75rem]:pb-0">
+            {LINKS.map((l) => l === COMMUNITY ? (
+              <li key={COMMUNITY}>
+                <CommunityMenu linkClass={navClass} rowRef={linksRef} />
+              </li>
+            ) : (
               <li key={l.to}>
                 <NavLink
                   to={l.to}

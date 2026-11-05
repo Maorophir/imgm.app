@@ -19,15 +19,19 @@ const listFromQuery = (text) =>
   guessList.safeParse(String(text ?? '').split(',').filter(Boolean).map(Number)).data ?? [];
 
 // The page's data: the puzzle, where the player stands, and (once finished) how
-// everyone did today
+// everyone did today. The headline numbers (how many finished, the share who got it)
+// come always: the home page's strip shows them before anyone plays, and they give
+// nothing away.
 const answerFor = async (puzzle, state, user) => {
   const finished = state.status !== 'playing';
   const { ids, ...shown } = state;
+  const stats = await todayStats(puzzle.day);
   return {
     ...puzzleInfo(puzzle),
     ...shown,
     played: ids, // the ids to keep (a logged-out player's browser stores them)
-    today: finished ? await todayStats(puzzle.day) : null,
+    results: { players: stats.players, solvedShare: stats.solvedShare },
+    today: finished ? stats : null,
     me: user ? await recordOf(user.id, puzzle.day) : null,
   };
 };
