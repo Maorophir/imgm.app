@@ -52,6 +52,7 @@ import ShareCardButton from '../components/ShareCardButton';
 import ChangePictureButton from '../components/share/ChangePictureButton';
 import FaceDownCard from '../components/home/FaceDownCard';
 import RateAnother from '../components/reviewQuest/RateAnother';
+import RoundupQuestion from '../components/reviewQuest/RoundupQuestion';
 import {
   EMPTY_ANSWERS, BADGES, CHECKLIST, XP_EASY, XP_WRITTEN, MAX_XP, getRarity,
 } from '../components/reviewQuest/questOptions';
@@ -714,6 +715,8 @@ const Quest = ({ id }) => {
           )}
         </div>
 
+        {/* Asked once ever, after a review: the Sunday email, off unless they say yes */}
+        {step === DONE && <RoundupQuestion />}
         {/* The way on: three more games to rate, and the quest's game search */}
         {step === DONE && <RateAnother gameId={game.id} />}
       </div>

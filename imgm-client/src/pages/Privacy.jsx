@@ -12,7 +12,7 @@ import { TEXT_LINK } from '../lib/ui';
 const Privacy = () => (
   <LegalPage
     title="Privacy Policy"
-    effective="November 3, 2026"
+    effective="November 5, 2026"
     intro="This policy explains what IMGM (I Am Gaming, imgm.app) collects about you, why, who helps us run the site, and the choices you have. We keep it as short and plain as we can."
   >
     <S title="1. Who we are">
@@ -25,6 +25,7 @@ const Privacy = () => (
         <li><strong className="text-white">Steam, if you sign up with it or connect it:</strong> your Steam ID (the public number Steam gives every account), your Steam name, the games you own on Steam (and the ones you've played lately through Steam Family Sharing, which we keep once seen), how long you've played each one (in all and in the last two weeks) and when you last played it. We use your Steam ID to let you log in with Steam. Steam never shares your Steam password, email address or payment details with us. We ask Steam for your games only when you connect Steam, open your Steam library on IMGM or refresh it.</li>
         <li><strong className="text-white">Profile:</strong> your gamer tag and, if you add one, your profile picture.</li>
         <li><strong className="text-white">What you post and do:</strong> reviews and their answers, ratings, helpful votes, Game of the Week votes and nominations, your Backlog, Play Next chats and quest answers, and feedback you send.</li>
+        <li><strong className="text-white">Notifications and email choices:</strong> the lines in your notification bell (for example that another player replied to your comment, or that a game in your Backlog came out), which emails you chose to get, and a record of the ones we sent you (so we never send one twice).</li>
         <li><strong className="text-white">Technical:</strong> a login cookie, and your IP address, used briefly for security and to limit abuse (for example rate limits).</li>
         <li><strong className="text-white">Anonymous visit counts:</strong> Vercel Analytics counts page views without cookies and without identifying you.</li>
       </ul>
@@ -37,7 +38,8 @@ const Privacy = () => (
         <li>To give you Play Next recommendations based on your answers and reviews.</li>
         <li>If you sign up with Steam or connect it: to let you log in with it, and to show you your Steam library with your hours, so you can rate those games or add them to your Backlog.</li>
         <li>To keep IMGM safe and fair (stopping spam, abuse and fake votes) and to fix bugs.</li>
-        <li>To send you account emails, like password resets. We don't send marketing emails.</li>
+        <li>To send you account emails, like password resets. These always come, because your account needs them.</li>
+        <li>To send you only the other emails you chose: a weekly roundup, the day a game in your Backlog comes out, or replies and likes. They're all off until you switch one on in Settings, go only to a confirmed email address, and come at most twice a week. Every one has an Unsubscribe link that works in one click, without logging in, and you can switch each one off in Settings at any time.</li>
       </ul>
       <p>We never sell your data, and we don't show ads based on you.</p>
     </S>
@@ -57,7 +59,7 @@ const Privacy = () => (
         <li>Neon (database);</li>
         <li>Google Cloud (Gemini AI, Cloud Vision, and the AI service's hosting) and Google sign-in;</li>
         <li>TypeSafe (Jev AI, which sorts Play Next messages: it gets the message text only, never your email address, name or account);</li>
-        <li>Resend (account emails);</li>
+        <li>Resend (account emails, and the emails you chose to get);</li>
         <li>IGDB/Twitch (game information; we don't send them your personal data);</li>
         <li>YouTube (Google), Valve's Steam and Microsoft's Xbox, for game trailers: when a trailer plays, your browser loads it from their servers, which see your IP address. We send them nothing about you; YouTube's trailers play in its privacy-enhanced mode;</li>
         <li>Valve, only if you connect Steam (Steam sign-in, and your Steam library). You log in on Steam's own site, under <a href="https://store.steampowered.com/privacy_agreement/" target="_blank" rel="noopener noreferrer" className={`font-medium text-white ${TEXT_LINK}`}>Valve's privacy policy</a>; we send Valve only your Steam ID, to ask for your games.</li>
@@ -73,6 +75,7 @@ const Privacy = () => (
         <li>Your account and content: until you delete them or your account.</li>
         <li>Your Steam connection and Steam library: until you disconnect Steam in your profile's settings or delete your account. Disconnecting deletes them; your reviews and Backlog stay.</li>
         <li>Play Next chats: 30 days after your last message, then they're deleted.</li>
+        <li>Notifications: read ones for 60 days, any for 180 days. The record of emails we sent you: 60 days.</li>
         <li>Feedback and security logs: as long as needed to handle them, usually a few months.</li>
         <li>After you delete your account, your data is removed within days; backups may keep a copy for a short time.</li>
       </ul>

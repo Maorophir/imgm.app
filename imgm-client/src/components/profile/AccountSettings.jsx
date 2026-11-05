@@ -1,6 +1,7 @@
 /**
- * Account settings on the profile: your email, change your password, connect or
- * disconnect Steam, and delete your account.
+ * Account settings on the profile: your email (and the emails you chose to get:
+ * EmailSettings), change your password, connect or disconnect Steam, and delete your
+ * account.
  *
  * Accounts that log in with Google have no IMGM password: Google manages it, so there's
  * nothing to change here, and deleting works within a day of logging in (Better Auth's
@@ -26,6 +27,7 @@ import { steamProfileLink } from '../steam/library/libraryData';
 import { passwordProblems } from '../../lib/passwordRules';
 import { FIELD, TEXT_BOX, GHOST_BUTTON, TEXT_LINK } from '../../lib/ui';
 import PasswordChecklist from '../PasswordChecklist';
+import EmailSettings from './EmailSettings';
 
 const field = FIELD;
 // A settings part: card stock on a hairline
@@ -337,6 +339,8 @@ const AccountSettings = () => {
   return (
     <>
       <EmailStatus />
+      {/* The emails they chose (all off until switched on); /settings#emails lands here */}
+      <EmailSettings />
       <div className={`${PANEL} gap-4`}>
         <div>
           <p className={PANEL_LABEL}><KeyRound className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> Password</p>

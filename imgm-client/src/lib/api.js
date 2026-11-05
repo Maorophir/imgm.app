@@ -260,3 +260,16 @@ export async function streamGuide(body, { signal, onEvent }) {
     }
   }
 }
+
+// The bell in the header (components/NotificationBell.jsx)
+export const getUnreadCount = (signal) => fetchJson('/api/notifications/unread', { signal });
+export const getNotifications = (signal) => fetchJson('/api/notifications', { signal });
+export const markNotificationRead = (id) => fetchJson(`/api/notifications/${id}/read`, { method: 'PUT' });
+export const markAllNotificationsRead = () => fetchJson('/api/notifications/read-all', { method: 'PUT' });
+
+// The emails a player chose: Settings → Emails, the quest's one question, /unsubscribe
+export const getEmailSettings = (signal) => fetchJson('/api/emails/settings', { signal });
+export const setEmailSettings = (choices) => fetchJson('/api/emails/settings', { method: 'PUT', body: choices });
+export const answerRoundupQuestion = (yes) => fetchJson('/api/emails/settings/roundup-question', { method: 'PUT', body: { yes } });
+export const unsubscribeAll = (token) => fetchJson('/api/emails/unsubscribe', { method: 'POST', body: { token } });
+export const resubscribe = (token, choices) => fetchJson('/api/emails/resubscribe', { method: 'POST', body: { token, ...choices } });

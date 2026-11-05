@@ -26,6 +26,7 @@ import Search from './pages/Search';
 import Welcome from './pages/Welcome';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Unsubscribe from './pages/Unsubscribe';
 import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
@@ -98,6 +99,7 @@ const PAGES = {
   '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, collect a card for every rating, and get picks from Play Next.'],
   '/welcome': ['Welcome'],
   '/signup/steam': ['Sign up with Steam'],
+  '/unsubscribe': ['Unsubscribe'],
   '/discover': [
     'Discover: new and upcoming games, trailer by trailer',
     'Scroll through new releases, upcoming games and what\'s trending, one trailer at a time. Vote, save one for later, or rate it in one tap.',
@@ -155,6 +157,8 @@ function App() {
           <Route path="/signup/steam" element={<SteamSignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          {/* Every opt-in email's one-click Unsubscribe link (no login) */}
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/welcome" element={<Welcome />} />
         </Routes>
