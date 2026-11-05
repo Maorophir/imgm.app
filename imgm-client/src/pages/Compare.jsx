@@ -16,7 +16,7 @@
  */
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
-import { useSession } from '../lib/authClient';
+import { authClient, useSession } from '../lib/authClient';
 import { getCompareGames, getMyReview, getTasteMatch, saveReview } from '../lib/api';
 import { getRarity } from '../components/reviewQuest/questOptions';
 import { Avatar } from '../components/reviewCard/RarityCard';
@@ -71,6 +71,9 @@ const CompareContent = ({ username }) => {
   const [skipped, setSkipped] = useState(() => new Set());
   const [saving, setSaving] = useState(null); // { gameId, score } being saved
   const [problem, setProblem] = useState(null);
+  // Unconfirmed emails post only a few reviews: then the page asks for the email instead
+  // of showing an error ('ask' | 'sending' | 'sent' | 'failed')
+  const [confirm, setConfirm] = useState(null);
   const [taste, setTaste] = useState(null); // the taste endpoint's answer
   const [reveal, setReveal] = useState(false); // "See your match now"
 
@@ -144,12 +147,18 @@ const CompareContent = ({ username }) => {
       if (!existing?.rating) await saveReview({ gameId: game.id, rating: score });
       setYours((current) => ({ ...current, [game.id]: existing?.rating ?? score }));
     } catch (error) {
-      setProblem(error?.data?.error ?? "Couldn't save your score. Please try again.");
+      if (error?.data?.code === 'EMAIL_NOT_CONFIRMED') setConfirm('ask');
+      else setProblem(error?.data?.error ?? "Couldn't save your score. Please try again.");
     } finally {
       setSaving(null);
     }
   };
   const skip = (game) => setSkipped((current) => new Set(current).add(game.id));
+  const resend = async () => {
+    setConfirm('sending');
+    const { error } = await authClient.sendVerificationEmail({ email: session.user.email, callbackURL: `${window.location.origin}${pathname}` });
+    setConfirm(error ? 'failed' : 'sent');
+  };
 
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12 flex flex-col gap-8">
@@ -225,6 +234,21 @@ const CompareContent = ({ username }) => {
           </ol>
           {visible.length === 0 && <p className="text-base text-slate-300">You haven't played any of {name}'s games yet.</p>}
           {problem && <p role="alert" className="text-sm text-red-200">{problem}</p>}
+          {confirm && (
+            <div role="status" className="flex flex-col gap-2 border border-slate-600 bg-slate-900 p-4 sm:p-5">
+              <p className="font-semibold text-white">Confirm your email to rate more games</p>
+              <p className="text-sm text-slate-300">
+                Your scores so far already count toward your match. Open the link we emailed you, then come back here.
+              </p>
+              {confirm === 'sent' ? (
+                <p className="text-sm text-slate-300">Sent. Check your inbox.</p>
+              ) : (
+                <button type="button" onClick={resend} disabled={confirm === 'sending'} className={`${TEXT_BUTTON_SM} self-start`}>
+                  {confirm === 'failed' ? "Couldn't send it. Try again" : 'Send the email again'}
+                </button>
+              )}
+            </div>
+          )}
 
           {!userId && (
             <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
