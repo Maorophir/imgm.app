@@ -36,6 +36,7 @@ import steamRouter from './src/routes/steam.js';
 import discoverRouter from './src/routes/discover.js';
 import socialRouter from './src/routes/social.js';
 import adminRouter from './src/routes/admin.js';
+import dailyRouter from './src/routes/daily.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/lib/auth.js';
 
@@ -55,6 +56,7 @@ app.use('/api/users', socialRouter); // following players, and taste matches
 app.use('/api/gotw', gotwRouter);
 app.use('/api/backlog', backlogRouter);
 app.use('/api/discover', discoverRouter); // Discover's thumbs up / down
+app.use('/api/daily', dailyRouter); // the daily Guess the game
 app.use('/api/feedback', feedbackRouter);
 // A connected Steam account's library (connecting itself is on the login server, /api/auth/steam)
 app.use('/api/steam', steamRouter);

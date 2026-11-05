@@ -34,6 +34,7 @@ import SteamLanding from './pages/SteamLanding';
 import SteamLibrary from './pages/SteamLibrary';
 import SteamSignUp from './pages/SteamSignUp';
 import Discover from './pages/Discover';
+import Daily from './pages/Daily';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
 import { useDiscoverAccess } from './hooks/useDiscoverAccess';
 import { usePageTitle } from './hooks/usePageTitle';
@@ -114,6 +115,10 @@ const PAGES = {
     'Discover: new and upcoming games, trailer by trailer',
     'Scroll through new releases, upcoming games and what\'s trending, one trailer at a time. Vote, save one for later, or rate it in one tap.',
   ],
+  '/daily': [
+    'Guess the game: the IMGM daily',
+    'A new game every day, the same for everyone: name it from a blurred screenshot in six tries, and keep your streak going.',
+  ],
 };
 function RouteTitle() {
   const { pathname } = useLocation();
@@ -161,6 +166,7 @@ function App() {
           <Route path="/steam/library" element={<SteamLibrary />} />
           {/* Discover: a feed of new and upcoming games, one trailer per screen */}
           <Route path="/discover" element={<DiscoverRoute />} />
+          <Route path="/daily" element={<Daily />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Auth />} />
