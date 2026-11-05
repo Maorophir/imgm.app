@@ -37,6 +37,9 @@ import discoverRouter from './src/routes/discover.js';
 import socialRouter from './src/routes/social.js';
 import adminRouter from './src/routes/admin.js';
 import dailyRouter from './src/routes/daily.js';
+import notificationsRouter from './src/routes/notifications.js';
+import emailsRouter from './src/routes/emails.js';
+import { startNotifyJobs } from './src/lib/notifyJobs.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/lib/auth.js';
 
@@ -65,8 +68,12 @@ app.use('/api', sitemapRouter); // /api/sitemap.xml (imgm.app/sitemap.xml forwar
 app.use('/api/guide', guideRouter);
 // The admin pages (stats, moderation): only for admins, a 404 for everyone else
 app.use('/api/admin', adminRouter);
+// The bell in the header, and the emails players chose (with the one-click unsubscribe)
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/emails', emailsRouter);
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  startNotifyJobs(); // the release radar, reminders and opt-in emails (lib/notifyJobs.js)
 });

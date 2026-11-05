@@ -22,6 +22,9 @@
  * says it): logo about 104px + 8 + search 44 + 8 + Log in 44 + 16 + Sign up 85 = about
  * 309px, in 328px. Below 360px, the sign-up page's "Already have an account? Log in" is
  * one tap away.
+ *
+ * Players: the notification bell (NotificationBell) sits just left of their menu: logo
+ * about 104px + 8 + search 44 + 8 + bell 44 + 4 + menu about 62 = about 274px.
  */
 import { Search, X } from 'lucide-react';
 import { useRef, useState } from 'react';
@@ -33,6 +36,7 @@ import { wakeGuide } from '../lib/api';
 import { WRAP } from '../lib/ui';
 import SearchBar from './SearchBar';
 import UserMenu from './UserMenu';
+import NotificationBell from './NotificationBell';
 import Logo from './Logo';
 import { usePlayNextAccess } from '../hooks/usePlayNextAccess';
 import { useDiscoverAccess } from '../hooks/useDiscoverAccess';
@@ -176,9 +180,14 @@ function Navbar() {
             ))}
           </ul>
 
-          {/* Account (every width) */}
+          {/* Account (every width): a player's bell and menu, or a visitor's log in links */}
           <div className="flex items-center gap-4 shrink-0">
-            {!isPending && (session ? <UserMenu user={session.user} /> : visitorLinks)}
+            {!isPending && (session ? (
+              <div className="flex items-center gap-1">
+                <NotificationBell />
+                <UserMenu user={session.user} />
+              </div>
+            ) : visitorLinks)}
           </div>
         </div>
       </nav>

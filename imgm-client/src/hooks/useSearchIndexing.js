@@ -27,6 +27,7 @@ const NOINDEX = new Set([
   '/reset-password',
   '/oauth-success',
   '/admin', // the admin's own pages
+  '/unsubscribe', // an email's link, with the player's token in it
 ]);
 const isPrivate = (path) =>
   NOINDEX.has(path) ||
