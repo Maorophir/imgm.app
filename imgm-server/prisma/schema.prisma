@@ -530,7 +530,8 @@ model Follow {
 // -----------------------------------------------------------------------------
 
 // One row per player per day they used the site logged in (a UTC date). Nothing about
-// logged-out visitors. History starts the day this table shipped.
+// logged-out visitors. History starts the day this table shipped; days older than 13
+// months are deleted each night (notifyJobs.js).
 model PlayerDay {
   userId String
   user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -635,4 +636,29 @@ model EmailSend {
 
   @@id([userId, kind, key])
   @@index([userId, sentAt])
+}
+
+// -----------------------------------------------------------------------------
+// The visitor counter (/admin's Visitors tab, lib/visits.js): daily totals only. No
+// cookies, no IPs, nothing about who a visitor is. Kept 13 months.
+// -----------------------------------------------------------------------------
+
+// Each day's page views and different visitors (a visitor is recognised only within a
+// day, so the same person on two days counts on both)
+model VisitDay {
+  day      DateTime @id @db.Date
+  views    Int      @default(0)
+  visitors Int      @default(0)
+}
+
+// The same day split by one thing about the visit: which page, the site it came from,
+// the country, phone / tablet / computer, the browser or the operating system
+model VisitCount {
+  day       DateTime @db.Date
+  dimension String // path | referrer | country | device | browser | os
+  value     String
+  views     Int      @default(0)
+  visitors  Int      @default(0)
+
+  @@id([day, dimension, value])
 }

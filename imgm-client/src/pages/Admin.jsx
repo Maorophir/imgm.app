@@ -2,6 +2,8 @@
  * Admin — IMGM's own back office at /admin, only for players whose role is 'admin' (App
  * sends anyone else home; the server answers them 404 either way). Four tabs:
  *   Stats     players, who's active week by week, who comes back, reviews, what players do
+ *   Visitors  everyone who opens the site, logged in or not (IMGM's own cookie-free
+ *             counter): visitors, pages, where they came from, countries, devices
  *   Reports   Discover comments someone reported: keep, hide or delete each
  *   Reviews   the newest reviews, searchable by game or gamer tag: delete one
  *   Comments  the newest Discover comments, searchable: hide or delete one
@@ -10,9 +12,9 @@
  */
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { EyeOff, Eye, Lock, Search, Trash2 } from 'lucide-react';
+import { EyeOff, Eye, Lock, Search, Trash2, ExternalLink } from 'lucide-react';
 import {
-  getAdminStats, getAdminReports, getAdminComments, getAdminReviews,
+  getAdminStats, getAdminVisitors, getAdminReports, getAdminComments, getAdminReviews,
   setAdminCommentHidden, deleteAdminComment, deleteAdminReview,
 } from '../lib/api';
 import { getRarity } from '../components/reviewQuest/questOptions';
@@ -22,6 +24,7 @@ import { WRAP, SECTION_TITLE, SEGMENTS, segment, LABEL, FIELD, GHOST_BUTTON_SM, 
 
 const TABS = [
   ['stats', 'Stats'],
+  ['visitors', 'Visitors'],
   ['reports', 'Reports'],
   ['reviews', 'Reviews'],
   ['comments', 'Comments'],
@@ -72,8 +75,6 @@ function Stats() {
   if (error) return <LoadError onRetry={reload} />;
   if (!data) return <div className="h-150" />;
   const { players, active, cameBack, reviews, weeks, doing, activitySince } = data;
-  const tallest = Math.max(1, ...weeks.map((w) => w.players));
-  const thisWeek = weeks.length - 1;
   const doingRows = [
     ['Rated a game', doing.rated],
     ['Discover vote', doing.discoverVoted],
@@ -102,22 +103,7 @@ function Stats() {
             Players who used the site logged in that week (7 days to today, UTC).{' '}
             {activitySince ? `Counted since ${shortDate(activitySince)}.` : 'Counting starts with the next visit.'}
           </p>
-          <div className="flex items-end gap-2 sm:gap-3 h-45 border-b border-slate-600">
-            {weeks.map((week, i) => (
-              <div key={week.start} className="flex-1 flex flex-col items-center justify-end gap-1.5 h-full">
-                <span className="text-xs tabular-nums text-slate-300">{week.players}</span>
-                <div
-                  className={`w-full ${i === thisWeek ? 'bg-white' : 'bg-slate-500'}`}
-                  style={{ height: `${(week.players / tallest) * 150}px` }}
-                />
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 sm:gap-3 mt-2">
-            {weeks.map((week) => (
-              <span key={week.start} className="flex-1 text-center text-xs text-slate-400">{shortDate(week.start)}</span>
-            ))}
-          </div>
+          <WeekBars weeks={weeks} value={(week) => week.players} />
         </div>
 
         <div className="border border-slate-700 bg-slate-900 p-5">
@@ -138,6 +124,121 @@ function Stats() {
           ))}
         </div>
       </div>
+    </>
+  );
+}
+
+// ── Visitors ──
+
+// Week-by-week bars, for Stats and Visitors (the newest week in ivory)
+function WeekBars({ weeks, value }) {
+  const tallest = Math.max(1, ...weeks.map(value));
+  return (
+    <>
+      <div className="flex items-end gap-2 sm:gap-3 h-45 border-b border-slate-600">
+        {weeks.map((week, i) => (
+          <div key={week.start} className="flex-1 flex flex-col items-center justify-end gap-1.5 h-full">
+            <span className="text-xs tabular-nums text-slate-300">{value(week)}</span>
+            <div
+              className={`w-full ${i === weeks.length - 1 ? 'bg-white' : 'bg-slate-500'}`}
+              style={{ height: `${(value(week) / tallest) * 150}px` }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex gap-2 sm:gap-3 mt-2">
+        {weeks.map((week) => (
+          <span key={week.start} className="flex-1 text-center text-xs text-slate-400">{shortDate(week.start)}</span>
+        ))}
+      </div>
+    </>
+  );
+}
+
+const DEVICE_NAMES = { phone: 'Phone', tablet: 'Tablet', computer: 'Computer' };
+const countryName = (code) => {
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'region' }).of(code) ?? code;
+  } catch {
+    return code;
+  }
+};
+const TOP_LISTS = [
+  ['path', 'Top pages', (v) => v],
+  ['referrer', 'Where they came from', (v) => (v === 'other' ? 'Other sites' : v)],
+  ['country', 'Countries', countryName],
+  ['device', 'Devices', (v) => DEVICE_NAMES[v] ?? v],
+  ['browser', 'Browsers', (v) => v],
+  ['os', 'Systems', (v) => v],
+];
+
+// One of this week's top lists, as bars against its biggest value
+function TopList({ title, rows, label, empty }) {
+  const most = Math.max(1, ...rows.map((r) => r.visitors));
+  return (
+    <div className="border border-slate-700 bg-slate-900 p-5">
+      <p className="font-semibold mb-4">{title}</p>
+      {rows.length === 0 && <p className="text-sm text-slate-400">{empty}</p>}
+      {rows.map((row) => (
+        <div key={row.value} className="mb-3.5">
+          <div className="flex justify-between gap-4 text-sm mb-1.5">
+            <span className="min-w-0 truncate">{label(row.value)}</span>
+            <span className="shrink-0 tabular-nums text-slate-300">
+              {row.visitors} <span className="text-slate-400">· {row.views} views</span>
+            </span>
+          </div>
+          <div className="h-1.5 bg-slate-700">
+            <div className="h-full bg-slate-300" style={{ width: `${(row.visitors / most) * 100}%` }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Visitors() {
+  const { data, error, reload } = useLoad((signal) => getAdminVisitors(signal), []);
+  if (error) return <LoadError onRetry={reload} />;
+  if (!data) return <div className="h-150" />;
+  const { since, today, thisWeek, lastWeek, weeks, top } = data;
+
+  return (
+    <>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-slate-700 border border-slate-700 mb-8">
+        <Tile label="Visitors today" value={today.visitors} note={`${today.views} page views`} />
+        <Tile label="Visitors this week" value={thisWeek.visitors} note={change(thisWeek.visitors, lastWeek.visitors)} />
+        <Tile label="Visitors last week" value={lastWeek.visitors} note={`${lastWeek.views} page views`} />
+        <Tile label="Page views this week" value={thisWeek.views} note={change(thisWeek.views, lastWeek.views)} />
+      </div>
+
+      <div className="border border-slate-700 bg-slate-900 p-5 mb-6 lg:mb-8">
+        <p className="font-semibold mb-1">Visitors, week by week</p>
+        <p className="text-sm text-slate-400 mb-5">
+          Everyone who opened the site, logged in or not. A visitor is only recognised within a day, so a
+          week adds up its days: someone who came on three days counts three times.{' '}
+          {since ? `Counted since ${shortDate(since)}.` : 'Counting starts with the next visit.'}
+        </p>
+        <WeekBars weeks={weeks} value={(week) => week.visitors} />
+      </div>
+
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 lg:gap-8">
+        {TOP_LISTS.map(([dimension, title, label]) => (
+          <TopList
+            key={dimension}
+            title={title}
+            rows={top[dimension] ?? []}
+            label={label}
+            empty={dimension === 'referrer' ? 'No visits from other sites this week' : dimension === 'country' ? 'No countries yet (the server only learns them through imgm.app)' : 'Nothing this week yet'}
+          />
+        ))}
+      </div>
+
+      <p className="text-sm text-slate-400 mt-6">
+        This week: the last 7 days, UTC. No cookies; browsers that ask not to be tracked aren't counted.{' '}
+        <a href="https://vercel.com/dashboard" target="_blank" rel="noopener noreferrer" className={`${TEXT_BUTTON_SM} inline-flex items-center gap-1 h-auto text-white`}>
+          Full analytics on Vercel <ExternalLink className="size-3.5" aria-hidden="true" />
+        </a>
+      </p>
     </>
   );
 }
@@ -380,6 +481,7 @@ export default function Admin() {
         ))}
       </div>
       {tab === 'stats' && <Stats />}
+      {tab === 'visitors' && <Visitors />}
       {tab === 'reports' && <Reports />}
       {tab === 'reviews' && <Reviews />}
       {tab === 'comments' && <Comments />}

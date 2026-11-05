@@ -7,7 +7,7 @@ import { Router } from 'express';
 import { rateLimit } from 'express-rate-limit';
 import { requireAdmin } from '../lib/session.js';
 import {
-  getStats, listReports, listComments, listReviews, setCommentHidden, deleteComment, deleteReview,
+  getStats, getVisitors, listReports, listComments, listReviews, setCommentHidden, deleteComment, deleteReview,
 } from '../controllers/adminController.js';
 
 const router = Router();
@@ -24,6 +24,7 @@ router.use(rateLimit({
 }));
 
 router.get('/stats', getStats);
+router.get('/visitors', getVisitors); // the cookie-free visitor counter
 router.get('/reports', listReports);
 router.get('/comments', listComments); // ?q=
 router.get('/reviews', listReviews); // ?q=

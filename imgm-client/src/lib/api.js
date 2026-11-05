@@ -289,6 +289,8 @@ export async function streamGuide(body, { signal, onEvent }) {
 
 // ── The admin pages (/admin): only an admin gets answers, everyone else a 404 ──
 export const getAdminStats = (signal) => fetchJson('/api/admin/stats', { signal });
+// The visitor counter: { since, today, thisWeek, lastWeek, weeks, top: { path: [{ value, views, visitors }], … } }
+export const getAdminVisitors = (signal) => fetchJson('/api/admin/visitors', { signal });
 export const getAdminReports = (signal) => fetchJson('/api/admin/reports', { signal });
 export const getAdminComments = (q, signal) => fetchJson(`/api/admin/comments?q=${encodeURIComponent(q ?? '')}`, { signal });
 export const getAdminReviews = (q, signal) => fetchJson(`/api/admin/reviews?q=${encodeURIComponent(q ?? '')}`, { signal });
