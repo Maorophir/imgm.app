@@ -110,7 +110,16 @@ jev = (
     if os.getenv("TYPESAFE_API_KEY", "").strip()
     else None
 )
-JEV_SURE = 0.7  # below this, Gemini decides (clear answers came 0.74-1.00; an unsure one 0.56)
+# How likely Jev's route must be before we act on it; below, Gemini decides (TypeSafe's
+# "routing by probability"). Refusing a player is the costly mistake, so off_topic needs
+# more: "you're useless" came 0.76 off_topic. Find and chat keep the old bar (confidence
+# 0.7 was probability 0.8: for three options, confidence rescales the top probability).
+JEV_SURE = {FIND: 0.8, CHAT_ROUTE: 0.8, OFF_TOPIC: 0.9}
+
+
+def jev_is_sure(route) -> bool:
+    """Is Jev's route answer likely enough to act on?"""
+    return route.probabilities[route.choice] >= JEV_SURE[route.choice]
 
 
 def searched_before(messages: list) -> bool:
@@ -122,19 +131,36 @@ def searched_before(messages: list) -> bool:
     return any(isinstance(m, ToolMessage) and m.name == "search_games" for m in earlier)
 
 
+def jev_state(latest: str, earlier: str | None, reply: str, picked: bool) -> dict:
+    """What Jev sees: the last exchange in order, as a person would read it.
+
+    Play Next's reply matters: "ok ok something exciting" after a weather question is
+    unclear, after "I only help with games, what would you like to play?" it isn't.
+    Whether games were suggested is a fact code already knows, so Jev is told it.
+    """
+    if earlier is None:
+        return {"player's latest message": latest, "earlier conversation": "none: this is their first message"}
+    return {
+        "player's earlier message": earlier,
+        "Play Next's reply": reply or "(no reply)",
+        "player's latest message": latest,
+        "games suggested so far": "yes" if picked else "none yet",
+    }
+
+
 @traceable(name="jev_screen")
-def jev_screen(latest: str, earlier: str | None) -> tuple[str, str] | None:
-    """Jev's verdict on a message: (route, language) when it's sure, else None (Gemini decides)."""
+def jev_screen(state: dict) -> tuple[str, str] | None:
+    """Jev's verdict on a message (state from jev_state): (route, language) when it's sure,
+    else None (Gemini decides)."""
     if jev is None:
         return None
-    state = {"latest message": latest, "earlier message": earlier or "none: this is their first message"}
     try:
         result = jev.system_one(state=state, questions={"route": ROUTE_QUESTION, "language": LANGUAGE_QUESTION})
     except Exception:
         log.warning("Jev failed; Gemini screens instead", exc_info=True)
         return None
     route = result.choices["route"]
-    if route.confidence < JEV_SURE:
+    if not jev_is_sure(route):
         return None
     return route.choice, result.choices["language"].choice
 
@@ -160,7 +186,9 @@ def screen_question(state: RecommenderState) -> dict:
     latest = questions[-1] if questions else ""
     earlier = questions[-2] if len(questions) > 1 else None
 
-    verdict = jev_screen(latest, earlier)  # (route, language), or None when Gemini should decide
+    messages = state["messages"]
+    seen = jev_state(latest, earlier, previous_answer(messages), searched_before(messages))
+    verdict = jev_screen(seen)  # (route, language), or None when Gemini should decide
     route, language = verdict or (None, "english")
     reply = DECLINES.get(language, DEFAULT_DECLINE)
     if route is None:
