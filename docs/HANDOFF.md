@@ -1,4 +1,4 @@
-# Handoff (2026-11-03, after Jev became the screen node)
+# Handoff (2026-11-05, after Jev's screen was tuned with TypeSafe's skill)
 
 Read `.claude/CLAUDE.md` first: it explains how everything works. This file says where things stand.
 
@@ -24,6 +24,7 @@ Read `.claude/CLAUDE.md` first: it explains how everything works. This file says
   - **The new README** (d2d3cd9d): animations of the quest, the card and Discover, two Mermaid diagrams, screenshots, problems worth reading about (improved by another session). CLAUDE.md → Conventions → The README says how the images were made.
   - **Jev (TypeSafe) screens Play Next messages** (db5f65b9 + the Cloud Run redeploy): route and language in one call, ~0.2s; Gemini decides under 0.7 confidence, on a failure or without a key. Off-topic replies are fixed lines (English, Hebrew). "hello" before any picks gets a welcome and a question, not five games. The user wrote steps 1–2 of the agent code; Claude applied the fixes when asked. Production smoke test passed: hello 6.7s (welcome, no picks), off topic 0.4–0.5s, a real request 5 good picks.
   - **The Privacy Policy** names TypeSafe (Play Next messages, the text only) and Microsoft's Xbox (trailers), effective November 3, 2026.
+- **2026-11-05:** Jev's screen tuned with TypeSafe's skill (`feature/jev-evals`): a bar per route (off topic 0.9), Jev sees Play Next's last reply, clearer route wording, and a reusable eval (`imgm-ai/evals/jev_screen.py`, 79 messages, 79/79 in both orders). The user found LangSmith keeps only ~2 weeks of traces (11 real messages, mostly friends), so the eval is mostly written cases. Needs the Cloud Run redeploy (the user runs it).
 - **Migrations since 2026-10-17:** `steam_library`, `steam_shared_games`, `discover_votes`, `discover_comments` (Render runs them on start).
 
 ## The other machine (laptop)
@@ -41,7 +42,7 @@ Work on 2026-11-02/03 was on the desktop, which is up to date. The laptop needs 
 - Shared Steam games played before connecting (and not in the last two weeks) can't be fetched: Steam's Families API needs a user token.
 
 ## Next
-1. **Jev suggesting the agent's path** (the user's idea, next for the agent): Jev answers a few questions about a find request (does it name a game, is it about new or upcoming games, does it set limits), and the agent gets hints (or the code calls `get_game_family` itself when a game is named), saving a model turn. Jev suggests, the model decides, the check enforces; measure it in traces (agent turns, time, pick quality). The user writes it, one small step at a time. Other Jev ideas: a fit judge in the check, Discover comment moderation (Express side), review summary themes.
+1. **Jev suggesting the agent's path** (the user's idea, next for the agent): Jev answers a few questions about a find request (does it name a game, is it about new or upcoming games, does it set limits), and the agent gets hints (or the code calls `get_game_family` itself when a game is named), saving a model turn. Jev suggests, the model decides, the check enforces; measure it in traces (agent turns, time, pick quality). The path questions can go in the same `system_one` call as the route (same state, no extra wait: the skill's "ask speculatively"), and should be yes/no judgments (Nouls) that code combines; add their cases to the eval first. The user writes it, one small step at a time. Other Jev ideas: a fit judge in the check, Discover comment moderation (Express side), review summary themes.
 2. **Watch Discover now that it's open:** comment reports arriving at `FEEDBACK_EMAIL` (check it's set on Render), iPhone sound, the paused-YouTube panel, Render's logs for Steam lookup failures. Ideas the user liked for later: a "For you" order from votes and scores (Play Next reading them is agent code: the user writes it), a "guess the game" card every few clips.
 3. **Play Next uses the Steam library** (the user's next agent task, written by the user): what you've played and for how long, even with no reviews, and never recommend games you already own.
 4. **Branch cleanup** (the user runs it: Claude's branch deletions are blocked). Every local feature/hotfix branch is merged into `main`:
