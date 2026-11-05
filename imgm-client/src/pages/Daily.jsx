@@ -2,8 +2,8 @@
  * Daily — Route: /daily, the daily Guess the game
  *
  * One game a day (Israel time), the same for everyone: guess it from a screenshot in
- * six tries. The first picture is a very blurred screenshot; each wrong guess unlocks a
- * new, clearer one, says how close the guess was (Verdict, and the tiles in GuessRow),
+ * six tries. The first picture is a very blurred screenshot; each wrong guess makes it
+ * clearer (the same screenshot sharper, then a new one), says how close the guess was (Verdict, and the tiles in GuessRow),
  * and after a few, gives a clue. A right guess stamps the picture. The server checks every guess (lib/daily.js), so the answer only arrives at
  * the end.
  *
@@ -104,7 +104,7 @@ const Picture = ({ pictures, finished, solved, shake }) => {
           </span>
         )}
         <span className="absolute left-2 bottom-2 sm:left-3 sm:bottom-3 text-xs sm:text-sm font-medium bg-slate-950/85 px-2.5 py-1 rounded-xs tabular-nums">
-          {finished ? `Screenshot ${index + 1} of ${total}` : `Picture ${index + 1} of ${total}${index < 5 ? ': a new, clearer one with each try' : ''}`}
+          {finished ? `Screenshot ${index + 1} of ${total}` : `Picture ${index + 1} of ${total}${index < 5 ? ': clearer with each try' : ''}`}
         </span>
       </div>
       {/* The earlier pictures stay to look back at */}
@@ -166,7 +166,7 @@ const TONE = {
 
 // Right after a wrong guess: how warm it was in big words, what it told you, and that a
 // new picture is up. Read out by screen readers; keyed by the guess, so each one pops in.
-const Verdict = ({ guess, triesLeft }) => {
+const Verdict = ({ guess, triesLeft, newShot }) => {
   const heat = heatOf(guess);
   return (
     <div role="status" className={`mt-5 p-4 sm:p-5 rounded-sm border bg-slate-900 animate-pop ${TONE[heat.tone].box}`}>
@@ -176,7 +176,7 @@ const Verdict = ({ guess, triesLeft }) => {
       </p>
       {triesLeft > 0 && (
         <p className="mt-1.5 text-sm text-slate-400">
-          A new, clearer picture is up. {triesLeft} {triesLeft === 1 ? 'try' : 'tries'} left.
+          {newShot ? 'A new screenshot is up.' : 'The picture is sharper now.'} {triesLeft} {triesLeft === 1 ? 'try' : 'tries'} left.
         </p>
       )}
     </div>
@@ -533,6 +533,10 @@ export default function Daily() {
   const wrong = data.guesses.filter((g) => !g.right).length;
   const triesLeft = data.maxTries - data.guesses.length;
   const latest = data.guesses.at(-1);
+  // Whether the last miss brought a new screenshot or the same one sharper (an image's
+  // id is the end of its address; the size in it changes)
+  const shotOf = (picture) => picture?.url.split('/').pop();
+  const newShot = data.pictures.length > 1 && shotOf(data.pictures.at(-1)) !== shotOf(data.pictures.at(-2));
   const streak = data.me ? data.me.streak : guestStreak(history, data.day);
   const myTries = data.status === 'solved' ? data.guesses.length : null;
   const dayLabel = new Date(`${data.day}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
@@ -552,7 +556,7 @@ export default function Daily() {
             solved={data.status === 'solved'}
             shake={!finished && justGuessed}
           />
-          {!finished && latest && <Verdict key={latest.id} guess={latest} triesLeft={triesLeft} />}
+          {!finished && latest && <Verdict key={latest.id} guess={latest} triesLeft={triesLeft} newShot={newShot} />}
 
           <div className="mt-6">
             {finished ? (

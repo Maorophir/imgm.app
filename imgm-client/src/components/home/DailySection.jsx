@@ -68,7 +68,7 @@ export default function DailySection() {
             <p className="mt-2 text-sm text-slate-300">
               {finished
                 ? daily.status === 'solved' ? `You got it in ${daily.guesses.length}. ${resultsLine(daily.results)}.` : `Not today. ${resultsLine(daily.results)}.`
-                : `${daily.maxTries} tries, a new, clearer picture each time. ${resultsLine(daily.results)}.`}
+                : `${daily.maxTries} tries, a clearer picture each time. ${resultsLine(daily.results)}.`}
             </p>
           </div>
 

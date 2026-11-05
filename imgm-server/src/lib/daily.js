@@ -6,9 +6,10 @@
  * the day's first visit picks it (from IGDB's most rated games, never one used before)
  * and saves it, so every later visit gets the same one.
  *
- * Each wrong guess unlocks a new screenshot, a little less blurred than the last (see
- * STAGES), and the player can look back at the ones they've seen. (Plain screenshots,
- * like GuessThe.Game's, were tried on 2026-11-05: the user liked the blur better.) A
+ * Each wrong guess makes the picture clearer: the same screenshot less blurred, then a
+ * new one, less blurred again (see STAGES), and the player can look back at the ones
+ * they've seen. (Plain screenshots, like GuessThe.Game's, and a new blurred screenshot
+ * every try were both tried on 2026-11-05: the first was too easy, the second too hard.) A
  * wrong guess says how close it was (shared genres, newer or older, same studio, same
  * series), and after a few, a clue about the answer itself (CLUES). Never the studio
  * as a clue: it nearly named Control ("Remedy Entertainment").
@@ -36,15 +37,15 @@ const CLASSIC_BEFORE = 2005;
 
 // The picture before each try (stage n = after n wrong guesses): which screenshot, its
 // blur as a share of the picture's width (so a phone and a computer see the same blur),
-// and the IGDB size to load. A new screenshot every time, each clearer than the last;
-// the last try is the first screenshot, sharp.
+// and the IGDB size to load. Each screenshot gets two tries, sharper the second time,
+// then a new one comes in clearer still; the last try is sharp.
 const STAGES = [
   { shot: 0, blur: 3.2, size: 't_screenshot_med' },
-  { shot: 1, blur: 2.4, size: 't_screenshot_med' },
-  { shot: 2, blur: 1.6, size: 't_screenshot_med' },
-  { shot: 3, blur: 1, size: 't_screenshot_big' },
-  { shot: 4, blur: 0.5, size: 't_screenshot_big' },
-  { shot: 0, blur: 0, size: 't_screenshot_huge' },
+  { shot: 0, blur: 2.2, size: 't_screenshot_med' },
+  { shot: 1, blur: 1.5, size: 't_screenshot_med' },
+  { shot: 1, blur: 0.9, size: 't_screenshot_big' },
+  { shot: 2, blur: 0.4, size: 't_screenshot_big' },
+  { shot: 2, blur: 0, size: 't_screenshot_huge' },
 ];
 
 // IGDB's platform names, shortened for the clue ("PC (Microsoft Windows)" → "PC")
