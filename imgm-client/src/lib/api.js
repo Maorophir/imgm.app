@@ -171,6 +171,17 @@ export const getMyReviews = (offset, signal) => fetchJson(`/api/users/me/reviews
 export const getPublicProfile = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/profile`, { signal });
 export const getPublicReviews = (username, offset, signal) =>
   fetchJson(`/api/users/${encodeURIComponent(username)}/reviews?offset=${offset}&limit=12`, { signal });
+// Following players: a profile's counts ({ followers, following, youFollow }), following
+// and unfollowing (→ { followers, youFollow }), and the newest reviews by the players you
+// follow ({ following, reviews }, for the home page)
+export const getFollows = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/follows`, { signal });
+export const setFollowing = (username, on) =>
+  fetchJson(`/api/users/${encodeURIComponent(username)}/follow`, { method: on ? 'PUT' : 'DELETE' });
+export const getFollowingReviews = (signal) => fetchJson('/api/users/me/following/reviews', { signal });
+// You and another player: { player, shared, needed, match, games } (logged in)
+export const getTasteMatch = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/taste`, { signal });
+// A player's compare link (/compare/<tag>): { player, games, yours, isYou }
+export const getCompareGames = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/compare`, { signal });
 // Profile picture: a data URL from resizeToAvatar (checked by the server before it's saved)
 export const uploadAvatar = (image) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { image } });
 // The avatar window opened: wake the photo check's AI service now (never waited on)

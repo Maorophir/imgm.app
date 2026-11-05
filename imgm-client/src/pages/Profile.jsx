@@ -13,6 +13,8 @@ import { useSession } from '../lib/authClient';
 import { getMyProfile, getMyReviews } from '../lib/api';
 import { LevelCard, PlayerReviews, ProfilePicture, StatsGrid } from '../components/profile/ProfileParts';
 import ShareCardButton from '../components/ShareCardButton';
+import FollowBar from '../components/profile/FollowBar';
+import CompareInvite from '../components/profile/CompareInvite';
 import { useMyProgress } from '../hooks/useMyProgress';
 import { SECTION_TITLE, TEXT_LINK } from '../lib/ui';
 
@@ -70,6 +72,7 @@ function Profile() {
               />
             </div>
           )}
+          {current && <FollowBar username={current} isYou />}
         </div>
         <Link
           to="/settings"
@@ -84,6 +87,8 @@ function Profile() {
       {progress && <LevelCard progress={progress} own />}
 
       {profile && <StatsGrid stats={profile.stats} own />}
+
+      {profile && current && <CompareInvite name={current} hasReviews={profile.stats.reviews > 0} />}
 
       {profile && (
         <section className="flex flex-col gap-8">
