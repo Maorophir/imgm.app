@@ -20,3 +20,8 @@ export const localDailyGame = () => {
     return null;
   }
 };
+
+// A picture as the server set it: zoomed in on a detail (the first tries) around its
+// focus point, or whole
+export const pictureStyle = ({ zoom = 1, focus } = {}) =>
+  zoom > 1 ? { transform: `scale(${zoom})`, transformOrigin: `${focus?.x ?? 50}% ${focus?.y ?? 50}%` } : undefined;

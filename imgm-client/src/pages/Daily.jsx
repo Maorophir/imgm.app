@@ -2,9 +2,9 @@
  * Daily — Route: /daily, the daily Guess the game
  *
  * One game a day (Israel time), the same for everyone: guess it from a screenshot in
- * six tries. The picture starts very blurred; each wrong guess sharpens it (and later
- * swaps to another screenshot), says how close the guess was, and after a few, gives a
- * clue. The server checks every guess (lib/daily.js), so the answer only arrives at
+ * six tries, like GuessThe.Game. The first picture is a zoomed-in detail; each wrong
+ * guess unlocks a new, easier one (wider, then whole screenshots), says how close the
+ * guess was, and after a few, gives a clue. The server checks every guess (lib/daily.js), so the answer only arrives at
  * the end.
  *
  * A logged-in player's game is saved on the server (their streak, today's stats); a
@@ -22,7 +22,7 @@ import LoadError from '../components/LoadError';
 import { getDaily, giveUpDaily, guessDaily } from '../lib/api';
 import { useSession } from '../lib/authClient';
 // The browser's game today (also read by the home page's strip)
-import { DAILY_GAME_KEY as GAME, localDailyGame as localGame } from '../lib/dailyGame';
+import { DAILY_GAME_KEY as GAME, localDailyGame as localGame, pictureStyle } from '../lib/dailyGame';
 import { WRAP, SECTION_TITLE, PRIMARY_BUTTON, GHOST_BUTTON, GHOST_BUTTON_TALL, TEXT_LINK, TEXT_BUTTON_SM, LABEL } from '../lib/ui';
 
 const HISTORY = 'imgm.daily.history'; // and their past days: { "2026-11-05": tries, … } (0 = not solved)
@@ -75,14 +75,14 @@ const useTimeLeft = (until) => {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
-// The screenshot, blurred by the server's stage. The blur is a share of the frame's
-// width (cqw), so a phone and a computer see the same picture; a blurred picture is
-// drawn a little larger so its soft edges stay outside the frame.
+// The screenshot, zoomed in as far as the server's stage says (the same detail on a
+// phone and a computer)
 const Picture = ({ pictures, finished }) => {
   const [viewing, setViewing] = useState(null); // null = the newest
   const [loaded, setLoaded] = useState({});
   const index = viewing ?? pictures.length - 1;
-  const { url, blur } = pictures[index];
+  const picture = pictures[index];
+  const { url } = picture;
   const total = finished ? pictures.length : 6;
 
   return (
@@ -91,18 +91,18 @@ const Picture = ({ pictures, finished }) => {
         <img
           key={url}
           src={url}
-          alt={finished ? 'A screenshot of the game' : 'A blurred screenshot of the game to guess'}
+          alt={finished ? 'A screenshot of the game' : 'A screenshot of the game to guess'}
           onLoad={() => setLoaded((l) => ({ ...l, [url]: true }))}
           draggable="false"
-          className={`absolute inset-0 w-full h-full object-cover select-none transition-[filter,opacity] duration-300 ${loaded[url] ? 'opacity-100' : 'opacity-0'}`}
-          style={{ filter: blur ? `blur(${blur}cqw)` : undefined, transform: blur ? 'scale(1.08)' : undefined }}
+          className={`absolute inset-0 w-full h-full object-cover select-none transition-opacity duration-300 ${loaded[url] ? 'opacity-100' : 'opacity-0'}`}
+          style={pictureStyle(picture)}
         />
         {!loaded[url] && <div className="absolute inset-0 animate-pulse bg-slate-800" aria-hidden="true" />}
         <span className="absolute left-2 bottom-2 sm:left-3 sm:bottom-3 text-xs sm:text-sm font-medium bg-slate-950/85 px-2.5 py-1 rounded-xs tabular-nums">
-          {finished ? `Screenshot ${index + 1} of ${total}` : `Picture ${index + 1} of ${total}${index < 5 ? ': sharper with each try' : ''}`}
+          {finished ? `Screenshot ${index + 1} of ${total}` : `Picture ${index + 1} of ${total}${index < 5 ? ': a new one with each try' : ''}`}
         </span>
       </div>
-      {/* The earlier (blurrier) pictures stay to look back at */}
+      {/* The earlier pictures stay to look back at */}
       {pictures.length > 1 && (
         <div className="flex gap-1.5 mt-2" role="group" aria-label="Pictures">
           {pictures.map((p, i) => (
@@ -166,7 +166,7 @@ const GuessRow = ({ guess }) => (
             </Hint>
           )}
           {guess.sameStudio && <Hint on>Same studio</Hint>}
-          {guess.sameSeries && <Hint on>Same series</Hint>}
+          {guess.sameSeries && <Hint on>Same series: so close</Hint>}
         </div>
       )}
     </div>

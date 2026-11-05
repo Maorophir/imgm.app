@@ -6,15 +6,17 @@
  * the day's first visit picks it (from IGDB's most rated games, never one used before)
  * and saves it, so every later visit gets the same one.
  *
- * Each wrong guess makes the next picture easier (less blurred, then another
- * screenshot, see STAGES), says how close it was (shared genres, newer or older, same
- * studio, same series), and after a few, a clue about the answer itself (CLUES).
+ * It works like GuessThe.Game (the user's call, 2026-11-05): each wrong guess unlocks
+ * a new picture, easier than the last (a zoomed-in detail first, then wider, then whole
+ * screenshots, see STAGES), and the player can look back at the ones they've seen. A
+ * wrong guess says how close it was (shared genres, newer or older, same studio, same
+ * series), and after a few, a clue about the answer itself (CLUES). Never the studio
+ * as a clue: it nearly named Control ("Remedy Entertainment").
  * The answer's name and id never reach the browser before the player finishes or gives
  * up: the server checks every guess. Only the pictures unlocked so far are sent.
  *
- * The blur is drawn by the browser, so a determined player could open a picture on its
- * own and see it sharp. That's fine for a game among friends; the blurred stages load
- * small versions, which are less use on their own (and load faster).
+ * The zoom is drawn by the browser, so a determined player could open a picture on its
+ * own and see all of it. That's fine for a game among friends.
  */
 import { randomInt } from 'node:crypto';
 import { prisma } from './db.js';
@@ -24,30 +26,41 @@ import { igdbImageUrl } from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
 
 export const MAX_TRIES = 6;
-const SHOTS = 4; // screenshots per puzzle
+const SHOTS = 5; // screenshots per puzzle
 const POOL_SIZE = 300; // the day's game is one of the 300 most rated games not used yet
 // Every third day is a classic (a game from before 2005), so the old favourites come up
 // as often as the new ones (the most rated games lean recent)
 const CLASSIC_EVERY = 3;
 const CLASSIC_BEFORE = 2005;
 
-// The picture before each try (stage n = after n wrong guesses): which screenshot, its
-// blur as a share of the picture's width (so a phone and a computer see the same blur),
-// and the IGDB size to load
+// The picture before each try (stage n = after n wrong guesses): which screenshot and
+// how far it's zoomed in. The first two are a detail of a screenshot (hard), then whole
+// ones; the last is the first screenshot whole, so the first detail finally makes sense.
 const STAGES = [
-  { shot: 0, blur: 3.2, size: 't_screenshot_med' },
-  { shot: 0, blur: 1.8, size: 't_screenshot_med' },
-  { shot: 1, blur: 1.1, size: 't_screenshot_med' },
-  { shot: 1, blur: 0.55, size: 't_screenshot_big' },
-  { shot: 2, blur: 0.25, size: 't_screenshot_big' },
-  { shot: 3, blur: 0, size: 't_screenshot_huge' },
+  { shot: 0, zoom: 2.6 },
+  { shot: 1, zoom: 1.7 },
+  { shot: 2, zoom: 1 },
+  { shot: 3, zoom: 1 },
+  { shot: 4, zoom: 1 },
+  { shot: 0, zoom: 1 },
 ];
+
+// Where a zoomed picture is centred: a point in the middle part of the screenshot (never
+// a blank edge), the same for everyone, taken from the screenshot's id
+const focusOf = (imageId) => {
+  let hash = 0;
+  for (const char of imageId) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return { x: 30 + (hash % 41), y: 30 + ((hash >>> 8) % 41) };
+};
+
+// IGDB's platform names, shortened for the clue ("PC (Microsoft Windows)" → "PC")
+const platformName = (name) => name.replace(/\s*\(Microsoft Windows\)/, '').replace(/^Super Nintendo Entertainment System$/, 'SNES').replace(/^Nintendo Entertainment System$/, 'NES');
 
 // Clues about the answer, each from this many wrong guesses on
 const CLUES = [
   { after: 2, label: 'Genre', value: (answer) => answer.genres.slice(0, 2).join(', ') },
   { after: 3, label: 'Released', value: (answer) => answer.year },
-  { after: 4, label: 'Made by', value: (answer) => answer.developers.slice(0, 2).join(', ') },
+  { after: 4, label: 'On', value: (answer) => answer.platforms.slice(0, 4).map(platformName).join(', ') },
 ];
 
 // A guess this close in years counts as "close"
@@ -134,8 +147,11 @@ export const todaysPuzzle = async () => {
 
 const isRight = (puzzle, guess) => {
   const right = (id) => id === puzzle.gameId || puzzle.acceptIds.includes(id);
-  // An edition ("Game of the Year Edition") is its main game
-  return right(guess.id) || (guess.versionParent != null && right(guess.versionParent));
+  // An edition ("Game of the Year Edition") is its main game, and so is an expansion or
+  // add-on (guessing Control: AWE for Control shows the player knows it)
+  return right(guess.id) ||
+    (guess.versionParent != null && right(guess.versionParent)) ||
+    (guess.parentGame != null && right(guess.parentGame));
 };
 
 // How close a wrong guess was. `answerIs` is the answer next to this guess: "newer"
@@ -181,14 +197,18 @@ export const playState = async (puzzle, guessIds, { gaveUp = false } = {}) => {
   const status = solved ? 'solved' : wrong >= MAX_TRIES || gaveUp ? 'failed' : 'playing';
   const finished = status !== 'playing';
 
-  const picture = ({ shot, blur, size }) => ({ url: igdbImageUrl(puzzle.shots[shot], size), blur });
+  // A puzzle made before 5 screenshots were kept has 4: its stages wrap around
+  const picture = ({ shot, zoom }) => {
+    const id = puzzle.shots[shot % puzzle.shots.length];
+    return { url: igdbImageUrl(id, 't_screenshot_huge'), zoom, focus: focusOf(id) };
+  };
   return {
     status,
     ids: guesses.map((g) => g.id),
     guesses,
     // Every picture unlocked so far (the last one is the current); all of them, sharp, at the end
     pictures: finished
-      ? puzzle.shots.map((shot) => ({ url: igdbImageUrl(shot, 't_screenshot_huge'), blur: 0 }))
+      ? puzzle.shots.map((shot) => ({ url: igdbImageUrl(shot, 't_screenshot_huge'), zoom: 1 }))
       : STAGES.slice(0, wrong + 1).map(picture),
     clues: CLUES.filter((clue) => finished || wrong >= clue.after)
       .map((clue) => ({ label: clue.label, value: clue.value(answer) }))

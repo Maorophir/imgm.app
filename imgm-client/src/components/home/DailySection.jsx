@@ -1,6 +1,6 @@
 /**
  * DailySection — the home page's way into the daily Guess the game (/daily): today's
- * first picture, blurred as the game starts it, "Guess the game · #12", how everyone is
+ * first picture, zoomed in as the game starts it, "Guess the game · #12", how everyone is
  * doing, and a button: Play, or "See your result" once this player has finished.
  *
  * A ghost button, not lime: the hero holds the home page's one lime action. The strip
@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
 import { getDaily } from '../../lib/api';
 import { useSession } from '../../lib/authClient';
-import { localDailyGame } from '../../lib/dailyGame';
+import { localDailyGame, pictureStyle } from '../../lib/dailyGame';
 import { WRAP, GHOST_BUTTON_TALL, LABEL } from '../../lib/ui';
 
 // The line under the title: how everyone did, once anyone has finished
@@ -42,22 +42,22 @@ export default function DailySection() {
 
   if (failed || !daily?.pictures?.length) return null;
   const finished = daily.status !== 'playing';
-  const { url, blur } = daily.pictures[0];
+  const first = daily.pictures[0];
 
   return (
     <section aria-labelledby="daily-title" className="mt-30 sm:mt-40">
       <div className={WRAP}>
         <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-8 p-4 sm:p-5 rounded-sm bg-slate-900 border border-slate-700 animate-fade-in">
-          {/* The first picture as the game starts it: blurred by the server's stage (a
-              share of the frame's width, as on the page), so nothing is given away */}
+          {/* The first picture as the game starts it: a zoomed-in detail, so nothing is
+              given away */}
           <div className="@container relative w-full sm:w-[280px] aspect-video shrink-0 overflow-hidden rounded-xs border border-slate-600 bg-slate-950">
             <img
-              src={url}
+              src={first.url}
               alt=""
               loading="lazy"
               decoding="async"
               className="w-full h-full object-cover"
-              style={{ filter: blur ? `blur(${blur}cqw)` : undefined, transform: blur ? 'scale(1.08)' : undefined }}
+              style={pictureStyle(first)}
             />
           </div>
 
@@ -69,7 +69,7 @@ export default function DailySection() {
             <p className="mt-2 text-sm text-slate-300">
               {finished
                 ? daily.status === 'solved' ? `You got it in ${daily.guesses.length}. ${resultsLine(daily.results)}.` : `Not today. ${resultsLine(daily.results)}.`
-                : `${daily.maxTries} tries, a sharper picture each time. ${resultsLine(daily.results)}.`}
+                : `${daily.maxTries} tries, a new picture each time. ${resultsLine(daily.results)}.`}
             </p>
           </div>
 

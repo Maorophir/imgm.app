@@ -732,7 +732,7 @@ export const getRemasterOriginals = async (id) =>
 
 // What a guess is compared with: its genres, year, studio and series. Cached a day
 // (a game's facts don't change), so replaying a day's guesses costs no requests.
-const FACTS_FIELDS = `fields name, cover.image_id, first_release_date, genres.name, collections, version_parent,
+const FACTS_FIELDS = `fields name, cover.image_id, first_release_date, genres.name, collections, version_parent, parent_game, platforms.name,
   involved_companies.developer, involved_companies.porting, involved_companies.company.name;`;
 const FACTS_TTL = 24 * 60 * 60 * 1000;
 const MAX_FACTS = 2000; // a few hundred bytes each; the oldest goes first
@@ -748,10 +748,13 @@ const factsOf = (raw) => ({
   developers: (raw.involved_companies ?? []).filter((ic) => ic.developer && !ic.porting).map((ic) => ic.company?.name).filter(Boolean),
   seriesIds: raw.collections ?? [],
   versionParent: raw.version_parent ?? null,
+  parentGame: raw.parent_game ?? null, // an expansion's or add-on's main game
+  platforms: (raw.platforms ?? []).map((p) => p.name),
 });
 
 /**
- * Map(id → { id, title, coverUrl, year, genres, developers, seriesIds, versionParent })
+ * Map(id → { id, title, coverUrl, year, genres, developers, seriesIds, versionParent,
+ * parentGame, platforms })
  * for up to 10 games in one request. A game IGDB doesn't know is missing from the map.
  */
 export const getGuessFacts = async (ids) => {
