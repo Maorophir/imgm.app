@@ -294,25 +294,19 @@ body {
 }
 .card-face-back { transform: rotateY(180deg); }
 
-/* First Edition foil (CollectibleCard, RarityCard): the first review of a game gets
-   its card's frame in foil, the tier's own ink (--ink, set on the card) as polished
-   metal, the way a Legendary wears the gilt: bands of the ink darker and lighter, the
-   picture larger than the frame so that moving it (--gilt-at, set by a tilting
-   CardStage) slides the shine across. Only the frame shines: no glow around the card. */
-.card-foil {
-  background-image: linear-gradient(
-    100deg,
-    color-mix(in srgb, var(--ink) 45%, #100f0d) 0%,
-    var(--ink) 16%,
-    color-mix(in srgb, var(--ink) 42%, #f8f3e9) 32%,
-    var(--ink) 47%,
-    color-mix(in srgb, var(--ink) 55%, #100f0d) 63%,
-    color-mix(in srgb, var(--ink) 62%, #f8f3e9) 81%,
-    color-mix(in srgb, var(--ink) 50%, #100f0d) 100%
-  );
-  background-size: 260% 260%;
-  background-position: var(--gilt-at, 50% 50%);
+/* First Edition (CollectibleCard's FirstEditionCrown): the frame's bottom corners cut
+   off at 45°, 7cqi along each side (the crown draws the rail along the cut), and the
+   crown's gems in four shades of the tier's ink (--ink, set on the card), lit from the
+   top left. Flat facets with a dark edge: they read as cut stone, with no glow. */
+.card-first {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7cqi), calc(100% - 7cqi) 100%, 7cqi 100%, 0 calc(100% - 7cqi));
 }
+.fe-hi { fill: color-mix(in srgb, var(--ink) 35%, #ffffff); }
+.fe-lo { fill: color-mix(in srgb, var(--ink) 65%, #ffffff); }
+.fe-ink { fill: var(--ink); }
+.fe-dk { fill: color-mix(in srgb, var(--ink) 50%, #100f0d); }
+.fe-edge { fill: none; stroke: color-mix(in srgb, var(--ink) 35%, #100f0d); stroke-width: 1.2; stroke-linejoin: round; }
+.fe-rail { stroke: var(--ink); stroke-linecap: square; }
 
 /* Rarity frame (Play Next's picks, components/guide/PickCard.jsx): a padded wrapper
    whose background shows as a 2px edge, flat in the tier's ink (--rc, set inline). Near-
