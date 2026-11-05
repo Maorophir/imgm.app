@@ -21,6 +21,9 @@ import { getProgress } from '../lib/levels';
 import { Avatar } from '../components/reviewCard/RarityCard';
 import { LevelCard, PlayerReviews, StatsGrid } from '../components/profile/ProfileParts';
 import ShareCardButton from '../components/ShareCardButton';
+import FollowBar from '../components/profile/FollowBar';
+import TasteMatch from '../components/profile/TasteMatch';
+import CardSets from '../components/profile/CardSets';
 import LoadError from '../components/LoadError';
 import { usePageTitle } from '../hooks/usePageTitle';
 import { useSearchIndexing } from '../hooks/useSearchIndexing';
@@ -121,12 +124,16 @@ const PlayerProfileContent = ({ username }) => {
               label="Share profile"
             />
           </div>
+          <FollowBar username={name} isYou={isYou} loggedIn={Boolean(session)} />
         </div>
       </header>
 
       <LevelCard progress={{ ...getProgress(stats.xp), reviews: stats.reviews }} />
 
       <StatsGrid stats={stats} />
+
+      {!isYou && <TasteMatch username={name} name={name} loggedIn={Boolean(session)} />}
+      <CardSets username={username} />
 
       <section className="flex flex-col gap-8">
         <h2 className={SECTION_TITLE}>

@@ -218,7 +218,7 @@ const HomeHero = ({ slides = [], stats = {}, onBrowse }) => {
             // The share edition: the player's words and the IMGM mark on the card itself
             front={<CollectibleCard {...card} edition="share" />}
             // Between two games it's IMGM's back; Flip shows the checklist
-            back={!turning && ticks.length > 0 ? <ChecklistBack score={review.rating} ticks={ticks} name={card.reviewer} /> : <CardBack />}
+            back={!turning && ticks.length > 0 ? <ChecklistBack score={review.rating} ticks={ticks} name={card.reviewer} firstEdition={card.badges?.includes('first_reviewer')} /> : <CardBack />}
           />
         ) : (
           // Still loading, or nothing to show: a card face down (never a made-up one)

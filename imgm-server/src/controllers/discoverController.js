@@ -12,6 +12,7 @@ import { prisma } from '../lib/db.js';
 import { getSessionUser } from '../lib/session.js';
 import { sendEmail } from '../lib/email.js';
 import { commentProblem } from '../lib/commentFilter.js';
+import { notifyReply } from '../lib/notifications.js';
 
 const MAX_IDS = 60; // a feed is 40 games; a little room
 const IGDB_ID = z.coerce.number().int().positive().max(2_147_483_647);
@@ -163,8 +164,9 @@ export const postComment = async (req, res) => {
   try {
     // A reply joins the conversation of the comment it answers (one level deep)
     let parentId = null;
+    let parent = null;
     if (body.data.parentId) {
-      const parent = await prisma.discoverComment.findUnique({ where: { id: body.data.parentId }, select: { id: true, parentId: true, gameId: true, hidden: true } });
+      parent = await prisma.discoverComment.findUnique({ where: { id: body.data.parentId }, select: { id: true, parentId: true, gameId: true, hidden: true, userId: true } });
       if (!parent || parent.hidden || parent.gameId !== gameId.data) return res.status(404).json({ error: 'That comment is gone.' });
       parentId = parent.parentId ?? parent.id;
     }
@@ -172,6 +174,8 @@ export const postComment = async (req, res) => {
       data: { gameId: gameId.data, userId: req.user.id, parentId, body: body.data.body },
       select: { id: true },
     });
+    // The bell tells whoever wrote the comment it answers (fire-and-forget)
+    if (parent) notifyReply({ answered: parent, gameId: gameId.data, replier: req.user });
     const [comment] = await loadComments({ id: created.id }, req.user.id, { take: 1 });
     res.status(201).json(comment);
   } catch (error) {

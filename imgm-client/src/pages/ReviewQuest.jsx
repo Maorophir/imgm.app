@@ -52,6 +52,7 @@ import ShareCardButton from '../components/ShareCardButton';
 import ChangePictureButton from '../components/share/ChangePictureButton';
 import FaceDownCard from '../components/home/FaceDownCard';
 import RateAnother from '../components/reviewQuest/RateAnother';
+import RoundupQuestion from '../components/reviewQuest/RoundupQuestion';
 import {
   EMPTY_ANSWERS, BADGES, CHECKLIST, XP_EASY, XP_WRITTEN, MAX_XP, getRarity,
 } from '../components/reviewQuest/questOptions';
@@ -465,6 +466,8 @@ const Quest = ({ id }) => {
     reviewer: session?.user?.displayUsername,
     date: existing.review?.createdAt ?? result?.postedAt,
     quote: result?.cardQuote ?? answers.reviewText?.trim(), // the most quotable sentence (or theirs)
+    // Its badges: the game's first review gets its card as a First Edition foil
+    badges: result?.badges ?? existing.review?.badges ?? [],
   });
 
   return (
@@ -554,7 +557,7 @@ const Quest = ({ id }) => {
                 // Turned over: the checklist they just filled in (or the shared back if they skipped it)
                 back={
                   cardTicks.length > 0
-                    ? <ChecklistBack score={answers.rating} ticks={cardTicks} name={session.user.displayUsername ?? 'You'} />
+                    ? <ChecklistBack score={answers.rating} ticks={cardTicks} name={session.user.displayUsername ?? 'You'} firstEdition={rewardCard.badges.includes('first_reviewer')} />
                     : <CardBack />
                 }
               />
@@ -714,6 +717,8 @@ const Quest = ({ id }) => {
           )}
         </div>
 
+        {/* Asked once ever, after a review: the Sunday email, off unless they say yes */}
+        {step === DONE && <RoundupQuestion />}
         {/* The way on: three more games to rate, and the quest's game search */}
         {step === DONE && <RateAnother gameId={game.id} />}
       </div>

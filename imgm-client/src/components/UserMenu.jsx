@@ -4,7 +4,7 @@
  * feedback, Profile, Log out. Closes on an outside click, on Esc, or after picking an item.
  * Styled like the header's "Sign up": a ghost button with a control-grey edge.
  */
-import { Bookmark, ChevronDown, Gamepad2, LogOut, MessageSquarePlus, User } from 'lucide-react';
+import { Bookmark, ChevronDown, Gamepad2, LogOut, MessageSquarePlus, ShieldCheck, User } from 'lucide-react';
 import { openFeedback } from './Feedback';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -112,6 +112,12 @@ function UserMenu({ user }) {
           <Link to="/profile" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
             <User className={iconClass} strokeWidth={1.8} aria-hidden="true" /> Profile
           </Link>
+          {/* Stats and moderation: only an admin sees the link (and the page) */}
+          {user.role === 'admin' && (
+            <Link to="/admin" role="menuitem" onClick={() => setOpen(false)} className={itemClass}>
+              <ShieldCheck className={iconClass} strokeWidth={1.8} aria-hidden="true" /> Admin
+            </Link>
+          )}
           <div role="separator" className="my-1 h-px bg-slate-700" />
           <button type="button" role="menuitem" onClick={logOut} className={itemClass}>
             <LogOut className={iconClass} strokeWidth={1.8} aria-hidden="true" /> Log out

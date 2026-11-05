@@ -3,11 +3,13 @@ import { Analytics } from '@vercel/analytics/react';
 
 // Layout components
 import Navbar from './components/Navbar';
+import VisitCounter from './components/VisitCounter';
 
 // Page components (one per route)
 import Home from './pages/Home';
 import Profile from './pages/Profile';
 import PlayerProfile from './pages/PlayerProfile';
+import Compare from './pages/Compare';
 import GameDetails from './pages/GameDetails';
 import Auth from './pages/Auth';
 import OAuthSuccess from './pages/OAuthSuccess';
@@ -26,6 +28,7 @@ import Search from './pages/Search';
 import Welcome from './pages/Welcome';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Unsubscribe from './pages/Unsubscribe';
 import GamerTagGate from './components/GamerTagGate';
 import ReviewQuest from './pages/ReviewQuest';
 import GameGuide from './pages/GameGuide';
@@ -33,10 +36,13 @@ import SteamLanding from './pages/SteamLanding';
 import SteamLibrary from './pages/SteamLibrary';
 import SteamSignUp from './pages/SteamSignUp';
 import Discover from './pages/Discover';
+import Daily from './pages/Daily';
 import { usePlayNextAccess } from './hooks/usePlayNextAccess';
 import { useDiscoverAccess } from './hooks/useDiscoverAccess';
 import { usePageTitle } from './hooks/usePageTitle';
 import { useSearchIndexing } from './hooks/useSearchIndexing';
+import Admin from './pages/Admin';
+import { useSession } from './lib/authClient';
 
 /**
  * App — The root component. Its ONLY job is:
@@ -60,6 +66,14 @@ function DiscoverRoute() {
   const { enabled, loading } = useDiscoverAccess();
   if (loading) return <div className="min-h-[70vh]" />;
   return enabled ? <Discover /> : <Navigate to="/" replace />;
+}
+
+// The admin pages: only for an admin (the session carries the role); anyone else is sent
+// home as if the page didn't exist. The server answers them 404 either way.
+function AdminRoute() {
+  const { data: session, isPending } = useSession();
+  if (isPending) return <div className="min-h-[70vh]" />;
+  return session?.user?.role === 'admin' ? <Admin /> : <Navigate to="/" replace />;
 }
 
 function PlayNextRoute() {
@@ -98,9 +112,15 @@ const PAGES = {
   '/login': ['Log in or sign up', 'Join IMGM to rate the games you play, collect a card for every rating, and get picks from Play Next.'],
   '/welcome': ['Welcome'],
   '/signup/steam': ['Sign up with Steam'],
+  '/admin': ['Admin'],
+  '/unsubscribe': ['Unsubscribe'],
   '/discover': [
     'Discover: new and upcoming games, trailer by trailer',
     'Scroll through new releases, upcoming games and what\'s trending, one trailer at a time. Vote, save one for later, or rate it in one tap.',
+  ],
+  '/daily': [
+    'Guess the game: the IMGM daily',
+    'A new game every day, the same for everyone: name it from a blurred screenshot in six tries, and keep your streak going.',
   ],
 };
 function RouteTitle() {
@@ -120,6 +140,8 @@ function App() {
         {/* Navbar renders on EVERY page — it's outside <Routes> */}
         <Navbar />
         <RouteTitle />
+        {/* IMGM's own cookie-free page-view count, for /admin's Visitors tab */}
+        <VisitCounter />
         <ScrollToTop />
 
         {/* Only the matched route renders here. The gate sends logged-in users
@@ -141,6 +163,7 @@ function App() {
           <Route path="/profile" element={<Profile />} />
           {/* Anyone's public profile, by gamer tag */}
           <Route path="/u/:username" element={<PlayerProfile />} />
+          <Route path="/compare/:username" element={<Compare />} />
           <Route path="/settings" element={<Settings />} />
           <Route path="/backlog" element={<Backlog />} />
           {/* Steam: what connecting gives you (anyone), then your library (players) */}
@@ -148,6 +171,7 @@ function App() {
           <Route path="/steam/library" element={<SteamLibrary />} />
           {/* Discover: a feed of new and upcoming games, one trailer per screen */}
           <Route path="/discover" element={<DiscoverRoute />} />
+          <Route path="/daily" element={<Daily />} />
           <Route path="/privacy" element={<Privacy />} />
           <Route path="/terms" element={<Terms />} />
           <Route path="/login" element={<Auth />} />
@@ -155,8 +179,12 @@ function App() {
           <Route path="/signup/steam" element={<SteamSignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          {/* Every opt-in email's one-click Unsubscribe link (no login) */}
+          <Route path="/unsubscribe" element={<Unsubscribe />} />
           <Route path="/oauth-success" element={<OAuthSuccess />} />
           <Route path="/welcome" element={<Welcome />} />
+          {/* Stats and moderation, for the admin only */}
+          <Route path="/admin" element={<AdminRoute />} />
         </Routes>
         </GamerTagGate>
         <Footer />

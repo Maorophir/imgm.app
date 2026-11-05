@@ -146,6 +146,8 @@ body {
   --animate-scroll-right: scrollRight 120s linear infinite;
   --animate-fade-in: fadeIn 0.4s ease-out;
   --animate-pop: pop 0.28s ease-out;
+  /* A wrong guess in the daily game: the picture shakes its head */
+  --animate-shake: shake 0.42s ease-in-out;
   --animate-flash: flash 1.1s ease-out forwards;
   --animate-marquee: marquee var(--marquee-duration, 6s) linear infinite;
 
@@ -159,6 +161,13 @@ body {
   --animate-shimmer: shimmer 1.6s ease-in-out infinite;
 
   /* A star "pops" when it becomes the newly selected one */
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(2px); }
+  }
   @keyframes pop {
     50% { transform: scale(1.22); }
   }
@@ -293,6 +302,20 @@ body {
   -webkit-backface-visibility: hidden;
 }
 .card-face-back { transform: rotateY(180deg); }
+
+/* First Edition (CollectibleCard's FirstEditionCrown): the frame's bottom corners cut
+   off at 45°, 7cqi along each side (the crown draws the rail along the cut), and the
+   crown's gems in four shades of the tier's ink (--ink, set on the card), lit from the
+   top left. Flat facets with a dark edge: they read as cut stone, with no glow. */
+.card-first {
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7cqi), calc(100% - 7cqi) 100%, 7cqi 100%, 0 calc(100% - 7cqi));
+}
+.fe-hi { fill: color-mix(in srgb, var(--ink) 35%, #ffffff); }
+.fe-lo { fill: color-mix(in srgb, var(--ink) 65%, #ffffff); }
+.fe-ink { fill: var(--ink); }
+.fe-dk { fill: color-mix(in srgb, var(--ink) 50%, #100f0d); }
+.fe-edge { fill: none; stroke: color-mix(in srgb, var(--ink) 35%, #100f0d); stroke-width: 1.2; stroke-linejoin: round; }
+.fe-rail { stroke: var(--ink); stroke-linecap: square; }
 
 /* Rarity frame (Play Next's picks, components/guide/PickCard.jsx): a padded wrapper
    whose background shows as a 2px edge, flat in the tier's ink (--rc, set inline). Near-

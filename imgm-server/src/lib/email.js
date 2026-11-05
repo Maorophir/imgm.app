@@ -9,7 +9,9 @@
 const RESEND_URL = 'https://api.resend.com/emails';
 const FROM = (process.env.EMAIL_FROM || 'IMGM <no-reply@imgm.app>').trim(); // a stray space after = must not break it
 
-export const sendEmail = async ({ to, subject, html, text }) => {
+// headers: extra email headers, e.g. List-Unsubscribe on the emails players chose
+// (lib/optInEmails.js), so mail apps show their own Unsubscribe button
+export const sendEmail = async ({ to, subject, html, text, headers }) => {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.log(`[email] Not sent (no RESEND_API_KEY). To: ${to} · ${subject}\n${text}`);
@@ -18,7 +20,7 @@ export const sendEmail = async ({ to, subject, html, text }) => {
   const response = await fetch(RESEND_URL, {
     method: 'POST',
     headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: FROM, to, subject, html, text }),
+    body: JSON.stringify({ from: FROM, to, subject, html, text, ...(headers && { headers }) }),
   });
   if (!response.ok) {
     throw new Error(`Email to ${to} failed: ${response.status} ${await response.text()}`);

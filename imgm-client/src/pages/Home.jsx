@@ -38,7 +38,9 @@ import LoadError from '../components/LoadError';
 import HomeHero from '../components/home/HomeHero';
 import RaritySection from '../components/home/RaritySection';
 import DiscoverSection from '../components/home/DiscoverSection';
+import DailySection from '../components/home/DailySection';
 import { FreshReviews, ReviewPicks } from '../components/home/FreshReviews';
+import FollowingReviews from '../components/home/FollowingReviews';
 import GotwStrip from '../components/home/GotwStrip';
 
 const PAGE_SIZE = 10; // games per carousel page (2 rows on desktop)
@@ -172,6 +174,9 @@ const Home = () => {
       {/* The way into Discover: a phone playing the feed */}
       <DiscoverSection />
 
+      {/* Today's Guess the game: its blurred first picture and how everyone's doing */}
+      <DailySection />
+
       {/* ── Featured Games: the heading on the left, the shelf of game tiles on the right ──
           The section is where "Browse games" lands (tabIndex -1 lets it take focus);
           scroll-mt keeps it clear of the sticky navbar. */}
@@ -241,6 +246,7 @@ const Home = () => {
       {/* ── What the community is saying, the game it picked this week (and the vote
           for next week's), and games waiting for their first review ── */}
       <FreshReviews reviews={freshReviews} />
+      <FollowingReviews />
       <GotwStrip />
       <ReviewPicks avoidArt={HERO_GAME_IDS} />
     </main>

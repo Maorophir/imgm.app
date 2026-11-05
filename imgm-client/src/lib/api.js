@@ -98,6 +98,17 @@ export const voteGotw = (gameId) => fetchJson('/api/gotw/vote', { method: 'PUT',
 export const nominateGotw = (gameId) => fetchJson('/api/gotw/nominate', { method: 'PUT', body: { gameId } });
 export const getGotwHistory = (signal) => fetchJson('/api/gotw/history', { signal });
 
+// The daily Guess the game. A logged-out player's earlier guesses (IGDB ids) ride along,
+// since only their browser keeps them; a logged-in player's are on the server.
+export const getDaily = ({ guesses = [], gaveUp = false } = {}, signal) => {
+  const params = new URLSearchParams();
+  if (guesses.length) params.set('guesses', guesses.join(','));
+  if (gaveUp) params.set('gaveUp', '1');
+  return fetchJson(`/api/daily${params.size ? `?${params}` : ''}`, { signal });
+};
+export const guessDaily = (gameId, guesses) => fetchJson('/api/daily/guess', { method: 'POST', body: { gameId, ...(guesses ? { guesses } : {}) } });
+export const giveUpDaily = (guesses) => fetchJson('/api/daily/give-up', { method: 'POST', body: guesses ? { guesses } : {} });
+
 // The Hall of Fame (top games): { games: [{ rank, average, reviewCount, myRating, …game }], size, insights }
 export const getTopGames = ({ sort, platform }, signal) =>
   fetchJson(`/api/games/top?${new URLSearchParams({ sort, ...(platform && { platform }) })}`, { signal });
@@ -171,6 +182,21 @@ export const getMyReviews = (offset, signal) => fetchJson(`/api/users/me/reviews
 export const getPublicProfile = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/profile`, { signal });
 export const getPublicReviews = (username, offset, signal) =>
   fetchJson(`/api/users/${encodeURIComponent(username)}/reviews?offset=${offset}&limit=12`, { signal });
+// Following players: a profile's counts ({ followers, following, youFollow }), following
+// and unfollowing (→ { followers, youFollow }), and the newest reviews by the players you
+// follow ({ following, reviews }, for the home page)
+export const getFollows = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/follows`, { signal });
+export const setFollowing = (username, on) =>
+  fetchJson(`/api/users/${encodeURIComponent(username)}/follow`, { method: on ? 'PUT' : 'DELETE' });
+export const getFollowingReviews = (signal) => fetchJson('/api/users/me/following/reviews', { signal });
+// You and another player: { player, shared, needed, match, games } (logged in)
+export const getTasteMatch = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/taste`, { signal });
+// A player's compare link (/compare/<tag>): { player, games, yours, isYou }
+export const getCompareGames = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/compare`, { signal });
+// Card sets (yours, or a player's by gamer tag): { sets: [{ key, name, kind, badge, total,
+// collected, complete, games: [{ id, title, coverUrl, rating, firstEdition }] }] }
+export const getMySets = (signal) => fetchJson('/api/users/me/sets', { signal });
+export const getPlayerSets = (username, signal) => fetchJson(`/api/users/${encodeURIComponent(username)}/sets`, { signal });
 // Profile picture: a data URL from resizeToAvatar (checked by the server before it's saved)
 export const uploadAvatar = (image) => fetchJson('/api/users/me/avatar', { method: 'PUT', body: { image } });
 // The avatar window opened: wake the photo check's AI service now (never waited on)
@@ -260,3 +286,27 @@ export async function streamGuide(body, { signal, onEvent }) {
     }
   }
 }
+
+// ── The admin pages (/admin): only an admin gets answers, everyone else a 404 ──
+export const getAdminStats = (signal) => fetchJson('/api/admin/stats', { signal });
+// The visitor counter: { since, today, thisWeek, lastWeek, weeks, top: { path: [{ value, views, visitors }], … } }
+export const getAdminVisitors = (signal) => fetchJson('/api/admin/visitors', { signal });
+export const getAdminReports = (signal) => fetchJson('/api/admin/reports', { signal });
+export const getAdminComments = (q, signal) => fetchJson(`/api/admin/comments?q=${encodeURIComponent(q ?? '')}`, { signal });
+export const getAdminReviews = (q, signal) => fetchJson(`/api/admin/reviews?q=${encodeURIComponent(q ?? '')}`, { signal });
+export const setAdminCommentHidden = (id, hidden, note) =>
+  fetchJson(`/api/admin/comments/${id}/hidden`, { method: 'PUT', body: { hidden, note } });
+export const deleteAdminComment = (id, note) => fetchJson(`/api/admin/comments/${id}`, { method: 'DELETE', body: { note } });
+export const deleteAdminReview = (id, note) => fetchJson(`/api/admin/reviews/${id}`, { method: 'DELETE', body: { note } });
+// The bell in the header (components/NotificationBell.jsx)
+export const getUnreadCount = (signal) => fetchJson('/api/notifications/unread', { signal });
+export const getNotifications = (signal) => fetchJson('/api/notifications', { signal });
+export const markNotificationRead = (id) => fetchJson(`/api/notifications/${id}/read`, { method: 'PUT' });
+export const markAllNotificationsRead = () => fetchJson('/api/notifications/read-all', { method: 'PUT' });
+
+// The emails a player chose: Settings → Emails, the quest's one question, /unsubscribe
+export const getEmailSettings = (signal) => fetchJson('/api/emails/settings', { signal });
+export const setEmailSettings = (choices) => fetchJson('/api/emails/settings', { method: 'PUT', body: choices });
+export const answerRoundupQuestion = (yes) => fetchJson('/api/emails/settings/roundup-question', { method: 'PUT', body: { yes } });
+export const unsubscribeAll = (token) => fetchJson('/api/emails/unsubscribe', { method: 'POST', body: { token } });
+export const resubscribe = (token, choices) => fetchJson('/api/emails/resubscribe', { method: 'POST', body: { token, ...choices } });

@@ -92,3 +92,12 @@ const discoverBetaUsers = new Set(
     .filter(Boolean)
 );
 export const canUseDiscover = (userId) => discoverEnabled || discoverBetaUsers.has(userId);
+
+/**
+ * The emails players choose to get (the weekly roundup, release radar, replies and
+ * likes: lib/optInEmails.js) are only sent with EMAILS=on on Render. Without it (the
+ * default, and always locally) each one is written to the server log instead, as a dry
+ * run, so testing never mails a real player. Account emails (password resets, welcome)
+ * don't depend on it.
+ */
+export const optInEmailsEnabled = process.env.EMAILS === 'on';
