@@ -294,6 +294,26 @@ body {
 }
 .card-face-back { transform: rotateY(180deg); }
 
+/* First Edition foil (CollectibleCard, RarityCard): the first review of a game gets
+   its card's frame in foil, the tier's own ink (--ink, set on the card) as polished
+   metal, the way a Legendary wears the gilt: bands of the ink darker and lighter, the
+   picture larger than the frame so that moving it (--gilt-at, set by a tilting
+   CardStage) slides the shine across. Only the frame shines: no glow around the card. */
+.card-foil {
+  background-image: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--ink) 45%, #100f0d) 0%,
+    var(--ink) 16%,
+    color-mix(in srgb, var(--ink) 42%, #f8f3e9) 32%,
+    var(--ink) 47%,
+    color-mix(in srgb, var(--ink) 55%, #100f0d) 63%,
+    color-mix(in srgb, var(--ink) 62%, #f8f3e9) 81%,
+    color-mix(in srgb, var(--ink) 50%, #100f0d) 100%
+  );
+  background-size: 260% 260%;
+  background-position: var(--gilt-at, 50% 50%);
+}
+
 /* Rarity frame (Play Next's picks, components/guide/PickCard.jsx): a padded wrapper
    whose background shows as a 2px edge, flat in the tier's ink (--rc, set inline). Near-
    square corners and no glow: Noir frames sit on the page like printed card stock. */
