@@ -21,7 +21,8 @@ export const localDailyGame = () => {
   }
 };
 
-// A picture as the server set it: zoomed in on a detail (the first tries) around its
-// focus point, or whole
-export const pictureStyle = ({ zoom = 1, focus } = {}) =>
-  zoom > 1 ? { transform: `scale(${zoom})`, transformOrigin: `${focus?.x ?? 50}% ${focus?.y ?? 50}%` } : undefined;
+// A picture as the server set it: blurred by its stage (a share of the frame's width,
+// cqw, so a phone and a computer see the same blur), drawn a little larger so the soft
+// edges stay outside the frame
+export const pictureStyle = ({ blur = 0 } = {}) =>
+  blur ? { filter: `blur(${blur}cqw)`, transform: 'scale(1.08)' } : undefined;

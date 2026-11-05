@@ -1,6 +1,6 @@
 /**
  * DailySection — the home page's way into the daily Guess the game (/daily): today's
- * first picture, zoomed in as the game starts it, "Guess the game · #12", how everyone is
+ * first picture, blurred as the game starts it, "Guess the game · #12", how everyone is
  * doing, and a button: Play, or "See your result" once this player has finished.
  *
  * A ghost button, not lime: the hero holds the home page's one lime action. The strip
@@ -48,8 +48,7 @@ export default function DailySection() {
     <section aria-labelledby="daily-title" className="mt-30 sm:mt-40">
       <div className={WRAP}>
         <div className="flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-8 p-4 sm:p-5 rounded-sm bg-slate-900 border border-slate-700 animate-fade-in">
-          {/* The first picture as the game starts it: a zoomed-in detail, so nothing is
-              given away */}
+          {/* The first picture as the game starts it: blurred, so nothing is given away */}
           <div className="@container relative w-full sm:w-[280px] aspect-video shrink-0 overflow-hidden rounded-xs border border-slate-600 bg-slate-950">
             <img
               src={first.url}
@@ -69,7 +68,7 @@ export default function DailySection() {
             <p className="mt-2 text-sm text-slate-300">
               {finished
                 ? daily.status === 'solved' ? `You got it in ${daily.guesses.length}. ${resultsLine(daily.results)}.` : `Not today. ${resultsLine(daily.results)}.`
-                : `${daily.maxTries} tries, a new picture each time. ${resultsLine(daily.results)}.`}
+                : `${daily.maxTries} tries, a new, clearer picture each time. ${resultsLine(daily.results)}.`}
             </p>
           </div>
 
