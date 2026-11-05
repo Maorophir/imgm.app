@@ -34,6 +34,9 @@ import usersRouter from './src/routes/users.js';
 import guideRouter from './src/routes/guide.js';
 import steamRouter from './src/routes/steam.js';
 import discoverRouter from './src/routes/discover.js';
+import notificationsRouter from './src/routes/notifications.js';
+import emailsRouter from './src/routes/emails.js';
+import { startNotifyJobs } from './src/lib/notifyJobs.js';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './src/lib/auth.js';
 
@@ -58,8 +61,12 @@ app.use('/api/steam', steamRouter);
 app.use('/api', sitemapRouter); // /api/sitemap.xml (imgm.app/sitemap.xml forwards here)
 // Always mounted: the routes themselves check who may use Play Next (everyone, or the beta list)
 app.use('/api/guide', guideRouter);
+// The bell in the header, and the emails players chose (with the one-click unsubscribe)
+app.use('/api/notifications', notificationsRouter);
+app.use('/api/emails', emailsRouter);
 
 // Start server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
+  startNotifyJobs(); // the release radar, reminders and opt-in emails (lib/notifyJobs.js)
 });

@@ -50,6 +50,10 @@ model User {
   reviewVotes   ReviewVote[]
   gotwVotes     GotwVote[]
   gotwNominations GotwNomination[]
+  // The bell, and the emails they chose (lib/notifications.js, lib/optInEmails.js)
+  notifications   Notification[]
+  emailSettings   EmailSettings?
+  emailSends      EmailSend[]
 }
 
 model Session {
@@ -496,4 +500,52 @@ model DiscoverCommentReport {
   createdAt DateTime        @default(now())
 
   @@id([userId, commentId])
+}
+
+// -----------------------------------------------------------------------------
+// Notifications (the bell in the header) and the emails a player chose to get.
+// Emails are all off until the player switches one on (lib/optInEmails.js).
+// -----------------------------------------------------------------------------
+
+// One line in a player's bell. News about the same thing shares a row (its key), so
+// three helpful votes on one review read "X and 2 others", not three lines
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String    // reply | helpful | released | gotw_closing
+  key       String    // what it's about: "comment:<id>", "review:<id>", "game:<id>", "gotw:<week>"
+  data      Json      // what the line says (lib/notifications.js)
+  readAt    DateTime?
+  emailedAt DateTime? // went out in a "Replies and likes" email (so never twice)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt // its latest news: the bell's order
+
+  @@unique([userId, kind, key])
+  @@index([userId, updatedAt])
+}
+
+// A player's email choices. No row means every email is off (the default)
+model EmailSettings {
+  userId    String    @id
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekly    Boolean   @default(false) // the Sunday roundup
+  releases  Boolean   @default(false) // a game in their backlog came out
+  replies   Boolean   @default(false) // replies and helpful votes, at most one email a day
+  askedAt   DateTime? // when "Want a Sunday roundup?" was asked (only ever once)
+  token     String    @unique // the unsubscribe link's secret: it works without logging in
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// Every opt-in email sent: a restart never sends one twice, and the weekly cap holds
+model EmailSend {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind   String   // weekly | releases | replies
+  key    String   // which one: the week "2026-11-08", the day "2026-11-05"
+  sentAt DateTime @default(now())
+
+  @@id([userId, kind, key])
+  @@index([userId, sentAt])
 }

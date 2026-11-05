@@ -422,6 +422,21 @@ export const getCoverArt = async (id, size = 't_cover_big') => {
 };
 
 /**
+ * Today's release dates for many games: Map(id → Date | null). The release radar
+ * (lib/notifyJobs.js) asks before saying a backlog game is out, because a game saved
+ * months ago keeps the date it had then, and release dates move.
+ */
+export const getReleaseDates = async (ids) => {
+  const dates = new Map();
+  for (let i = 0; i < ids.length; i += 500) {
+    const batch = ids.slice(i, i + 500).map(Number);
+    const rows = await igdbRequest('games', `fields first_release_date; where id = (${batch.join(',')}); limit 500;`);
+    for (const row of rows) dates.set(row.id, row.first_release_date ? new Date(row.first_release_date * 1000) : null);
+  }
+  return dates;
+};
+
+/**
  * Popular recent games: released in the last 2 years, sorted by rating count.
  * Cached in memory to keep Home page loads off the IGDB rate limit.
  */
