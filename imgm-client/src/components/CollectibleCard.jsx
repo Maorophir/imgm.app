@@ -139,7 +139,7 @@ const CutGem = ({ cx, cy, w, h }) => (
 // The cut-off bottom corners are 7cqi along each side (the same as .card-first's)
 const CHAMFER = 44.1;
 
-const FirstEditionCrown = ({ mini }) => {
+export const FirstEditionCrown = ({ mini }) => {
   // Where the frame's outer edge is (the card stock's margin) and how thick it is, in
   // the box's units; a mini card's gems are a bit bigger, so they still read at 110px
   const edge = mini ? 16.4 : 15.1;
@@ -174,7 +174,7 @@ const FirstEditionCrown = ({ mini }) => {
 };
 
 // A First Edition's face starts a little lower, so the crown's middle gem clears the title
-const CROWN_ROOM = <div aria-hidden="true" className="h-[5cqi] shrink-0" />;
+export const CrownRoom = () => <div aria-hidden="true" className="h-[5cqi] shrink-0" />;
 
 // The mini card's "1st" stamp: a hairline box in the tier's ink (short, so it fits
 // beside "Legendary" on a 110px card)
@@ -248,7 +248,7 @@ const CollectibleCard = ({
             around the face */}
         <div className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${metal.frame}`} style={metal.style}>
           <div className={`flex-1 min-w-0 flex flex-col bg-slate-900 ${metal.face}`}>
-            {firstEdition && CROWN_ROOM}
+            {firstEdition && <CrownRoom />}
             {/* Title and score */}
             <div className="flex items-start justify-between gap-[3cqi]">
               <p className={`${size.title} min-w-0 font-display leading-[.9] tracking-[.01em] uppercase text-balance break-words line-clamp-3`}>
@@ -461,7 +461,7 @@ export const ChecklistBack = ({ score, ticks, name, firstEdition = false, classN
       <article aria-label={`${name}'s checklist`} className={`${STOCK} ${size.stock}`} style={{ '--ink': rarity.color }}>
         <div className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${metal.frame}`} style={metal.style}>
           <div className={`flex-1 min-w-0 min-h-0 flex flex-col bg-slate-900 ${metal.face}`}>
-            {firstEdition && CROWN_ROOM}
+            {firstEdition && <CrownRoom />}
             {/* The answers scroll if a small card can't fit them all; the small print
                 stays at the bottom, as on the front */}
             <div className="flex-1 min-h-0">
