@@ -271,16 +271,20 @@ export const playState = async (puzzle, guessIds) => {
     ids: guesses.map((g) => g.id),
     guesses,
     // Every picture unlocked so far (the last one is the current); all of them, sharp, at the end
+    // Once it's over: the same six pictures the game showed, in order (other screenshots
+    // looked like a different game, the user's report 2026-11-06), sharp and large, each
+    // with the blur it had (`seenBlur`) so the page can show them as they were played
     pictures: finished
-      ? [
-        ...puzzle.shots.map((shot) => ({ url: igdbImageUrl(shot, 't_screenshot_huge'), blur: 0 })),
-        ...(puzzle.clip ? [{ ...stage(STAGES.at(-1), STAGES.length - 1), blur: 0 }] : []), // sharp at the end
-      ]
+      ? STAGES.map((s, i) => {
+        const shown = stage(s, i);
+        return { ...shown, url: igdbImageUrl(puzzle.shots[s.shot % puzzle.shots.length], 't_screenshot_huge'), blur: 0, seenBlur: shown.blur };
+      })
       : STAGES.slice(0, wrong + 1).map(stage),
     clues: CLUES.filter((clue) => finished || wrong >= clue.after)
       .map((clue) => {
         const label = typeof clue.label === 'function' ? clue.label(puzzle) : clue.label;
-        return { label, value: clue.value(answer, puzzle), quote: label === 'Quote' };
+        // fresh: unlocked by the latest try (the page marks it New)
+        return { label, value: clue.value(answer, puzzle), quote: label === 'Quote', fresh: !finished && wrong === clue.after };
       })
       .filter((clue) => clue.value),
     // Wikiquote is credited once it's over (its address names the game)

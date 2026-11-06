@@ -17,7 +17,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Check, Clock, Flame, Lightbulb, Share2, SkipForward, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Clock, Eye, EyeOff, Flame, Lightbulb, Share2, SkipForward, X } from 'lucide-react';
 import GamePicker from '../components/reviewQuest/GamePicker';
 import LoadError from '../components/LoadError';
 import ShareCardDialog from '../components/share/ShareCardDialog';
@@ -143,10 +143,14 @@ const Clip = ({ src, style }) => {
 const Picture = ({ pictures, finished, solved, shake }) => {
   const [viewing, setViewing] = useState(null); // null = the newest
   const [loaded, setLoaded] = useState({});
+  // Once it's over the pictures are the game's six, sharp; this shows them blurred again,
+  // as they were played
+  const [asPlayed, setAsPlayed] = useState(false);
   const index = viewing ?? pictures.length - 1;
-  const picture = pictures[index];
+  const shown = pictures[index];
+  const picture = finished && asPlayed ? { ...shown, blur: shown.seenBlur } : shown;
   const { url } = picture;
-  const total = finished ? pictures.length : 6;
+  const total = 6;
 
   return (
     <div>
@@ -168,8 +172,7 @@ const Picture = ({ pictures, finished, solved, shake }) => {
           </span>
         )}
         <span className="absolute left-2 bottom-2 sm:left-3 sm:bottom-3 text-xs sm:text-sm font-medium bg-slate-950/85 px-2.5 py-1 rounded-xs tabular-nums">
-          {finished ? (picture.clip ? 'A moment from the trailer' : `Screenshot ${index + 1} of ${total}`)
-            : `Picture ${index + 1} of ${total}${picture.news ? `: ${picture.news}` : ''}`}
+          {`Picture ${index + 1} of ${total}${picture.news ? `: ${picture.news}` : ''}`}
         </span>
       </div>
       {/* The earlier pictures stay to look back at */}
@@ -190,6 +193,12 @@ const Picture = ({ pictures, finished, solved, shake }) => {
             </button>
           ))}
         </div>
+      )}
+      {finished && (
+        <button type="button" onClick={() => setAsPlayed((on) => !on)} aria-pressed={asPlayed} className={`${TEXT_BUTTON_SM} inline-flex items-center gap-1.5 mt-2`}>
+          {asPlayed ? <Eye className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> : <EyeOff className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />}
+          {asPlayed ? 'Show them sharp' : 'Show them as you played them'}
+        </button>
       )}
     </div>
   );
@@ -231,8 +240,8 @@ const TONE = {
 
 // Right after a wrong guess: how warm it was in big words, what it told you, and that a
 // new picture is up. Read out by screen readers; keyed by the guess, so each one pops in.
-const Verdict = ({ guess, triesLeft, newShot, clip }) => {
-  const nowPlaying = clip ? 'A moment of the game is playing.' : newShot ? 'A new screenshot is up.' : 'The picture is sharper now.';
+const Verdict = ({ guess, triesLeft, newShot, clip, newClue }) => {
+  const nowPlaying = `${clip ? 'A moment of the game is playing.' : newShot ? 'A new screenshot is up.' : 'The picture is sharper now.'}${newClue ? ` New clue: ${newClue}, just below.` : ''}`;
   if (guess.skipped) {
     return (
       <div role="status" className="mt-5 p-4 sm:p-5 rounded-sm border border-slate-600 bg-slate-900 animate-pop">
@@ -512,16 +521,29 @@ const Record = ({ me, guestStreakDays, finished }) => {
   );
 };
 
+// The clues, right under the picture (the user, who owns the site, didn't notice them in
+// the side column, 2026-11-06): a framed box with a count, the one just unlocked marked
+// New, a quote as a quote, and what's still to come
+const CLUE_COUNT = 4;
+// A clue in the verdict's sentence ("New clue: release year, just below."), as the
+// picture captions say it
+const CLUE_WORDS = { Genre: 'genre', Released: 'release year', Quote: 'a line from the game', On: 'platforms', Studio: 'studio' };
+const NewTag = () => (
+  <span className="ml-2 inline-flex items-center h-5 px-1.5 rounded-xs bg-white text-slate-950 text-[11px] font-semibold uppercase tracking-[.06em] align-middle">New</span>
+);
 const Clues = ({ clues, nextClueAfter, wrong, quoteSource }) => (
-  <section className="border border-slate-700 rounded-sm p-5">
-    <h2 className="flex items-center gap-2 font-semibold text-white">
-      <Lightbulb className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" /> Clues
+  <section className="border border-slate-500 bg-slate-900 rounded-sm p-4 sm:p-5" aria-labelledby="clues-title">
+    <h2 id="clues-title" className="flex items-center justify-between gap-3 font-semibold text-white">
+      <span className="flex items-center gap-2">
+        <Lightbulb className="w-5 h-5 text-(--color-rarity-legendary)" strokeWidth={1.8} aria-hidden="true" /> Clues
+      </span>
+      <span className="text-sm font-medium text-slate-400 tabular-nums">{clues.length} of {CLUE_COUNT}</span>
     </h2>
     {clues.length > 0 && (
-      <dl className="mt-3 space-y-2">
+      <dl className="mt-3 space-y-2.5">
         {clues.map((clue) => (clue.quote ? (
-          <div key={clue.label} className="text-sm pt-1">
-            <dt className="text-slate-400">A line from the game</dt>
+          <div key={clue.label} className={`text-sm pt-1 ${clue.fresh ? 'animate-pop' : ''}`}>
+            <dt className="text-slate-400">A line from the game{clue.fresh && <NewTag />}</dt>
             <dd className="mt-1.5 pl-3 border-l-2 border-slate-500 font-serif italic text-base text-white leading-snug">“{clue.value}”</dd>
             {quoteSource && (
               <dd className="mt-1 pl-3 text-xs text-slate-400">
@@ -530,16 +552,16 @@ const Clues = ({ clues, nextClueAfter, wrong, quoteSource }) => (
             )}
           </div>
         ) : (
-          <div key={clue.label} className="flex gap-3 text-sm">
+          <div key={clue.label} className={`flex gap-3 text-sm ${clue.fresh ? 'animate-pop' : ''}`}>
             <dt className="w-20 shrink-0 text-slate-400">{clue.label}</dt>
-            <dd className="text-white font-medium tabular-nums">{clue.value}</dd>
+            <dd className="text-white font-medium tabular-nums">{clue.value}{clue.fresh && <NewTag />}</dd>
           </div>
         )))}
       </dl>
     )}
     {nextClueAfter != null && (
       <p className="text-sm text-slate-400 mt-3">
-        {clues.length ? 'Another' : 'A clue'} after {nextClueAfter - wrong} more {nextClueAfter - wrong === 1 ? 'try' : 'tries'} (a wrong guess or a skip).
+        {clues.length ? 'Another' : 'The first clue'} after {nextClueAfter - wrong} more {nextClueAfter - wrong === 1 ? 'try' : 'tries'} (a wrong guess or a skip).
       </p>
     )}
   </section>
@@ -678,7 +700,19 @@ export default function Daily() {
             solved={data.status === 'solved'}
             shake={!finished && justGuessed}
           />
-          {!finished && latest && <Verdict key={data.guesses.length} guess={latest} triesLeft={triesLeft} newShot={newShot} clip={Boolean(data.pictures.at(-1)?.clip)} />}
+          {!finished && latest && (
+            <Verdict
+              key={data.guesses.length}
+              guess={latest}
+              triesLeft={triesLeft}
+              newShot={newShot}
+              clip={Boolean(data.pictures.at(-1)?.clip)}
+              newClue={CLUE_WORDS[data.clues.find((clue) => clue.fresh)?.label]}
+            />
+          )}
+          <div className="mt-5">
+            <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
+          </div>
 
           <div className="mt-6">
             {finished ? (
@@ -706,13 +740,6 @@ export default function Daily() {
             )}
           </div>
 
-          {/* On a phone the clues come right under the guess (the side column is far below) */}
-          {data.clues.length > 0 && (
-            <div className="mt-6 lg:hidden">
-              <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
-            </div>
-          )}
-
           {data.guesses.length > 0 && (
             <section className="mt-6">
               <h2 className="font-semibold text-white mb-1">Your guesses</h2>
@@ -724,9 +751,6 @@ export default function Daily() {
         </div>
 
         <aside className="flex flex-col gap-4 min-w-0">
-          <div className={data.clues.length > 0 ? 'hidden lg:block' : ''}>
-            <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
-          </div>
           {finished && <Today today={data.today} mine={myTries} />}
           <Record me={data.me} guestStreakDays={streak} finished={finished} />
           <p className="flex items-center gap-2 text-sm text-slate-400 tabular-nums">

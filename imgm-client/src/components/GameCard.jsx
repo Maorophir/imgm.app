@@ -6,6 +6,9 @@
  * grid have no reviews yet, and a column of "No reviews yet" only advertises it), but
  * the line keeps its height, so every tile in a grid row is the same size.
  *
+ * `note` (optional) takes the quiet line's place, for a shelf that says something else
+ * there: when a game comes out, or who just rated it (pages/Search.jsx).
+ *
  * Data: coverUrl, title, genres, platforms and releaseDate come from IGDB;
  * ratings.imgm (the average score) and reviewCount from IMGM reviews.
  *
@@ -43,6 +46,7 @@ const GameCard = ({
   ratings,
   reviewCount,
   releaseDate,
+  note,
 }) => {
   const [loaded, setLoaded] = useState(false);
   const [broken, setBroken] = useState(!coverUrl);
@@ -107,11 +111,15 @@ const GameCard = ({
       {/* One quiet line: year · genre · platforms. On a narrow tile a part that doesn't
           fit drops out whole (it wraps onto a hidden second line) instead of being cut */}
       <p className="flex flex-wrap gap-x-1 h-[21px] mt-1 overflow-hidden text-sm leading-[21px] text-slate-400">
-        {meta.map((part, i) => (
-          <span key={i} className="whitespace-nowrap">
-            {i > 0 && '· '}{part}
-          </span>
-        ))}
+        {note ? (
+          <span className="truncate">{note}</span>
+        ) : (
+          meta.map((part, i) => (
+            <span key={i} className="whitespace-nowrap">
+              {i > 0 && '· '}{part}
+            </span>
+          ))
+        )}
       </p>
 
       {/* The IMGM verdict in the tier's ink, or an empty line of the same height.
