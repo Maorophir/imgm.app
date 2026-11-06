@@ -6,6 +6,20 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
 import { clientIp } from '../lib/clientIp.js';
+import ip3country from 'ip3country';
+
+// The visitor's country from their address, for the Visitors tab: Vercel doesn't pass its
+// own country header through the rewrite (Render's log said so on 2026-11-06), so a small
+// address → country table (IP2Location LITE, credited in the Privacy Policy) answers it
+// here. The address is used for that moment only and never stored.
+ip3country.init();
+const countryOf = (ip) => {
+  try {
+    return ip3country.lookupStr(ip) ?? '';
+  } catch {
+    return ''; // an address it can't read (IPv6 and the like): no country
+  }
+};
 import { z } from 'zod';
 import { countVisit } from '../lib/visits.js';
 
@@ -32,24 +46,19 @@ const Beacon = z.object({
 // The visitor's own address: Vercel puts it first in X-Forwarded-For when it passes the
 // request on. It only goes into today's visitor hash, never into storage.
 
-// Whether Vercel passes the visitor's country on to this server: said once in the log
-let countryNoted = false;
-
 // POST /api/visits  { path, referrer?, device?, automated? }
 router.post('/', beaconLimiter, (req, res) => {
   const beacon = Beacon.safeParse(req.body);
   if (beacon.success && !beacon.data.automated) {
-    const country = req.headers['x-vercel-ip-country'];
-    if (!countryNoted) {
-      countryNoted = true;
-      console.log(`Visitor counter: ${country ? 'the country reaches this server' : 'no country header (countries stay empty)'}`);
-    }
+    const ip = clientIp(req);
+    const header = req.headers['x-vercel-ip-country'];
+    const country = typeof header === 'string' && header ? header : countryOf(ip);
     countVisit({
       path: beacon.data.path,
       referrer: beacon.data.referrer,
       device: beacon.data.device,
-      country: typeof country === 'string' ? country.toUpperCase() : '',
-      ip: clientIp(req),
+      country: country.toUpperCase(),
+      ip,
       ua: String(req.headers['user-agent'] ?? ''),
     });
   }

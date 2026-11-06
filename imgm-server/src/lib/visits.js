@@ -5,7 +5,8 @@
  * The site sends one small beacon per page view (POST /api/visits): the page (ids
  * collapsed, so /game/:id), the site it came from (its host only, on the first page of a
  * visit) and phone / tablet / computer. This server adds the browser and system (from the
- * User-Agent), and the country if Vercel passed it on (x-vercel-ip-country).
+ * User-Agent), and the country (Vercel doesn't pass its own on through the rewrite, so
+ * routes/visits.js looks it up from the address: IP2Location LITE, via ip3country).
  *
  * A visitor is recognised only within a day: a hash of a random salt, their IP and their
  * User-Agent. The salt lives only in memory and is replaced at midnight UTC, so
