@@ -20,6 +20,9 @@ import { Link } from 'react-router-dom';
 import { ArrowDown, ArrowUp, Check, Clock, Flame, Lightbulb, Share2, SkipForward, X } from 'lucide-react';
 import GamePicker from '../components/reviewQuest/GamePicker';
 import LoadError from '../components/LoadError';
+import ShareCardDialog from '../components/share/ShareCardDialog';
+import DailyShareImage from '../components/share/DailyShareImage';
+import { blurredPicture } from '../lib/dailyShare';
 import { getDaily, guessDaily, nativeTrailerUrl, skipDaily } from '../lib/api';
 import { playsStreamsItself, releaseVideo } from '../components/discover/trailerVideo';
 import { useSession } from '../lib/authClient';
@@ -28,8 +31,6 @@ import { DAILY_GAME_KEY as GAME, localDailyGame as localGame, pictureStyle } fro
 import { WRAP, SECTION_TITLE, PRIMARY_BUTTON, GHOST_BUTTON, GHOST_BUTTON_TALL, TEXT_LINK, TEXT_BUTTON_SM, LABEL } from '../lib/ui';
 
 const HISTORY = 'imgm.daily.history'; // and their past days: { "2026-11-05": tries, … } (0 = not solved)
-const SHARE_AT = 'imgm.app/daily';
-const SHARED_FOR = 2000; // ms "Copied" stays up
 
 // Storage can be blocked (private windows, strict settings): the game still plays
 const readStore = (key) => {
@@ -339,47 +340,68 @@ const TriesBar = ({ guesses, maxTries }) => (
   </div>
 );
 
-// "IMGM daily #47: 3/6, 12-day streak. imgm.app/daily" (plain text, no spoilers)
+// The line that goes with the picture: "Guess the game #47: 3/6, 12-day streak." (the
+// share window adds the link; never a spoiler)
 const shareLine = (data, streak) => {
   const score = data.status === 'solved' ? `${data.guesses.length}/${data.maxTries}` : `X/${data.maxTries}`;
-  return `IMGM daily #${data.number}: ${score}${streak >= 2 ? `, ${streak}-day streak` : ''}. ${SHARE_AT}`;
+  return `Guess the game #${data.number} on IMGM: ${score}${streak >= 2 ? `, ${streak}-day streak` : ''}.`;
 };
 
-const ShareResult = ({ text }) => {
-  const [status, setStatus] = useState('idle'); // 'copied' | 'failed'
-  useEffect(() => {
-    if (status === 'idle') return;
-    const timer = setTimeout(() => setStatus('idle'), SHARED_FOR);
-    return () => clearTimeout(timer);
-  }, [status]);
+// Each try as the share picture's block: the hit, a skip, or how warm a miss was
+const toneOf = (guess) =>
+  guess.right ? 'hit' : guess.skipped ? 'skip' : { close: 'hot', warm: 'warm', cold: 'cold' }[heatOf(guess).tone];
+
+// "Share your result": the result as a picture (DailyShareImage: the day's first picture
+// blurred as the game starts it, never the answer) in the review card's share window
+// (Share image, Save, Copy link, WhatsApp, X). The blur is made once, on the first tap.
+const ShareResult = ({ data, streak }) => {
+  const [open, setOpen] = useState(false);
+  const [picture, setPicture] = useState(null);
+  const [preparing, setPreparing] = useState(false);
 
   const share = async () => {
-    // Phones: the share sheet. Elsewhere (or if it fails): copy the line
-    if (navigator.share) {
+    if (picture == null) {
+      setPreparing(true);
       try {
-        await navigator.share({ text });
-        return;
-      } catch (err) {
-        if (err.name === 'AbortError') return;
+        setPicture(await blurredPicture(data.pictures[0].url));
+      } catch {
+        setPicture(''); // the picture's frame stays empty; the rest still shares
+      } finally {
+        setPreparing(false);
       }
     }
-    try {
-      await navigator.clipboard.writeText(text);
-      setStatus('copied');
-    } catch {
-      setStatus('failed');
-    }
+    setOpen(true);
   };
-  const message = status === 'copied' ? 'Copied' : status === 'failed' ? "Couldn't copy it" : '';
 
   return (
-    <div>
-      <button type="button" onClick={share} className={`${GHOST_BUTTON} w-full`}>
-        <Share2 className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> {message || 'Share your result'}
+    <>
+      <button type="button" onClick={share} disabled={preparing} className={`${GHOST_BUTTON} w-full`}>
+        <Share2 className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" /> {preparing ? 'Making your picture…' : 'Share your result'}
       </button>
-      <span role="status" className="sr-only">{message}</span>
-      <p className="mt-2 text-sm text-slate-400 font-mono wrap-break-word">{text}</p>
-    </div>
+      <ShareCardDialog
+        open={open}
+        onClose={() => setOpen(false)}
+        url="/daily"
+        title={`Guess the game #${data.number}`}
+        text={shareLine(data, streak)}
+        image={{
+          heading: 'Share your result',
+          alt: `Your result for Guess the game #${data.number}, as a picture`,
+          fileName: `imgm-daily-${data.number}.png`,
+          making: 'Making your picture…',
+          element: (
+            <DailyShareImage
+              number={data.number}
+              tries={data.guesses.map(toneOf)}
+              maxTries={data.maxTries}
+              solved={data.status === 'solved'}
+              streak={streak}
+              picture={picture || null}
+            />
+          ),
+        }}
+      />
+    </>
   );
 };
 
@@ -420,7 +442,7 @@ const Result = ({ data, streak }) => {
         <Link to={`/game/${answer.id}`} className={`${GHOST_BUTTON_TALL} sm:flex-1`}>See the game</Link>
       </div>
       <div className="mt-5 pt-5 border-t border-slate-700">
-        <ShareResult text={shareLine(data, streak)} />
+        <ShareResult data={data} streak={streak} />
       </div>
     </section>
   );

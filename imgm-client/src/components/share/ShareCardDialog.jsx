@@ -16,6 +16,9 @@
  *   card            CollectibleCard props (the picture uses the share edition)
  *   url             the card's page, e.g. "/game/1942?review=abc#review-abc"
  *   title, text     the share sheet's title and line, e.g. "10/10, Legendary on IMGM"
+ *   image           another picture instead of the card (the daily game's result):
+ *                   { element (the picture at its real size, e.g. <DailyShareImage>),
+ *                   heading, alt, fileName, making ("Making your picture…") }
  *   customize       for your own review: { gameId, onChange } adds "Make it yours", to
  *                   choose the card's picture (the game's cover, artworks, screenshots)
  *                   and its words (a sentence of your review). Choices are saved to the
@@ -77,7 +80,7 @@ const MakeItYours = ({ choices, busy, onChoose }) => (
 
 // The window's contents. Made anew on every opening (so the picture starts fresh: the
 // card may have changed since)
-const ShareCardBody = ({ onClose, card: cardNow, url, title, text, customize }) => {
+const ShareCardBody = ({ onClose, card: cardNow, url, title, text, customize, image }) => {
   // The card as it was when the window opened (pages rebuild their card props on every
   // redraw, and a new object each time would re-photograph it again and again), then as
   // the player makes it theirs
@@ -100,7 +103,7 @@ const ShareCardBody = ({ onClose, card: cardNow, url, title, text, customize }) 
         const blob = await makeCardImage(imageRef.current, SHARE_IMAGE_SIZE);
         if (cancelled) return;
         preview = URL.createObjectURL(blob);
-        setPicture({ file: new File([blob], fileName(card.title), { type: 'image/png' }), preview });
+        setPicture({ file: new File([blob], image?.fileName ?? fileName(card.title), { type: 'image/png' }), preview });
         setStatus('ready');
       } catch (error) {
         console.error('Card picture failed:', error);
@@ -112,7 +115,7 @@ const ShareCardBody = ({ onClose, card: cardNow, url, title, text, customize }) 
       cancelAnimationFrame(frame);
       if (preview) URL.revokeObjectURL(preview);
     };
-  }, [card]);
+  }, [card]); // eslint-disable-line react-hooks/exhaustive-deps -- `image` is set once per opening
 
   // A short note ("Link copied") goes away by itself
   useEffect(() => {
@@ -188,7 +191,7 @@ const ShareCardBody = ({ onClose, card: cardNow, url, title, text, customize }) 
     <>
       <div className="p-5 sm:p-6 flex flex-col gap-5">
         <div className="flex items-center justify-between gap-4">
-          <h2 id="share-card-title" className="font-display text-[32px] leading-none text-white">Share your card</h2>
+          <h2 id="share-card-title" className="font-display text-[32px] leading-none text-white">{image?.heading ?? 'Share your card'}</h2>
           <button type="button" onClick={onClose} aria-label="Close" className="w-11 h-11 -mr-2 grid place-items-center text-slate-400 hover:text-white">
             <X className="w-5 h-5" aria-hidden="true" />
           </button>
@@ -197,11 +200,11 @@ const ShareCardBody = ({ onClose, card: cardNow, url, title, text, customize }) 
         {/* The picture that will be shared */}
         <div className="aspect-[1080/1350] w-full rounded-sm overflow-hidden bg-slate-950 border border-slate-700 grid place-items-center">
           {status === 'ready' ? (
-            <img src={picture.preview} alt={`Your card for ${card.title}, as a picture`} className="w-full h-full object-contain" />
+            <img src={picture.preview} alt={image?.alt ?? `Your card for ${card.title}, as a picture`} className="w-full h-full object-contain" />
           ) : status === 'failed' ? (
             <p className="px-6 text-center text-sm text-slate-400">Couldn’t make the picture. You can still share the link below.</p>
           ) : (
-            <p className="text-sm text-slate-400 motion-safe:animate-pulse">Making your card…</p>
+            <p className="text-sm text-slate-400 motion-safe:animate-pulse">{image?.making ?? 'Making your card…'}</p>
           )}
         </div>
 
@@ -239,13 +242,13 @@ const ShareCardBody = ({ onClose, card: cardNow, url, title, text, customize }) 
       </div>
       {/* The picture's original, drawn off screen at its real size to be photographed */}
       <div aria-hidden="true" className="fixed top-0 left-[-20000px] pointer-events-none">
-        <ShareImage ref={imageRef} card={card} />
+        {image ? <div ref={imageRef}>{image.element}</div> : <ShareImage ref={imageRef} card={card} />}
       </div>
     </>
   );
 };
 
-const ShareCardDialog = ({ open, onClose, card, url, title, text, customize }) => {
+const ShareCardDialog = ({ open, onClose, card, url, title, text, customize, image }) => {
   const dialogRef = useRef(null);
 
   // Opening and closing the native dialog (it handles Escape and the page behind)
@@ -264,7 +267,7 @@ const ShareCardDialog = ({ open, onClose, card, url, title, text, customize }) =
       aria-labelledby="share-card-title"
       className="m-auto w-[min(440px,calc(100vw-32px))] max-h-[calc(100dvh-32px)] overflow-y-auto rounded-sm border border-slate-600 bg-slate-900 p-0 text-white backdrop:bg-slate-950/80"
     >
-      {open && <ShareCardBody onClose={onClose} card={card} url={url} title={title} text={text} customize={customize} />}
+      {open && <ShareCardBody onClose={onClose} card={card} url={url} title={title} text={text} customize={customize} image={image} />}
     </dialog>
   );
 };
