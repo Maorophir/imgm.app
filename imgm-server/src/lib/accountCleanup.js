@@ -3,9 +3,11 @@
  * The database removes the player's own rows by itself (onDelete: Cascade); this
  * handles what depends on them elsewhere:
  *   before  their helpful votes are taken off (and those reviews recounted), and the
- *           AI service forgets their Play Next chats
+ *           AI service forgets their Play Next chats; the admin log keeps what was
+ *           done to their reviews and comments, but drops its copies of them
  *   after   the games they reviewed get their AI summary refreshed, if it's due
  */
+import { Prisma } from '@prisma/client';
 import { prisma } from './db.js';
 import { recountVotes } from './reviewVotes.js';
 import { refreshGameSummary } from './aiSummary.js';
@@ -27,6 +29,7 @@ export const beforeAccountDeleted = async (user) => {
     prisma.playNextChat.findMany({ where: { userId: user.id }, select: { id: true } }),
   ]);
   await prisma.reviewVote.deleteMany({ where: { userId: user.id } });
+  await prisma.adminAction.updateMany({ where: { targetUserId: user.id }, data: { snapshot: Prisma.DbNull } });
   for (const { reviewId } of votes) await recountVotes(reviewId);
   if (process.env.AI_SERVICE_URL) chats.forEach((chat) => forgetChat(user.id, chat.id));
   reviewedGames.set(user.id, reviews.map((r) => r.gameId));

@@ -10,6 +10,7 @@ import {
   wakePictureCheck, deleteAvatar, getAvatar, getAvatarPresets, getAvatarPresetImage, getMyProfile, getMyReviews, getMyAccount, deleteMyAccount,
   getPublicProfile, getPublicReviews,
 } from '../controllers/profileController.js';
+import { getMySets, getPublicSets } from '../controllers/cardSetsController.js';
 
 const router = Router();
 
@@ -34,6 +35,7 @@ router.get('/me/progress', getMyProgress);
 // Your profile: stats + reviews
 router.get('/me/profile', getMyProfile);
 router.get('/me/reviews', getMyReviews);
+router.get('/me/sets', getMySets); // your card sets
 
 // Your account: how you log in, and deleting it (password changes go through Better Auth)
 router.get('/me/account', getMyAccount);
@@ -58,5 +60,6 @@ router.get('/:id/avatar', getAvatar);
 // on purpose: "me" is too short to be a gamer tag, so it never reaches these.
 router.get('/:username/profile', getPublicProfile);
 router.get('/:username/reviews', getPublicReviews);
+router.get('/:username/sets', getPublicSets);
 
 export default router;

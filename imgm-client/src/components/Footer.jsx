@@ -1,6 +1,6 @@
 /**
  * Footer — a quiet line at the bottom of every page (not on Play Next, whose chat
- * fills the screen): the brand, that IMGM is in beta, Terms, Privacy and feedback, and
+ * fills the screen): the brand, that IMGM is in beta, the daily game, Terms, Privacy and feedback, and
  * the credit for the game data (covers, art, release dates, platforms) from IGDB.
  * Noir: one hairline on top, metadata-grey text, the power mark in ivory (the lime
  * one lives in the header).
@@ -36,6 +36,7 @@ const Footer = () => {
         </div>
         <nav aria-label="Footer">
           <ul className="flex flex-wrap gap-x-7">
+            <li><Link to="/daily" className={linkClass}>Daily game</Link></li>
             <li><Link to="/terms" className={linkClass}>Terms</Link></li>
             <li><Link to="/privacy" className={linkClass}>Privacy</Link></li>
             <li><button type="button" onClick={openFeedback} className={linkClass}>Send feedback</button></li>

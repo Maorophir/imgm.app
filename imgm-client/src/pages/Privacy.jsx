@@ -12,7 +12,7 @@ import { TEXT_LINK } from '../lib/ui';
 const Privacy = () => (
   <LegalPage
     title="Privacy Policy"
-    effective="November 3, 2026"
+    effective="November 5, 2026"
     intro="This policy explains what IMGM (I Am Gaming, imgm.app) collects about you, why, who helps us run the site, and the choices you have. We keep it as short and plain as we can."
   >
     <S title="1. Who we are">
@@ -24,26 +24,28 @@ const Privacy = () => (
         <li><strong className="text-white">Account:</strong> your email address and login (a password, stored only as a secure hash, your Google account, or your Steam account). If you sign up with Steam, you give us your email address yourself, because Steam doesn't share it. If you sign in with Google, we get your name, email and Google picture; we never show your name or Google picture on IMGM.</li>
         <li><strong className="text-white">Steam, if you sign up with it or connect it:</strong> your Steam ID (the public number Steam gives every account), your Steam name, the games you own on Steam (and the ones you've played lately through Steam Family Sharing, which we keep once seen), how long you've played each one (in all and in the last two weeks) and when you last played it. We use your Steam ID to let you log in with Steam. Steam never shares your Steam password, email address or payment details with us. We ask Steam for your games only when you connect Steam, open your Steam library on IMGM or refresh it.</li>
         <li><strong className="text-white">Profile:</strong> your gamer tag and, if you add one, your profile picture.</li>
-        <li><strong className="text-white">What you post and do:</strong> reviews and their answers, ratings, helpful votes, Game of the Week votes and nominations, your Backlog, Play Next chats and quest answers, and feedback you send.</li>
+        <li><strong className="text-white">What you post and do:</strong> reviews and their answers, ratings, helpful votes, Game of the Week votes and nominations, your Backlog, Discover votes and comments (and comments you like or report), the players you follow, your daily Guess the game results, Play Next chats and quest answers, and feedback you send. We also note which days you used IMGM while logged in (the date only), to count how many players come back.</li>
+        <li><strong className="text-white">Notifications and email choices:</strong> the lines in your notification bell (for example that another player replied to your comment, or that a game in your Backlog came out), which emails you chose to get, and a record of the ones we sent you (so we never send one twice).</li>
         <li><strong className="text-white">Technical:</strong> a login cookie, and your IP address, used briefly for security and to limit abuse (for example rate limits).</li>
-        <li><strong className="text-white">Anonymous visit counts:</strong> Vercel Analytics counts page views without cookies and without identifying you.</li>
+        <li><strong className="text-white">Anonymous visit counts:</strong> Vercel Analytics counts page views without cookies and without identifying you. IMGM also counts visits itself, logged in or not, the same way: for each page you open, your browser sends the page (without any ids in its address), the site that sent you there, and whether you're on a phone, tablet or computer, and our server notes your browser, your system (like iOS or Windows) and your country. To count each visitor once a day, your IP address and browser details are turned into a code that changes every day and is never stored, so you can't be followed from one day to the next. Your IP address is never kept, only daily totals are, and nothing is sent if your browser asks sites not to track it (Do Not Track or Global Privacy Control).</li>
       </ul>
     </S>
 
     <S title="3. Why we use it">
       <ul>
         <li>To run your account and show your reviews, scores, XP, badges, votes and Backlog.</li>
-        <li>To make the community features work: game scores, the Hall of Fame, Game of the Week, and AI summaries of what players think.</li>
+        <li>To make the community features work: game scores, the Hall of Fame, Game of the Week, the daily Guess the game, following players, taste matches, card sets, and AI summaries of what players think.</li>
         <li>To give you Play Next recommendations based on your answers and reviews.</li>
         <li>If you sign up with Steam or connect it: to let you log in with it, and to show you your Steam library with your hours, so you can rate those games or add them to your Backlog.</li>
-        <li>To keep IMGM safe and fair (stopping spam, abuse and fake votes) and to fix bugs.</li>
-        <li>To send you account emails, like password resets. We don't send marketing emails.</li>
+        <li>To keep IMGM safe and fair (stopping spam, abuse and fake votes) and to fix bugs. We may remove reviews and comments that break our <Link to="/terms" className={`font-medium text-white ${TEXT_LINK}`}>Terms of Use</Link>, and we keep a copy of what we removed in a moderation log, so a mistake can be undone.</li>
+        <li>To send you account emails, like password resets. These always come, because your account needs them.</li>
+        <li>To send you only the other emails you chose: a weekly roundup, the day a game in your Backlog comes out, or replies and likes. They're all off until you switch one on in Settings, go only to a confirmed email address, and come at most twice a week. Every one has an Unsubscribe link that works in one click, without logging in, and you can switch each one off in Settings at any time.</li>
       </ul>
       <p>We never sell your data, and we don't show ads based on you.</p>
     </S>
 
     <S title="4. What everyone can see">
-      <p>Your gamer tag, profile picture, level, reviews (with their scores and answers) and badges are public. Your email address, real name, votes, Backlog and Play Next chats are private. So are your Steam ID, Steam name and Steam library: only what you put in a review yourself (like the hours you played) is public.</p>
+      <p>Your gamer tag, profile picture, level, reviews (with their scores and answers), badges, card sets, Discover comments, and how many players you follow and follow you are public. Logged-in players can see how their scores compare with yours (a taste match, made from your public reviews). Your email address, real name, votes, Backlog, Play Next chats, daily game results and who you follow (or who follows you) are private. So are your Steam ID, Steam name and Steam library: only what you put in a review yourself (like the hours you played) is public.</p>
     </S>
 
     <S title="5. AI features">
@@ -57,7 +59,7 @@ const Privacy = () => (
         <li>Neon (database);</li>
         <li>Google Cloud (Gemini AI, Cloud Vision, and the AI service's hosting) and Google sign-in;</li>
         <li>TypeSafe (Jev AI, which sorts Play Next messages: it gets the message text only, never your email address, name or account);</li>
-        <li>Resend (account emails);</li>
+        <li>Resend (account emails, and the emails you chose to get);</li>
         <li>IGDB/Twitch (game information; we don't send them your personal data);</li>
         <li>YouTube (Google), Valve's Steam and Microsoft's Xbox, for game trailers: when a trailer plays, your browser loads it from their servers, which see your IP address. We send them nothing about you; YouTube's trailers play in its privacy-enhanced mode;</li>
         <li>Valve, only if you connect Steam (Steam sign-in, and your Steam library). You log in on Steam's own site, under <a href="https://store.steampowered.com/privacy_agreement/" target="_blank" rel="noopener noreferrer" className={`font-medium text-white ${TEXT_LINK}`}>Valve's privacy policy</a>; we send Valve only your Steam ID, to ask for your games.</li>
@@ -73,6 +75,9 @@ const Privacy = () => (
         <li>Your account and content: until you delete them or your account.</li>
         <li>Your Steam connection and Steam library: until you disconnect Steam in your profile's settings or delete your account. Disconnecting deletes them; your reviews and Backlog stay.</li>
         <li>Play Next chats: 30 days after your last message, then they're deleted.</li>
+        <li>Notifications: read ones for 60 days, any for 180 days. The record of emails we sent you: 60 days.</li>
+        <li>The days you used IMGM while logged in, and the daily visit totals: 13 months.</li>
+        <li>The moderation log's copy of a removed review or comment: until its writer deletes their account.</li>
         <li>Feedback and security logs: as long as needed to handle them, usually a few months.</li>
         <li>After you delete your account, your data is removed within days; backups may keep a copy for a short time.</li>
       </ul>

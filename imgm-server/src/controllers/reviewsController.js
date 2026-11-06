@@ -8,8 +8,10 @@ import { findSlurField, withMaskedText } from '../lib/reviewText.js';
 import { getPlayerXp, withAuthorXp } from '../lib/playerXp.js';
 import { notifyReviewChanged } from '../lib/aiIndex.js';
 import { castVote } from '../lib/reviewVotes.js';
+import { notifyHelpful } from '../lib/notifications.js';
 import { refreshGameSummary } from '../lib/aiSummary.js';
 import { cacheAtEdge } from '../lib/cdnCache.js';
+import { removeReview } from '../lib/reviewRemoval.js';
 import { ART_SELECT, artChoices, reviewArt } from '../lib/reviewArt.js';
 import { cardQuoteOf, sentencesOf } from '../lib/cardQuote.js';
 import { CHECKLIST } from '../lib/reviewOptions.js';
@@ -273,9 +275,7 @@ export const deleteMyReview = async (req, res) => {
     if (!review) {
       return res.status(404).json({ error: "You haven't reviewed this game." });
     }
-    await prisma.review.delete({ where: { id: review.id } });
-    notifyReviewChanged(review.id); // and Play Next's search forgets it
-    refreshGameSummary(gameId); // and its summary, if that changed enough
+    await removeReview({ id: review.id, gameId }); // Play Next and the summary follow
 
     res.status(204).end(); // 204 = done, nothing to send back
   } catch (error) {
@@ -293,10 +293,15 @@ export const voteOnReview = async (req, res) => {
   try {
     const user = await getUser(req);
     if (!user) return res.status(401).json({ error: 'Log in to vote.' });
-    const review = await prisma.review.findUnique({ where: { id: req.params.id }, select: { userId: true } });
+    const review = await prisma.review.findUnique({
+      where: { id: req.params.id },
+      select: { id: true, userId: true, gameId: true, game: { select: { title: true } } },
+    });
     if (!review) return res.status(404).json({ error: 'Review not found' });
     if (review.userId === user.id) return res.status(403).json({ error: "You can't vote on your own review." });
     res.json(await castVote(user.id, req.params.id, body.data.helpful));
+    // "Helpful" goes to the author's bell (a "not helpful" never does)
+    if (body.data.helpful === true) notifyHelpful({ review, voter: user });
   } catch (error) {
     console.error('Error voting on review:', error);
     res.status(500).json({ error: 'Internal server error' });

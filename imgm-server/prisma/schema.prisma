@@ -32,6 +32,10 @@ model User {
   // cache-buster: the picture's address carries this time, so a new one shows at once
   avatarUpdatedAt   DateTime?
   avatar            UserAvatar?
+  // 'player', or 'admin' for IMGM's owner (the /admin pages). Set only by hand in the
+  // database: no route changes it, and Better Auth's update routes can't (auth.js)
+  role              String    @default("player")
+  activeDays        PlayerDay[]
   backlog           BacklogItem[]
   feedback          Feedback[]
   accounts      Account[]
@@ -50,6 +54,14 @@ model User {
   reviewVotes   ReviewVote[]
   gotwVotes     GotwVote[]
   gotwNominations GotwNomination[]
+  // Players this one follows, and the players following them (see Follow)
+  following       Follow[] @relation("Follower")
+  followers       Follow[] @relation("Followed")
+  dailyGuesses  DailyGuess[] // the daily Guess the game (/daily)
+  // The bell, and the emails they chose (lib/notifications.js, lib/optInEmails.js)
+  notifications   Notification[]
+  emailSettings   EmailSettings?
+  emailSends      EmailSend[]
 }
 
 model Session {
@@ -496,4 +508,159 @@ model DiscoverCommentReport {
   createdAt DateTime        @default(now())
 
   @@id([userId, commentId])
+}
+
+// One player following another: their new reviews show on the follower's home page.
+// Only the counts are public (a profile shows how many follow and are followed), never
+// who follows whom.
+model Follow {
+  followerId  String
+  follower    User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("Followed", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+}
+
+// -----------------------------------------------------------------------------
+// The admin pages (/admin): who used the site on which days, for the stats, and a log
+// of every moderation action
+// -----------------------------------------------------------------------------
+
+// One row per player per day they used the site logged in (a UTC date). Nothing about
+// logged-out visitors. History starts the day this table shipped; days older than 13
+// months are deleted each night (notifyJobs.js).
+model PlayerDay {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  day    DateTime @db.Date
+
+  @@id([userId, day])
+  @@index([day])
+}
+
+// What an admin did: hid, kept or deleted a comment, deleted a review. `snapshot` keeps
+// what was removed, so it can be put back by hand; it's cleared if that player deletes
+// their account (accountCleanup.js).
+model AdminAction {
+  id           String   @id @default(cuid())
+  adminId      String
+  action       String   // comment.hide | comment.keep | comment.delete | review.delete
+  targetType   String   // comment | review
+  targetId     String
+  targetUserId String?  // whose comment or review it was
+  note         String?
+  snapshot     Json?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([targetUserId])
+}
+
+// -----------------------------------------------------------------------------
+// The daily Guess the game (/daily, lib/daily.js)
+// -----------------------------------------------------------------------------
+
+// One game a day, the same for everyone. The day's first visit (Israel time) picks it,
+// and it's kept, so a game never comes back
+model DailyPuzzle {
+  day       String       @id // the Israeli calendar day, "2026-11-05"
+  number    Int          @unique // #1, #2…: the number in the share line
+  gameId    Int          @unique // the answer (an IGDB id; the game is saved in Game too)
+  acceptIds Int[] // also right: the answer's remasters, or the game it remasters (same pictures)
+  shots     String[] // IGDB screenshot image ids, in the order they're shown
+  quote     Json? // a line from the game, names blanked: { text, source } (lib/dailyQuote.js), or null
+  clip      String? // the game's trailer (a Steam or Xbox HLS address): a moment of it is the last picture
+  createdAt DateTime     @default(now())
+  guesses   DailyGuess[]
+}
+
+// A logged-in player's game of the day (logged-out players keep theirs in the browser)
+model DailyGuess {
+  day        String
+  puzzle     DailyPuzzle @relation(fields: [day], references: [day], onDelete: Cascade)
+  userId     String
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  guesses    Int[] // IGDB ids, in the order they were guessed
+  solved     Boolean     @default(false)
+  finishedAt DateTime? // solved, out of tries, or given up
+  createdAt  DateTime    @default(now())
+
+  @@id([day, userId])
+  @@index([userId, day])
+}
+
+// -----------------------------------------------------------------------------
+// Notifications (the bell in the header) and the emails a player chose to get.
+// Emails are all off until the player switches one on (lib/optInEmails.js).
+// -----------------------------------------------------------------------------
+
+// One line in a player's bell. News about the same thing shares a row (its key), so
+// three helpful votes on one review read "X and 2 others", not three lines
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String    // reply | helpful | released | gotw_closing
+  key       String    // what it's about: "comment:<id>", "review:<id>", "game:<id>", "gotw:<week>"
+  data      Json      // what the line says (lib/notifications.js)
+  readAt    DateTime?
+  emailedAt DateTime? // went out in a "Replies and likes" email (so never twice)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt // its latest news: the bell's order
+
+  @@unique([userId, kind, key])
+  @@index([userId, updatedAt])
+}
+
+// A player's email choices. No row means every email is off (the default)
+model EmailSettings {
+  userId    String    @id
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weekly    Boolean   @default(false) // the Sunday roundup
+  releases  Boolean   @default(false) // a game in their backlog came out
+  replies   Boolean   @default(false) // replies and helpful votes, at most one email a day
+  askedAt   DateTime? // when "Want a Sunday roundup?" was asked (only ever once)
+  token     String    @unique // the unsubscribe link's secret: it works without logging in
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+// Every opt-in email sent: a restart never sends one twice, and the weekly cap holds
+model EmailSend {
+  userId String
+  user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind   String   // weekly | releases | replies
+  key    String   // which one: the week "2026-11-08", the day "2026-11-05"
+  sentAt DateTime @default(now())
+
+  @@id([userId, kind, key])
+  @@index([userId, sentAt])
+}
+
+// -----------------------------------------------------------------------------
+// The visitor counter (/admin's Visitors tab, lib/visits.js): daily totals only. No
+// cookies, no IPs, nothing about who a visitor is. Kept 13 months.
+// -----------------------------------------------------------------------------
+
+// Each day's page views and different visitors (a visitor is recognised only within a
+// day, so the same person on two days counts on both)
+model VisitDay {
+  day      DateTime @id @db.Date
+  views    Int      @default(0)
+  visitors Int      @default(0)
+}
+
+// The same day split by one thing about the visit: which page, the site it came from,
+// the country, phone / tablet / computer, the browser or the operating system
+model VisitCount {
+  day       DateTime @db.Date
+  dimension String // path | referrer | country | device | browser | os
+  value     String
+  views     Int      @default(0)
+  visitors  Int      @default(0)
+
+  @@id([day, dimension, value])
 }

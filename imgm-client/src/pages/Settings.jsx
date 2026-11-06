@@ -3,6 +3,7 @@
  *
  *   gamer tag       change it once every 30 days (changing only its capitals: any time)
  *   email           whether it's confirmed (and sending the email again)
+ *   emails          the ones they chose to get (all off until switched on): #emails
  *   password        change it (Google accounts manage theirs at Google)
  *   Steam           connect it (to log in with it and see your Steam library), or
  *                   disconnect it

@@ -234,7 +234,7 @@ const loadProfile = async (user, { own }) => {
 
 // The player behind a public gamer tag (any capitalisation), or null. Only what a public
 // profile needs is read: never the email address or the real name.
-const findPlayer = (tag) => {
+export const findPlayer = (tag) => {
   const name = String(tag ?? '').trim();
   if (!name || name.length > USERNAME_MAX) return null;
   return prisma.user.findUnique({

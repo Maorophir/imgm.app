@@ -8,6 +8,8 @@ import { clientOrigins } from "./config.js";
 import { resetPasswordEmail, sendEmail, welcomeEmail, welcomeVerifyEmail } from "./email.js";
 import { steam } from "./steamAuth.js";
 import { disconnectSteam } from "./steamAccount.js";
+import { recordActivity } from "./activity.js";
+import { claimUnconfirmedAccount } from "./accountClaim.js";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000",
@@ -43,12 +45,25 @@ export const auth = betterAuth({
       const [problem] = passwordProblems(ctx.body?.[field]);
       if (problem) throw new APIError("BAD_REQUEST", { message: problem, code: "WEAK_PASSWORD" });
     }),
+    // The site asks for the session on every page load: that counts the player's day for
+    // the admin stats (activity.js), also on pages that call nothing else
+    after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/get-session") recordActivity(ctx.context.returned?.user?.id);
+    }),
   },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID || "placeholder_client_id",
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "placeholder_client_secret",
     },
+  },
+  // A Google login with an IMGM account's email joins that account, even one whose
+  // email was never confirmed (Better Auth refuses those by default, so an unconfirmed
+  // sign-up with your email would keep you from using Google). Google is not a trusted
+  // provider here, so this only happens when Google itself has confirmed the email;
+  // accountClaim.js then clears out what the unconfirmed sign-up left behind.
+  account: {
+    accountLinking: { requireLocalEmailVerified: false },
   },
   trustedOrigins: clientOrigins,
   // Connecting a Steam account and logging in with it (/api/auth/steam/*, steamAuth.js)
@@ -76,6 +91,14 @@ export const auth = betterAuth({
         },
       },
     },
+    // A Google login joining an unconfirmed account takes it over clean (accountClaim.js)
+    account: {
+      create: {
+        before: async (account) => {
+          if (account.providerId === "google") await claimUnconfirmedAccount(account.userId);
+        },
+      },
+    },
   },
   // The gamer tag travels with the session (so the site knows who still needs to
   // pick one). input: false = Better Auth's own update routes can't change these;
@@ -93,6 +116,9 @@ export const auth = betterAuth({
       displayUsername: { type: "string", required: false, input: false },
       usernameChangedAt: { type: "date", required: false, input: false },
       avatarUpdatedAt: { type: "date", required: false, input: false }, // set by /api/users/me/avatar
+      // 'player' or 'admin' (set by hand in the database). The session carries it so
+      // the site can show an admin their menu link; the admin routes read it fresh.
+      role: { type: "string", required: false, input: false },
     },
   },
 });

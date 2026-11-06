@@ -46,8 +46,9 @@ const israelClock = (instant) => {
   return { ...parts, weekday: WEEKDAYS.indexOf(parts.weekday) };
 };
 
-// The instant it's 00:00 in Israel on a calendar day (daylight saving included)
-const israelMidnight = (year, month, day) => {
+// The instant it's 00:00 in Israel on a calendar day (daylight saving included).
+// The daily Guess the game starts its days here too (lib/daily.js).
+export const israelMidnight = (year, month, day) => {
   let instant = Date.UTC(year, month - 1, day);
   for (let i = 0; i < 2; i += 1) {
     const c = israelClock(new Date(instant));
