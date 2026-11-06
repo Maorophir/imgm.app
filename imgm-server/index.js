@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { clientOrigins } from './src/lib/config.js';
+import { clientIp } from './src/lib/clientIp.js';
+import { authLimits } from './src/lib/authLimits.js';
 
 dotenv.config();
 
@@ -11,6 +13,19 @@ const PORT = process.env.PORT || 5000;
 // In production, requests arrive through a proxy (Vercel/Render) — trust its
 // X-Forwarded-* headers so Express sees the real client IP and HTTPS protocol
 app.set('trust proxy', 1);
+// (req.ip is still a proxy's address behind Vercel: rate limits use clientIp.js)
+
+// No "X-Powered-By: Express", and every answer says what it is (a profile picture is
+// never read as a page) and isn't to be framed by another site
+app.disable('x-powered-by');
+app.use((req, res, next) => {
+  res.set({
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
+  });
+  next();
+});
 
 // Middleware
 app.use(cors({
@@ -51,7 +66,17 @@ app.get('/', (req, res) => {
 });
 
 // Auth Routes (Handled by Better Auth)
-app.use("/api/auth", toNodeHandler(auth));
+// Better Auth limits by visitor, so it's told the visitor's real address (any copy of
+// this header sent in is replaced); authLimits.js also limits per email first.
+app.use(
+  '/api/auth',
+  (req, res, next) => {
+    req.headers['x-imgm-client-ip'] = clientIp(req);
+    next();
+  },
+  authLimits,
+  toNodeHandler(auth)
+);
 
 // API Routes
 app.use('/api/games', gamesRouter);

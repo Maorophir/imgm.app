@@ -35,6 +35,16 @@ const limit = (windowMs, max, error) =>
 const burstLimiter = limit(15 * 60 * 1000, 10, "You've asked Play Next a lot in a short time. Take a breather and try again in a few minutes.");
 // The whole day: 30, so a slow steady stream can't run all day either
 const dailyLimiter = limit(24 * 60 * 60 * 1000, 30, "You've reached today's Play Next limit (30 questions). Come back tomorrow!");
+// The whole site, all players together: a ceiling on the AI bill if someone makes many
+// accounts to get around the per-player limits. PLAY_NEXT_SITE_DAILY on Render changes it.
+const siteDailyLimiter = rateLimit({
+  windowMs: 24 * 60 * 60 * 1000,
+  limit: Number(process.env.PLAY_NEXT_SITE_DAILY) || 1000,
+  keyGenerator: () => 'site',
+  standardHeaders: false,
+  legacyHeaders: false,
+  message: { error: 'Play Next is resting for today: it answered a lot of questions. Come back tomorrow!' },
+});
 
 // Before launch, only beta players may use it; for everyone else it doesn't exist (404)
 const playNextAccess = (req, res, next) =>
@@ -61,6 +71,6 @@ router.delete('/chats/:id', requireUser, playNextAccess, historyLimiter, deleteC
 router.post('/wake', requireUser, playNextAccess, wakeGuide);
 
 // POST /api/guide/stream — ask Play Next (logged-in players with access only)
-router.post('/stream', requireUser, playNextAccess, oneAtATime, burstLimiter, dailyLimiter, streamGuide);
+router.post('/stream', requireUser, playNextAccess, oneAtATime, burstLimiter, dailyLimiter, siteDailyLimiter, streamGuide);
 
 export default router;

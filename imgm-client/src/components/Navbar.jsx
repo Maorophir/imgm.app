@@ -83,6 +83,13 @@ const DISCOVER_LINK = { to: '/discover', label: 'Discover' };
 // flex row, separate pieces (and a margin) would leave a gap in the underline
 const PLAY_NEXT_LINK = { to: '/play-next', label: <span><span className="text-brand" aria-hidden="true">✦</span>{'\u00a0Play Next'}</span> };
 
+// Where Log in / Sign up should come back to: this page, encoded for ?redirect= (the
+// login page checks it stays on IMGM, safeRedirect). Not from the home page (where a
+// login lands anyway) or the login pages themselves.
+const NO_RETURN = /^\/(login|signup|welcome|forgot-password|reset-password|oauth-success)(\/|$)/;
+const returnHere = ({ pathname, search, hash }) =>
+  pathname === '/' || NO_RETURN.test(pathname) ? '' : encodeURIComponent(`${pathname}${search}${hash}`);
+
 function Navbar() {
   const { data: session, isPending } = useSession();
   // Play Next shows for everyone after launch, before that only for beta players
@@ -111,14 +118,16 @@ function Navbar() {
   };
 
   // Visitors: "Log in" where it fits, and "Sign up" as a ghost button (the GHOST_BUTTON
-  // look, with 4px less padding each side on phones so the row fits)
+  // look, with 4px less padding each side on phones so the row fits). Both come back to
+  // the page the visitor was on (the daily game, a game page…), not the home page
+  const back = returnHere(location);
   const visitorLinks = (
     <>
-      <Link to="/login" className={logInClass}>
+      <Link to={`/login${back ? `?redirect=${back}` : ''}`} className={logInClass}>
         Log in
       </Link>
       <Link
-        to="/login?mode=signup"
+        to={`/login?mode=signup${back ? `&redirect=${back}` : ''}`}
         className="inline-flex items-center h-11 px-3.5 sm:px-4.5 rounded-sm border border-slate-500 text-base font-medium text-white hover:border-white hover:text-slate-50 whitespace-nowrap transition-colors duration-120"
       >
         Sign up

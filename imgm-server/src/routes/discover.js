@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { clientIp } from '../lib/clientIp.js';
 import { getSessionUser, requireUser } from '../lib/session.js';
 import { canUseDiscover, discoverEnabled } from '../lib/config.js';
 import { getSafariPlaylist, isTrailerPlaylist } from '../services/steamTrailers.js';
@@ -15,7 +16,7 @@ const voteLimiter = rateLimit({
   limit: 90,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip),
+  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(clientIp(req)),
   message: { error: 'Too many votes. Please slow down.' },
 });
 
@@ -26,7 +27,7 @@ const commentLimiter = rateLimit({
   limit: 5,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip),
+  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(clientIp(req)),
   message: { error: 'You are commenting very fast. Please wait a minute.' },
 });
 const dailyCommentLimiter = rateLimit({
@@ -34,7 +35,7 @@ const dailyCommentLimiter = rateLimit({
   limit: 60,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip),
+  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(clientIp(req)),
   message: { error: "That's the most comments for today. Come back tomorrow." },
 });
 const reportLimiter = rateLimit({
@@ -42,7 +43,7 @@ const reportLimiter = rateLimit({
   limit: 20,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip),
+  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(clientIp(req)),
   message: { error: 'Too many reports. Please try again later.' },
 });
 
@@ -52,7 +53,7 @@ const playlistLimiter = rateLimit({
   limit: 300,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   message: { error: 'Too many requests. Please slow down.' },
 });
 
