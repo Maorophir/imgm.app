@@ -37,6 +37,7 @@ The user asked for ideas to keep people on the site, picked them from demos, and
 - **Card sets** on profiles (11 hand-picked sets in `imgm-server/src/lib/cardSets.js`) and the **First Edition diamond setting** for a game's first review (a crown of cut gems, cut bottom corners, a bottom gem, all in the tier's ink; the user drew it from a Smite loading frame: "take the structure, not the colour").
 - **The menu:** Games, Discover, **Community ▾** (Daily game, Game of the Week, Hall of Fame), Steam, Play Next (fits one row from 1200px).
 - **The Privacy Policy** (effective November 5, 2026) covers all of it.
+- **Also on `development` (2026-11-06, laptop):** a Google login takes over an unconfirmed account with its email (it got `?error=account_not_linked` before): the unconfirmed sign-up's password, sessions and Steam go. CLAUDE.md → Decisions. Tested locally with Better Auth's own linking code (4 cases); after the release, a real Google login with an unconfirmed account is worth one check.
 
 ### Before releasing these (only when the user says so)
 1. **The user reads `/privacy`** and answers the open question: its section 12 promises to "let you know on the site" about important changes, and the user chose no notice. Either one line in every player's bell (Claude's suggestion) or change that sentence.

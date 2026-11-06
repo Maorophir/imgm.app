@@ -9,6 +9,7 @@ import { resetPasswordEmail, sendEmail, welcomeEmail, welcomeVerifyEmail } from 
 import { steam } from "./steamAuth.js";
 import { disconnectSteam } from "./steamAccount.js";
 import { recordActivity } from "./activity.js";
+import { claimUnconfirmedAccount } from "./accountClaim.js";
 
 export const auth = betterAuth({
   baseURL: process.env.BETTER_AUTH_URL || "http://localhost:5000",
@@ -56,6 +57,14 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET || "placeholder_client_secret",
     },
   },
+  // A Google login with an IMGM account's email joins that account, even one whose
+  // email was never confirmed (Better Auth refuses those by default, so an unconfirmed
+  // sign-up with your email would keep you from using Google). Google is not a trusted
+  // provider here, so this only happens when Google itself has confirmed the email;
+  // accountClaim.js then clears out what the unconfirmed sign-up left behind.
+  account: {
+    accountLinking: { requireLocalEmailVerified: false },
+  },
   trustedOrigins: clientOrigins,
   // Connecting a Steam account and logging in with it (/api/auth/steam/*, steamAuth.js)
   plugins: [steam()],
@@ -79,6 +88,14 @@ export const auth = betterAuth({
           sendEmail({ to: user.email, ...welcomeEmail(clientOrigins[0]) }).catch((error) =>
             console.error('Welcome email failed:', error.message)
           );
+        },
+      },
+    },
+    // A Google login joining an unconfirmed account takes it over clean (accountClaim.js)
+    account: {
+      create: {
+        before: async (account) => {
+          if (account.providerId === "google") await claimUnconfirmedAccount(account.userId);
         },
       },
     },
