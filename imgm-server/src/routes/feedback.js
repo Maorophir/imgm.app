@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { clientIp } from '../lib/clientIp.js';
 import { sendFeedback } from '../controllers/feedbackController.js';
 
 const router = Router();
@@ -8,7 +9,7 @@ const router = Router();
 const feedbackLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 10,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Thanks for all the feedback! Please try again in a bit.' },

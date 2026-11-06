@@ -5,6 +5,7 @@
  */
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { clientIp } from '../lib/clientIp.js';
 import { z } from 'zod';
 import { countVisit } from '../lib/visits.js';
 
@@ -14,7 +15,7 @@ const router = Router();
 const beaconLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 60,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   handler: (req, res) => res.status(204).end(),
@@ -30,7 +31,6 @@ const Beacon = z.object({
 
 // The visitor's own address: Vercel puts it first in X-Forwarded-For when it passes the
 // request on. It only goes into today's visitor hash, never into storage.
-const clientIp = (req) => String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim() || req.ip;
 
 // Whether Vercel passes the visitor's country on to this server: said once in the log
 let countryNoted = false;

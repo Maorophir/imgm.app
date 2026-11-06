@@ -66,6 +66,12 @@ export const auth = betterAuth({
     accountLinking: { requireLocalEmailVerified: false },
   },
   trustedOrigins: clientOrigins,
+  // Its rate limits count per visitor: the address index.js puts in this header (from
+  // clientIp.js). Without it, behind Vercel and Render it saw no single address and kept
+  // one bucket for the whole site: 3 logins per 10 seconds for everyone together.
+  advanced: {
+    ipAddress: { ipAddressHeaders: ['x-imgm-client-ip'] },
+  },
   // Connecting a Steam account and logging in with it (/api/auth/steam/*, steamAuth.js)
   plugins: [steam()],
   // Email sign-ups get a welcome email with a "Confirm my email" button (logging in

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { clientIp } from '../lib/clientIp.js';
 import { getBallot, castGotwVote, nominateGame, getHistory } from '../controllers/gotwController.js';
 
 const router = Router();
@@ -11,7 +12,7 @@ router.get('/', getBallot);
 const voteLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 20,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Too many votes. Slow down a little.' },

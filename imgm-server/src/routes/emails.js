@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { clientIp } from '../lib/clientIp.js';
 import { requireUser } from '../lib/session.js';
 import {
   getEmailSettings, putEmailSettings, putRoundupAnswer, unsubscribe, resubscribe,
@@ -24,7 +25,7 @@ const linkLimiter = rateLimit({
   limit: 30,
   standardHeaders: 'draft-8',
   legacyHeaders: false,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   message: { error: 'Too many tries. Please wait a few minutes.' },
 });
 
