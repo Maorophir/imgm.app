@@ -1,6 +1,7 @@
 import { getTopGames } from '../controllers/chartsController.js';
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { clientIp } from '../lib/clientIp.js';
 import { getSessionUser } from '../lib/session.js';
 import { isInternalRequest } from '../lib/internal.js';
 import { getAllGames, getGameById, getGameFamily, searchGames, getFeaturedGames, getReviewPicks, getDiscoverGames } from '../controllers/gamesController.js';
@@ -19,7 +20,7 @@ const router = Router();
 const perPlayer = async (req) => {
   if (isInternalRequest(req) && req.get('X-User-Id')) return `agent:${req.get('X-User-Id')}`;
   const user = await getSessionUser(req).catch(() => null);
-  return user ? `user:${user.id}` : `ip:${ipKeyGenerator(req.ip)}`;
+  return user ? `user:${user.id}` : `ip:${ipKeyGenerator(clientIp(req))}`;
 };
 
 const searchLimiter = rateLimit({

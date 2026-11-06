@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { clientIp } from '../lib/clientIp.js';
 import { getDaily, guessDaily, skipDaily } from '../controllers/dailyController.js';
 
 const router = Router();
@@ -8,7 +9,7 @@ const router = Router();
 const guessLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 30,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Too many guesses. Slow down a little.' },
@@ -16,7 +17,7 @@ const guessLimiter = rateLimit({
 const pageLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 60,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Too many requests. Please wait a moment.' },

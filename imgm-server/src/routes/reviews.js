@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
+import { clientIp } from '../lib/clientIp.js';
 import { getReviewsByGameId, getMyReview, saveReview, deleteMyReview, voteOnReview, getRecentReviews, getMyCard, setMyCard } from '../controllers/reviewsController.js';
 
 const router = Router();
@@ -22,7 +23,7 @@ router.delete('/mine/:gameId', deleteMyReview);
 const voteLimiter = rateLimit({
   windowMs: 60 * 1000,
   limit: 60,
-  keyGenerator: (req) => ipKeyGenerator(req.ip),
+  keyGenerator: (req) => ipKeyGenerator(clientIp(req)),
   standardHeaders: 'draft-8',
   legacyHeaders: false,
   message: { error: 'Too many votes. Slow down a little.' },
