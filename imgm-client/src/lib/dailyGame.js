@@ -4,7 +4,7 @@
  * (components/home/DailySection.jsx), so both ask the server about the same game.
  */
 export const DAILY_TIME_ZONE = 'Asia/Jerusalem'; // the puzzle's days (the server's too)
-export const DAILY_GAME_KEY = 'imgm.daily'; // a logged-out player's game today: { day, guesses, gaveUp }
+export const DAILY_GAME_KEY = 'imgm.daily'; // a logged-out player's game today: { day, guesses }
 
 // "2026-11-05", today in Israel
 export const israelToday = () =>

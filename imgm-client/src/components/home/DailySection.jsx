@@ -32,7 +32,7 @@ export default function DailySection() {
     if (isPending) return;
     const controller = new AbortController();
     const game = localDailyGame();
-    getDaily({ guesses: game?.guesses ?? [], gaveUp: Boolean(game?.gaveUp) }, controller.signal)
+    getDaily({ guesses: game?.guesses ?? [] }, controller.signal)
       .then(setDaily)
       .catch((err) => {
         if (err.name !== 'AbortError') setFailed(true);

@@ -702,12 +702,25 @@ const ADULTS_ONLY_RATINGS = new Set([7]); // ESRB AO (IGDB /age_rating_categorie
 const NUDITY = /nud/i;
 const DAILY_POOL_FIELDS = GAME_FIELDS.replace(
   /;\s*$/,
-  ', total_rating_count, game_type, remasters, age_ratings.rating_category, age_ratings.rating_content_descriptions.description, screenshots.width, screenshots.height;'
+  ', total_rating_count, game_type, remasters, age_ratings.rating_category, age_ratings.rating_content_descriptions.description, screenshots.width, screenshots.height, external_games.uid, external_games.external_game_source;'
 );
+
+// "https://en.wikipedia.org/wiki/Portal_2" → "Portal 2" (the daily quote finds the
+// game's Wikiquote page through it, lib/dailyQuote.js)
+const englishWikipediaTitle = (websites = []) => {
+  const url = websites.find((site) => /^https?:\/\/en\.wikipedia\.org\/wiki\//.test(site.url ?? ''))?.url;
+  if (!url) return null;
+  try {
+    return decodeURIComponent(url.split('/wiki/')[1].split('#')[0]).replace(/_/g, ' ');
+  } catch {
+    return null;
+  }
+};
 
 /**
  * The candidates, most rated first: [{ game (our Game shape), shots (screenshot image
- * ids, landscape ones only), remasters (IGDB ids), isRemaster }]. One IGDB request.
+ * ids, landscape ones only), remasters (IGDB ids), isRemaster, wikipedia (its English
+ * Wikipedia title or null), steamAppId (or null) }]. One IGDB request.
  */
 export const getDailyPool = async () => {
   const now = Math.floor(Date.now() / 1000);
@@ -723,6 +736,8 @@ export const getDailyPool = async () => {
       shots: (raw.screenshots ?? []).filter((s) => s.image_id && s.width > s.height).map((s) => s.image_id),
       remasters: raw.remasters ?? [],
       isRemaster: raw.game_type === 9,
+      wikipedia: englishWikipediaTitle(raw.websites),
+      steamAppId: Number((raw.external_games ?? []).find((e) => e.external_game_source === STEAM_SOURCE)?.uid) || null,
     }));
 };
 

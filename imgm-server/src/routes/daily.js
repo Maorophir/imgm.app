@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
-import { getDaily, guessDaily, giveUpDaily } from '../controllers/dailyController.js';
+import { getDaily, guessDaily, skipDaily } from '../controllers/dailyController.js';
 
 const router = Router();
 
@@ -28,7 +28,8 @@ router.get('/', pageLimiter, getDaily);
 // POST /api/daily/guess — guess today's game  { gameId, guesses? }
 router.post('/guess', guessLimiter, guessDaily);
 
-// POST /api/daily/give-up — show the answer
-router.post('/give-up', guessLimiter, giveUpDaily);
+// POST /api/daily/skip — skip a try: the next picture and clues, without a guess (the
+// last one shows the answer)
+router.post('/skip', guessLimiter, skipDaily);
 
 export default router;

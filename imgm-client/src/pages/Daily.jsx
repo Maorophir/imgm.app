@@ -2,9 +2,10 @@
  * Daily — Route: /daily, the daily Guess the game
  *
  * One game a day (Israel time), the same for everyone: guess it from a screenshot in
- * six tries. The first picture is a very blurred screenshot; each wrong guess makes it
+ * six tries. The first picture is a blurred screenshot; each wrong guess makes it
  * clearer (the same screenshot sharper, then a new one), says how close the guess was (Verdict, and the tiles in GuessRow),
- * and after a few, gives a clue. A right guess stamps the picture. The server checks every guess (lib/daily.js), so the answer only arrives at
+ * and after a few, gives a clue. Skip uses up a try without naming a game, for the
+ * next picture and clues; skipping the last try shows the answer (it asks first). A right guess stamps the picture. The server checks every guess (lib/daily.js), so the answer only arrives at
  * the end.
  *
  * A logged-in player's game is saved on the server (their streak, today's stats); a
@@ -14,12 +15,13 @@
  * Noir: the picture in a hairline frame, Big Shoulders headings, and lime only on the
  * page's main action: Guess while playing, then Rate the game once it's over.
  */
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowDown, ArrowUp, Check, Clock, Flame, Lightbulb, Share2, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Clock, Flame, Lightbulb, Share2, SkipForward, X } from 'lucide-react';
 import GamePicker from '../components/reviewQuest/GamePicker';
 import LoadError from '../components/LoadError';
-import { getDaily, giveUpDaily, guessDaily } from '../lib/api';
+import { getDaily, guessDaily, nativeTrailerUrl, skipDaily } from '../lib/api';
+import { playsStreamsItself, releaseVideo } from '../components/discover/trailerVideo';
 import { useSession } from '../lib/authClient';
 // The browser's game today (also read by the home page's strip)
 import { DAILY_GAME_KEY as GAME, localDailyGame as localGame, pictureStyle } from '../lib/dailyGame';
@@ -75,6 +77,66 @@ const useTimeLeft = (until) => {
   return h > 0 ? `${h}h ${m}m` : `${m}m`;
 };
 
+// The last try's picture when the game has a trailer: a few seconds from its middle
+// (past the logos and age ratings), muted (a trailer's voice often says the game's
+// name), on a loop, blurred as the server says (sharp once the game is over). The sharp screenshot shows until it plays, and stays if it can't.
+// Steam's and Xbox's trailers are HLS: an iPhone plays them itself (our copy of the
+// playlist, 480p first, as Discover does), other browsers through hls.js.
+const CLIP_AT = 0.45; // where in the trailer the moment starts
+const CLIP_SECONDS = 4;
+const Clip = ({ src, style }) => {
+  const ref = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => {
+    const video = ref.current;
+    let hls = null;
+    let cancelled = false;
+    let start = null;
+    const onMeta = () => {
+      if (!Number.isFinite(video.duration)) return;
+      start = video.duration * CLIP_AT;
+      video.currentTime = start;
+      video.play().catch(() => {});
+    };
+    const onTime = () => {
+      if (start != null && (video.currentTime > start + CLIP_SECONDS || video.currentTime < start - 1)) video.currentTime = start;
+    };
+    const onPlaying = () => setPlaying(true);
+    video.addEventListener('loadedmetadata', onMeta);
+    video.addEventListener('timeupdate', onTime);
+    video.addEventListener('playing', onPlaying);
+    if (playsStreamsItself(video)) {
+      video.src = nativeTrailerUrl(src);
+      video.play().catch(() => {}); // an iPhone loads nothing until play()
+    } else {
+      import('hls.js').then(({ default: Hls }) => {
+        if (cancelled || !Hls.isSupported()) return;
+        hls = new Hls({ capLevelToPlayerSize: true });
+        hls.loadSource(src);
+        hls.attachMedia(video);
+      });
+    }
+    return () => {
+      cancelled = true;
+      video.removeEventListener('loadedmetadata', onMeta);
+      video.removeEventListener('timeupdate', onTime);
+      video.removeEventListener('playing', onPlaying);
+      hls?.destroy();
+      releaseVideo(video);
+    };
+  }, [src]);
+  return (
+    <video
+      ref={ref}
+      muted
+      playsInline
+      aria-hidden="true"
+      style={style}
+      className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${playing ? 'opacity-100' : 'opacity-0'}`}
+    />
+  );
+};
+
 // The screenshot, blurred by the server's stage (pictureStyle). A wrong guess shakes
 // the frame as its new picture comes in; a right one stamps it "Got it".
 const Picture = ({ pictures, finished, solved, shake }) => {
@@ -98,13 +160,15 @@ const Picture = ({ pictures, finished, solved, shake }) => {
           style={pictureStyle(picture)}
         />
         {!loaded[url] && <div className="absolute inset-0 animate-pulse bg-slate-800" aria-hidden="true" />}
+        {picture.clip && <Clip key={picture.clip} src={picture.clip} style={pictureStyle(picture)} />}
         {solved && (
           <span className="absolute top-3 right-3 inline-flex items-center gap-1.5 h-9 px-3 rounded-sm bg-(--color-rarity-uncommon) text-slate-950 font-semibold animate-pop">
             <Check className="w-4.5 h-4.5" strokeWidth={2.6} aria-hidden="true" /> Got it
           </span>
         )}
         <span className="absolute left-2 bottom-2 sm:left-3 sm:bottom-3 text-xs sm:text-sm font-medium bg-slate-950/85 px-2.5 py-1 rounded-xs tabular-nums">
-          {finished ? `Screenshot ${index + 1} of ${total}` : `Picture ${index + 1} of ${total}${index < 5 ? ': clearer with each try' : ''}`}
+          {finished ? (picture.clip ? 'A moment from the trailer' : `Screenshot ${index + 1} of ${total}`)
+            : `Picture ${index + 1} of ${total}${picture.news ? `: ${picture.news}` : ''}`}
         </span>
       </div>
       {/* The earlier pictures stay to look back at */}
@@ -166,7 +230,18 @@ const TONE = {
 
 // Right after a wrong guess: how warm it was in big words, what it told you, and that a
 // new picture is up. Read out by screen readers; keyed by the guess, so each one pops in.
-const Verdict = ({ guess, triesLeft, newShot }) => {
+const Verdict = ({ guess, triesLeft, newShot, clip }) => {
+  const nowPlaying = clip ? 'A moment of the game is playing.' : newShot ? 'A new screenshot is up.' : 'The picture is sharper now.';
+  if (guess.skipped) {
+    return (
+      <div role="status" className="mt-5 p-4 sm:p-5 rounded-sm border border-slate-600 bg-slate-900 animate-pop">
+        <p className="font-display text-[30px] leading-none text-white">Skipped</p>
+        <p className="mt-2 text-base text-slate-300">
+          {nowPlaying} {triesLeft} {triesLeft === 1 ? 'try' : 'tries'} left.
+        </p>
+      </div>
+    );
+  }
   const heat = heatOf(guess);
   return (
     <div role="status" className={`mt-5 p-4 sm:p-5 rounded-sm border bg-slate-900 animate-pop ${TONE[heat.tone].box}`}>
@@ -176,7 +251,7 @@ const Verdict = ({ guess, triesLeft, newShot }) => {
       </p>
       {triesLeft > 0 && (
         <p className="mt-1.5 text-sm text-slate-400">
-          {newShot ? 'A new screenshot is up.' : 'The picture is sharper now.'} {triesLeft} {triesLeft === 1 ? 'try' : 'tries'} left.
+          {nowPlaying} {triesLeft} {triesLeft === 1 ? 'try' : 'tries'} left.
         </p>
       )}
     </div>
@@ -196,6 +271,17 @@ const Tile = ({ tone, label, children }) => (
 // A guess and how close it was: tiles for genre, year, studio and series, green for a
 // match, gold for close, grey for a miss ("↑ 2011": the answer came out after 2011)
 const GuessRow = ({ guess, index }) => {
+  if (guess.skipped) {
+    return (
+      <li className="flex items-center gap-3 py-3 border-t border-slate-700 first:border-t-0 animate-fade-in">
+        <span className="w-4 text-sm tabular-nums text-slate-400 shrink-0">{index + 1}</span>
+        <span className="w-10 h-14 rounded-sm border border-dashed border-slate-600 shrink-0 flex items-center justify-center">
+          <SkipForward className="w-4 h-4 text-slate-500" strokeWidth={1.8} aria-hidden="true" />
+        </span>
+        <span className="text-slate-400">Skipped</span>
+      </li>
+    );
+  }
   const heat = guess.right ? null : heatOf(guess);
   const yearTone = guess.answerIs === 'same' ? 'match' : guess.close ? 'close' : 'miss';
   return (
@@ -243,6 +329,7 @@ const TriesBar = ({ guesses, maxTries }) => (
           key={i}
           className={`flex-1 h-2.5 ${
             guess?.right ? 'bg-(--color-rarity-uncommon)'
+              : guess?.skipped ? 'bg-slate-700'
               : guess ? (heatOf(guess).tone === 'cold' ? 'bg-slate-500' : 'bg-(--color-rarity-legendary)/70')
                 : 'border border-slate-600'
           }`}
@@ -403,24 +490,34 @@ const Record = ({ me, guestStreakDays, finished }) => {
   );
 };
 
-const Clues = ({ clues, nextClueAfter, wrong }) => (
+const Clues = ({ clues, nextClueAfter, wrong, quoteSource }) => (
   <section className="border border-slate-700 rounded-sm p-5">
     <h2 className="flex items-center gap-2 font-semibold text-white">
       <Lightbulb className="w-4 h-4 text-slate-400" strokeWidth={1.8} aria-hidden="true" /> Clues
     </h2>
     {clues.length > 0 && (
       <dl className="mt-3 space-y-2">
-        {clues.map((clue) => (
+        {clues.map((clue) => (clue.quote ? (
+          <div key={clue.label} className="text-sm pt-1">
+            <dt className="text-slate-400">A line from the game</dt>
+            <dd className="mt-1.5 pl-3 border-l-2 border-slate-500 font-serif italic text-base text-white leading-snug">“{clue.value}”</dd>
+            {quoteSource && (
+              <dd className="mt-1 pl-3 text-xs text-slate-400">
+                From <a href={quoteSource} target="_blank" rel="noopener noreferrer" className={TEXT_LINK}>Wikiquote</a> (CC BY-SA)
+              </dd>
+            )}
+          </div>
+        ) : (
           <div key={clue.label} className="flex gap-3 text-sm">
             <dt className="w-20 shrink-0 text-slate-400">{clue.label}</dt>
             <dd className="text-white font-medium tabular-nums">{clue.value}</dd>
           </div>
-        ))}
+        )))}
       </dl>
     )}
     {nextClueAfter != null && (
       <p className="text-sm text-slate-400 mt-3">
-        {clues.length ? 'Another' : 'A clue'} after {nextClueAfter - wrong} more wrong {nextClueAfter - wrong === 1 ? 'guess' : 'guesses'}.
+        {clues.length ? 'Another' : 'A clue'} after {nextClueAfter - wrong} more {nextClueAfter - wrong === 1 ? 'try' : 'tries'} (a wrong guess or a skip).
       </p>
     )}
   </section>
@@ -434,7 +531,7 @@ export default function Daily() {
   const [picked, setPicked] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const [confirmGiveUp, setConfirmGiveUp] = useState(false);
+  const [confirmLastSkip, setConfirmLastSkip] = useState(false); // skipping the last try ends the game: "Sure?" first
   const [justGuessed, setJustGuessed] = useState(false); // the picture shakes after a miss, not on load
   const [history, setHistory] = useState(() => readStore(HISTORY) ?? {});
   const timeLeft = useTimeLeft(data?.nextAt);
@@ -448,7 +545,7 @@ export default function Daily() {
       return;
     }
     const finished = result.status !== 'playing';
-    writeStore(GAME, { day: result.day, guesses: result.played, gaveUp: result.status === 'failed' && result.played.length < result.maxTries });
+    writeStore(GAME, { day: result.day, guesses: result.played });
     if (finished) {
       setHistory((old) => {
         const next = { ...old, [result.day]: result.status === 'solved' ? result.played.length : 0 };
@@ -460,7 +557,7 @@ export default function Daily() {
 
   const load = useCallback((signal) => {
     const game = localGame();
-    getDaily({ guesses: game?.guesses ?? [], gaveUp: Boolean(game?.gaveUp) }, signal)
+    getDaily({ guesses: game?.guesses ?? [] }, signal)
       .then(apply)
       .catch((err) => {
         if (err.name !== 'AbortError') setLoadError(true);
@@ -475,12 +572,12 @@ export default function Daily() {
     return () => controller.abort();
   }, [isPending, userId, load]);
 
-  // The "Sure?" of giving up goes away by itself
+  // The "Sure?" of skipping the last try goes away by itself
   useEffect(() => {
-    if (!confirmGiveUp) return;
-    const timer = setTimeout(() => setConfirmGiveUp(false), 4000);
+    if (!confirmLastSkip) return;
+    const timer = setTimeout(() => setConfirmLastSkip(false), 4000);
     return () => clearTimeout(timer);
-  }, [confirmGiveUp]);
+  }, [confirmLastSkip]);
 
   const fromBrowser = () => (data?.me ? undefined : data?.played ?? []);
 
@@ -501,20 +598,23 @@ export default function Daily() {
     }
   };
 
-  const giveUp = async () => {
-    if (!confirmGiveUp) {
-      setConfirmGiveUp(true);
+  const skip = async () => {
+    const last = data.maxTries - data.guesses.length === 1;
+    if (last && !confirmLastSkip) {
+      setConfirmLastSkip(true);
       return;
     }
     setBusy(true);
     setError('');
     try {
-      apply(await giveUpDaily(fromBrowser()));
-    } catch {
-      setError("Couldn't show the answer. Try again.");
+      apply(await skipDaily(fromBrowser()));
+      setJustGuessed(true);
+    } catch (err) {
+      setError(err.status === 429 ? 'Too many tries. Wait a moment.' : err.message || "Couldn't skip. Try again.");
+      if (err.status === 409) load();
     } finally {
       setBusy(false);
-      setConfirmGiveUp(false);
+      setConfirmLastSkip(false);
     }
   };
 
@@ -543,8 +643,8 @@ export default function Daily() {
 
   return (
     <div className={`${WRAP} py-10 sm:py-14`}>
-      <p className="text-sm text-slate-400 tabular-nums">Daily · #{data.number} · {dayLabel} · the same game for everyone</p>
-      <h1 className={`${SECTION_TITLE} mt-2 mb-6 sm:mb-8`}>Guess the game</h1>
+      <p className="text-sm text-slate-400 tabular-nums">Daily · {dayLabel} · the same game for everyone</p>
+      <h1 className={`${SECTION_TITLE} mt-2 mb-6 sm:mb-8`}>Guess the game <span className="tabular-nums text-slate-400">#{data.number}</span></h1>
 
       <div className="grid gap-8 lg:gap-10 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 max-w-205">
@@ -556,7 +656,7 @@ export default function Daily() {
             solved={data.status === 'solved'}
             shake={!finished && justGuessed}
           />
-          {!finished && latest && <Verdict key={latest.id} guess={latest} triesLeft={triesLeft} newShot={newShot} />}
+          {!finished && latest && <Verdict key={data.guesses.length} guess={latest} triesLeft={triesLeft} newShot={newShot} clip={Boolean(data.pictures.at(-1)?.clip)} />}
 
           <div className="mt-6">
             {finished ? (
@@ -576,8 +676,9 @@ export default function Daily() {
                   </button>
                 </div>
                 {error && <p className="mt-2 text-sm text-red-400" role="alert">{error}</p>}
-                <button type="button" onClick={giveUp} disabled={busy} className={`${TEXT_BUTTON_SM} mt-2`}>
-                  {confirmGiveUp ? 'Sure? Show the answer' : 'Give up'}
+                <button type="button" onClick={skip} disabled={busy} className={`${TEXT_BUTTON_SM} inline-flex items-center gap-1.5 mt-2`}>
+                  <SkipForward className="w-4 h-4" strokeWidth={1.8} aria-hidden="true" />
+                  {triesLeft > 1 ? 'Skip (uses a try)' : confirmLastSkip ? 'Sure? This shows the answer' : 'Skip your last try'}
                 </button>
               </form>
             )}
@@ -586,7 +687,7 @@ export default function Daily() {
           {/* On a phone the clues come right under the guess (the side column is far below) */}
           {data.clues.length > 0 && (
             <div className="mt-6 lg:hidden">
-              <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} />
+              <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
             </div>
           )}
 
@@ -594,7 +695,7 @@ export default function Daily() {
             <section className="mt-6">
               <h2 className="font-semibold text-white mb-1">Your guesses</h2>
               <ol>
-                {data.guesses.map((g, i) => <GuessRow key={g.id} guess={g} index={i} />)}
+                {data.guesses.map((g, i) => <GuessRow key={`${i}:${g.id}`} guess={g} index={i} />)}
               </ol>
             </section>
           )}
@@ -602,7 +703,7 @@ export default function Daily() {
 
         <aside className="flex flex-col gap-4 min-w-0">
           <div className={data.clues.length > 0 ? 'hidden lg:block' : ''}>
-            <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} />
+            <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
           </div>
           {finished && <Today today={data.today} mine={myTries} />}
           <Record me={data.me} guestStreakDays={streak} finished={finished} />
