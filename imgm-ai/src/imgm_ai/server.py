@@ -46,6 +46,7 @@ from imgm_ai.models.llm import model_names
 from imgm_ai.rag.store import index_review, sync_reviews
 from imgm_ai.summary import summarize_game
 from imgm_ai.pictures import check_image
+from imgm_ai.daily_quote import find_quote
 
 log = logging.getLogger("imgm_ai.server")
 # Our own info/warning lines (model skips, catch-ups) show up in Cloud Run's logs
@@ -493,6 +494,22 @@ def summarize(game_id: int, x_internal_key: str | None = Header(default=None)) -
     if result is None:
         raise HTTPException(status_code=422, detail="Not enough reviews for a summary")
     return result
+
+
+# ── The daily game's quote (called by Express, never by browsers) ──
+
+
+class QuoteRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    year: int | None = Field(default=None, ge=1950, le=2100)
+
+
+@app.post("/daily/quote")
+def daily_quote(request: QuoteRequest, x_internal_key: str | None = Header(default=None)) -> dict:
+    """A line from the game for the daily puzzle's clue (daily_quote.py), checked online.
+    {"quote": null} when there's none: Express then tries Wikiquote."""
+    check_internal_key(x_internal_key)
+    return {"quote": find_quote(request.title, request.year)}
 
 
 # ── Profile pictures (called by Express, never by browsers) ──

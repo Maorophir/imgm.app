@@ -26,6 +26,9 @@ import { TIME_ZONE, israelMidnight } from './gotw.js';
 import * as igdb from '../services/igdbService.js';
 import { igdbImageUrl } from '../services/igdbService.js';
 import { upsertGame } from '../services/gameStore.js';
+import { getSteamTrailers } from '../services/steamTrailers.js';
+import { getXboxTrailers, xboxIdOf } from '../services/xboxTrailers.js';
+import { findQuote } from './dailyQuote.js';
 
 export const MAX_TRIES = 6;
 const SHOTS = 5; // screenshots per puzzle
@@ -38,25 +41,54 @@ const CLASSIC_BEFORE = 2005;
 // The picture before each try (stage n = after n wrong guesses): which screenshot, its
 // blur as a share of the picture's width (so a phone and a computer see the same blur),
 // and the IGDB size to load. Each screenshot gets two tries, sharper the second time,
-// then a new one comes in clearer still; the last try is sharp.
+// then a new one comes in clearer still; the last try is sharp. The first picture
+// started at 3.2 until 2026-11-06: too blurred to make anything out (the user's call).
 const STAGES = [
-  { shot: 0, blur: 3.2, size: 't_screenshot_med' },
   { shot: 0, blur: 2.2, size: 't_screenshot_med' },
-  { shot: 1, blur: 1.5, size: 't_screenshot_med' },
-  { shot: 1, blur: 0.9, size: 't_screenshot_big' },
-  { shot: 2, blur: 0.4, size: 't_screenshot_big' },
+  { shot: 0, blur: 1.6, size: 't_screenshot_med' },
+  { shot: 1, blur: 1.1, size: 't_screenshot_med' },
+  { shot: 1, blur: 0.7, size: 't_screenshot_big' },
+  { shot: 2, blur: 0.35, size: 't_screenshot_big' },
   { shot: 2, blur: 0, size: 't_screenshot_huge' },
 ];
+
+// The trailer moment's blur on the last try, like picture 4's: sharp, it was too easy (most
+// trailers show a game at its most recognisable, some its logo); blurred, the movement
+// and colours still help and the words are gone (the user's pick from a demo, 2026-11-06)
+const CLIP_BLUR = 0.7;
+
+// A skipped try, kept among the guesses (IGDB ids start at 1): it uses up a try like a
+// wrong guess, so the player gets the next picture and clues without naming a game
+export const SKIP = 0;
 
 // IGDB's platform names, shortened for the clue ("PC (Microsoft Windows)" → "PC")
 const platformName = (name) => name.replace(/\s*\(Microsoft Windows\)/, '').replace(/^Super Nintendo Entertainment System$/, 'SNES').replace(/^Nintendo Entertainment System$/, 'NES');
 
-// Clues about the answer, each from this many wrong guesses on
+// Clues about the answer, each from this many missed tries on. A line from the game
+// (lib/dailyQuote.js) when the puzzle has one, else the platforms; the studio comes
+// last, when the game is nearly over (earlier it nearly named Control: "Remedy").
+const platformsOf = (answer) => answer.platforms.slice(0, 4).map(platformName).join(', ');
+// `news`: what the picture that comes with the clue says it brought ("Picture 4 of 6:
+// release year")
 const CLUES = [
-  { after: 2, label: 'Genre', value: (answer) => answer.genres.slice(0, 2).join(', ') },
-  { after: 3, label: 'Released', value: (answer) => answer.year },
-  { after: 4, label: 'On', value: (answer) => answer.platforms.slice(0, 4).map(platformName).join(', ') },
+  { after: 2, label: 'Genre', news: 'genre', value: (answer) => answer.genres.slice(0, 2).join(', ') },
+  { after: 3, label: 'Released', news: 'release year', value: (answer) => answer.year },
+  {
+    after: 4,
+    label: (puzzle) => (puzzle.quote ? 'Quote' : 'On'),
+    news: (puzzle) => (puzzle.quote ? 'a line from the game' : 'platforms'),
+    value: (answer, puzzle) => puzzle.quote?.text ?? platformsOf(answer),
+  },
+  { after: 5, label: 'Studio', news: 'studio', value: (answer) => answer.developers.slice(0, 2).join(', ') },
 ];
+
+// The last picture can be a moment of the game's trailer: Steam's, else Xbox's
+const findClip = async ({ steamAppId, game }) => {
+  const steam = steamAppId ? (await getSteamTrailers([steamAppId])).get(steamAppId)?.trailer : null;
+  if (steam?.hls) return steam.hls;
+  const xboxId = xboxIdOf(game.stores);
+  return xboxId ? (await getXboxTrailers([xboxId])).get(xboxId)?.hls ?? null : null;
+};
 
 // A guess this close in years counts as "close"
 const CLOSE_YEARS = 3;
@@ -90,6 +122,28 @@ const shuffled = (list) => {
   return copy;
 };
 
+// The quote and the trailer for a pool pick, looked up once when the day's game is
+// chosen: neither ever holds the day up (each is null if it fails)
+export const extrasFor = async (pick) => {
+  const year = pick.game.releaseDate ? new Date(pick.game.releaseDate).getUTCFullYear() : null;
+  const [quote, clip] = await Promise.all([
+    findQuote({ title: pick.game.title, year, wikipedia: pick.wikipedia }),
+    findClip(pick).catch(() => null),
+  ]);
+  return { quote, clip };
+};
+
+// Saved after the puzzle, so the day's first visitor never waits for them: the quote is
+// a clue from the 5th picture on, the clip the 6th (until they arrive, the platforms and
+// the sharp screenshot stand in)
+const addExtras = (puzzle, pick) =>
+  extrasFor(pick)
+    .then(({ quote, clip }) => (quote || clip
+      // (only what was found: Prisma takes no plain null for a JSON field)
+      ? prisma.dailyPuzzle.update({ where: { day: puzzle.day }, data: { ...(quote && { quote }), ...(clip && { clip }) } })
+      : null))
+    .catch((error) => console.error(`Daily game #${puzzle.number}: its quote and clip failed:`, error.message));
+
 const makePuzzle = async (day) => {
   const used = new Set((await prisma.dailyPuzzle.findMany({ select: { gameId: true } })).map((p) => p.gameId));
   const pool = (await igdb.getDailyPool())
@@ -107,7 +161,7 @@ const makePuzzle = async (day) => {
   const originals = pick.isRemaster ? await igdb.getRemasterOriginals(pick.game.id).catch(() => []) : [];
   await upsertGame(pick.game); // the answer links to its game page
   try {
-    return await prisma.dailyPuzzle.create({
+    const puzzle = await prisma.dailyPuzzle.create({
       data: {
         day,
         number,
@@ -116,6 +170,8 @@ const makePuzzle = async (day) => {
         shots: shuffled(pick.shots).slice(0, SHOTS),
       },
     });
+    addExtras(puzzle, pick);
+    return puzzle;
   } catch (error) {
     // Another server made it meanwhile
     if (error.code === 'P2002') {
@@ -169,18 +225,23 @@ const hintFor = (guess, answer, right) => ({
 });
 
 /**
- * Where a player stands after these guesses (IGDB ids, in order):
+ * Where a player stands after these guesses (IGDB ids or SKIP, in order):
  *   { status: 'playing' | 'solved' | 'failed', guesses (hints), pictures, clues,
  *     answer (null while playing), ids (the guesses that count) }
  * Throws if IGDB can't tell what the games are.
  */
-export const playState = async (puzzle, guessIds, { gaveUp = false } = {}) => {
-  const facts = await igdb.getGuessFacts([puzzle.gameId, ...guessIds]);
+export const playState = async (puzzle, guessIds) => {
+  const facts = await igdb.getGuessFacts([puzzle.gameId, ...guessIds.filter((id) => id !== SKIP)]);
   const answer = facts.get(puzzle.gameId);
   if (!answer) throw new Error(`IGDB doesn't know the daily answer ${puzzle.gameId}`);
 
   const guesses = [];
   for (const id of guessIds) {
+    if (id === SKIP) {
+      guesses.push({ id: SKIP, skipped: true, right: false });
+      if (guesses.length >= MAX_TRIES) break;
+      continue;
+    }
     const guess = facts.get(id);
     if (!guess) continue;
     const right = isRight(puzzle, guess);
@@ -189,22 +250,41 @@ export const playState = async (puzzle, guessIds, { gaveUp = false } = {}) => {
   }
   const solved = guesses.some((g) => g.right);
   const wrong = guesses.filter((g) => !g.right).length;
-  const status = solved ? 'solved' : wrong >= MAX_TRIES || gaveUp ? 'failed' : 'playing';
+  const status = solved ? 'solved' : wrong >= MAX_TRIES ? 'failed' : 'playing';
   const finished = status !== 'playing';
 
   // A puzzle made before 5 screenshots were kept has 4: its stages wrap around
   const picture = ({ shot, blur, size }) => ({ url: igdbImageUrl(puzzle.shots[shot % puzzle.shots.length], size), blur });
+  // The last try's picture is a moment of the trailer (the sharp screenshot stays as its
+  // poster, and in its place if the video can't play)
+  // Each picture also says what came with it: a clue, or just a sharper picture
+  const newsAt = (i) => {
+    const clue = CLUES.find((c) => c.after === i);
+    if (!clue) return i === 0 ? null : 'sharper';
+    return typeof clue.news === 'function' ? clue.news(puzzle) : clue.news;
+  };
+  const stage = (s, i) => (i === STAGES.length - 1 && puzzle.clip
+    ? { ...picture(s), blur: CLIP_BLUR, news: `a moment of the game, ${newsAt(i)}`, clip: puzzle.clip }
+    : { ...picture(s), news: newsAt(i) });
   return {
     status,
     ids: guesses.map((g) => g.id),
     guesses,
     // Every picture unlocked so far (the last one is the current); all of them, sharp, at the end
     pictures: finished
-      ? puzzle.shots.map((shot) => ({ url: igdbImageUrl(shot, 't_screenshot_huge'), blur: 0 }))
-      : STAGES.slice(0, wrong + 1).map(picture),
+      ? [
+        ...puzzle.shots.map((shot) => ({ url: igdbImageUrl(shot, 't_screenshot_huge'), blur: 0 })),
+        ...(puzzle.clip ? [{ ...stage(STAGES.at(-1), STAGES.length - 1), blur: 0 }] : []), // sharp at the end
+      ]
+      : STAGES.slice(0, wrong + 1).map(stage),
     clues: CLUES.filter((clue) => finished || wrong >= clue.after)
-      .map((clue) => ({ label: clue.label, value: clue.value(answer) }))
+      .map((clue) => {
+        const label = typeof clue.label === 'function' ? clue.label(puzzle) : clue.label;
+        return { label, value: clue.value(answer, puzzle), quote: label === 'Quote' };
+      })
       .filter((clue) => clue.value),
+    // Wikiquote is credited once it's over (its address names the game)
+    quoteSource: finished ? puzzle.quote?.source ?? null : null,
     // The next clue, so the page can say "a clue after 1 more guess"
     nextClueAfter: finished ? null : CLUES.find((clue) => wrong < clue.after)?.after ?? null,
     answer: finished

@@ -100,14 +100,13 @@ export const getGotwHistory = (signal) => fetchJson('/api/gotw/history', { signa
 
 // The daily Guess the game. A logged-out player's earlier guesses (IGDB ids) ride along,
 // since only their browser keeps them; a logged-in player's are on the server.
-export const getDaily = ({ guesses = [], gaveUp = false } = {}, signal) => {
+export const getDaily = ({ guesses = [] } = {}, signal) => {
   const params = new URLSearchParams();
   if (guesses.length) params.set('guesses', guesses.join(','));
-  if (gaveUp) params.set('gaveUp', '1');
   return fetchJson(`/api/daily${params.size ? `?${params}` : ''}`, { signal });
 };
 export const guessDaily = (gameId, guesses) => fetchJson('/api/daily/guess', { method: 'POST', body: { gameId, ...(guesses ? { guesses } : {}) } });
-export const giveUpDaily = (guesses) => fetchJson('/api/daily/give-up', { method: 'POST', body: guesses ? { guesses } : {} });
+export const skipDaily = (guesses) => fetchJson('/api/daily/skip', { method: 'POST', body: guesses ? { guesses } : {} });
 
 // The Hall of Fame (top games): { games: [{ rank, average, reviewCount, myRating, …game }], size, insights }
 export const getTopGames = ({ sort, platform }, signal) =>
