@@ -386,10 +386,23 @@ export const searchGames = async (query, limit = 12) => {
     return cached.results;
   }
 
-  const body = `search "${escapeSearch(query.trim())}"; ${SEARCH_FIELDS} where cover != null & version_parent = null & game_type = (${REVIEWABLE_GAME_TYPES.join(',')}); limit ${SEARCH_CANDIDATES};`;
-  const candidates = await igdbRequest('games', body);
+  const text = escapeSearch(query.trim());
+  const where = `cover != null & version_parent = null & game_type = (${REVIEWABLE_GAME_TYPES.join(',')})`;
+  // Two questions at once: IGDB's search, which only matches whole words, and titles
+  // that CONTAIN the text, the most rated first, so a title typed halfway finds it
+  // ("zel" → Zelda, "the wit" → The Witcher 3; the Games page searches as you type,
+  // 2026-11-06). Two requests: IGDB's multiquery quietly answers nothing when one of its
+  // queries uses `search`. The ranking below weighs popularity and how well titles match.
+  const [words, partial] = await Promise.all([
+    igdbRequest('games', `search "${text}"; ${SEARCH_FIELDS} where ${where}; limit ${SEARCH_CANDIDATES};`),
+    igdbRequest('games', `${SEARCH_FIELDS} where name ~ *"${text}"* & ${where}; sort total_rating_count desc; limit ${SEARCH_CANDIDATES};`)
+      .catch(() => []), // the whole-word results still stand
+  ]);
+  const seen = new Set();
+  const candidates = [...words, ...partial].filter((raw) => !seen.has(raw.id) && seen.add(raw.id));
+  const ranked = rankSearchResults(candidates, query);
   // Popularity rides along for Play Next, which uses it to skip tiny fan-made games
-  const games = rankSearchResults(candidates, query)
+  const games = ranked
     .slice(0, limit)
     .map((raw) => ({ ...mapIgdbGame(raw), ratingCount: raw.total_rating_count ?? 0, hypes: raw.hypes ?? 0 }));
 
