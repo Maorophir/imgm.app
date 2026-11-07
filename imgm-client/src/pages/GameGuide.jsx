@@ -72,9 +72,10 @@ function GameGuide() {
 }
 
 function PlayNextChat({ userId }) {
-  // The "Use my Steam library" switch: on by default, sent with every question
+  // The Steam menu (use the library, hours that make a game "played", owned games as
+  // picks): sent with every question
   const steam = usePlayNextSteam(userId);
-  const guide = useGameGuide(userId, { useSteam: steam.on });
+  const guide = useGameGuide(userId, { steam: steam.request });
   const {
     chatId,
     turns,

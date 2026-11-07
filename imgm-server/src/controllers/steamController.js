@@ -53,8 +53,9 @@ const runImport = async (userId, steamId) => {
 };
 
 // GET /api/steam/me
-// 2 hours: from here a Steam game counts as played (Play Next's taste); under it, barely tried
-const PLAYED_MINUTES = 120;
+// The hours a player can choose in Play Next's Steam menu for "a game counts as played
+// after" (2 by default): played games are taste, the rest can still be suggested
+const PLAYED_HOURS = [1, 2, 5, 10];
 
 export const getSteamStatus = async (req, res) => {
   try {
@@ -65,12 +66,17 @@ export const getSteamStatus = async (req, res) => {
           select: { state: true, gameCount: true, hoursHidden: true, personaName: true, importedAt: true },
         })
       : null;
-    // Games played 2 hours or more: what Play Next learns from (the page's Steam switch
-    // shows the count). Under 2 hours is "barely tried", not taste.
-    const played = library ? await prisma.steamLibraryGame.count({ where: { userId: req.user.id, minutes: { gte: PLAYED_MINUTES } } }) : 0;
+    // How many games count as played at each choice of hours (Play Next's Steam menu
+    // shows the count for the one picked), and how many are owned but barely played
+    const minutes = library
+      ? (await prisma.steamLibraryGame.findMany({ where: { userId: req.user.id }, select: { minutes: true } })).map((g) => g.minutes)
+      : [];
+    const playedByHours = Object.fromEntries(PLAYED_HOURS.map((h) => [h, minutes.filter((m) => m >= h * 60).length]));
     res.json({
       connected: Boolean(steamId),
-      played,
+      played: playedByHours[2], // the default
+      playedByHours,
+      owned: minutes.length,
       steamId,
       profileUrl: steamId ? steamProfileUrl(steamId) : null,
       libraryEnabled: Boolean(steamApiKey),
