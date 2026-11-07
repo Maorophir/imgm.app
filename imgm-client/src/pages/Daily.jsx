@@ -290,7 +290,7 @@ const Tile = ({ tone, label, children }) => (
 
 // A guess and how close it was: tiles for genre, year, studio and series, green for a
 // match, gold for close, grey for a miss ("↑ 2011": the answer came out after 2011)
-const GuessRow = ({ guess, index }) => {
+const GuessRow = ({ guess, index, narrow = false }) => {
   if (guess.skipped) {
     return (
       <li className="flex items-center gap-3 py-3 border-t border-slate-700 first:border-t-0 animate-fade-in">
@@ -321,7 +321,7 @@ const GuessRow = ({ guess, index }) => {
           </span>
         </p>
         {!guess.right && (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 mt-2">
+          <div className={`grid grid-cols-2 gap-1.5 mt-2 ${narrow ? '' : 'sm:grid-cols-4'}`}>
             <Tile tone={guess.genres.length ? 'match' : 'miss'} label="Genre">
               {guess.genres.length ? guess.genres.slice(0, 2).join(', ') : 'None shared'}
             </Tile>
@@ -753,8 +753,9 @@ export default function Daily() {
             <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
           </div>
 
+          {/* Phones: your guesses at the bottom (computers have them in the side column) */}
           {data.guesses.length > 0 && (
-            <section className="mt-6">
+            <section className="mt-6 lg:hidden">
               <h2 className="font-semibold text-white mb-1">Your guesses</h2>
               <ol>
                 {data.guesses.map((g, i) => <GuessRow key={`${i}:${g.id}`} guess={g} index={i} />)}
@@ -768,6 +769,15 @@ export default function Daily() {
           <div className="hidden lg:block">
             <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
           </div>
+          {/* …and your guesses under them (the side column is narrow: two tiles a row) */}
+          {data.guesses.length > 0 && (
+            <section className="hidden lg:block border border-slate-700 rounded-sm px-4 pt-3 pb-1">
+              <h2 className="font-semibold text-white">Your guesses</h2>
+              <ol>
+                {data.guesses.map((g, i) => <GuessRow key={`${i}:${g.id}`} guess={g} index={i} narrow />)}
+              </ol>
+            </section>
+          )}
           {finished && <Today today={data.today} mine={myTries} />}
           <Record me={data.me} guestStreakDays={streak} finished={finished} />
           <p className="flex items-center gap-2 text-sm text-slate-400 tabular-nums">
