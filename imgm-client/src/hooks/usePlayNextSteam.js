@@ -1,12 +1,14 @@
 /**
- * usePlayNextSteam — Play Next's Steam menu: the player's Steam status (connected? how
- * many games count as played at each choice of hours?) and their three choices:
- *   use            use the Steam library at all (on by default, the user's call 2026-11-07)
- *   playedHours    from how many hours a game counts as played: 1, 2, 5 or 10 (2)
- *   suggestOwned   whether owned games played less than that can be picked (on)
- * Remembered per player in this browser. They ride along with every Play Next question
- * as `steam` ({ use, played_hours, suggest_owned }); the AI service reads the library
- * only when `use` is on and the player has Steam connected.
+ * usePlayNextSteam — Play Next's Steam menu (laid out by the user, 2026-11-07): the
+ * player's Steam status (connected? games played, never played, played under each
+ * limit) and their three choices:
+ *   use             use my Steam library (on)
+ *   suggestPlayed   recommend games I've already played (on)…
+ *   playedUnder     …only if I've played them less than 2, 5, 10 or 20 hours (2)
+ * Owned games never played can always be suggested (marked as in the library); played
+ * games teach Play Next the player's taste. Remembered per player in this browser, sent
+ * with every Play Next question as `steam` ({ use, suggest_played, played_under }); the
+ * AI service reads the library only when `use` is on and Steam is connected.
  *
  * → { status (null while loading, false for logged-out visitors or a failed load),
  *     settings, update(changes), request (what's sent) }
@@ -14,8 +16,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSteamStatus } from '../lib/api';
 
-export const PLAYED_HOURS = [1, 2, 5, 10];
-const DEFAULTS = { use: true, playedHours: 2, suggestOwned: true };
+export const UNDER_HOURS = [2, 5, 10, 20];
+const DEFAULTS = { use: true, suggestPlayed: true, playedUnder: 2 };
 const keyFor = (userId) => `imgm:play-next:steam:${userId}`;
 
 const readSettings = (userId) => {
@@ -24,8 +26,8 @@ const readSettings = (userId) => {
     if (!saved || typeof saved !== 'object') return DEFAULTS;
     return {
       use: saved.use !== false,
-      playedHours: PLAYED_HOURS.includes(saved.playedHours) ? saved.playedHours : DEFAULTS.playedHours,
-      suggestOwned: saved.suggestOwned !== false,
+      suggestPlayed: saved.suggestPlayed !== false,
+      playedUnder: UNDER_HOURS.includes(saved.playedUnder) ? saved.playedUnder : DEFAULTS.playedUnder,
     };
   } catch {
     return DEFAULTS; // storage blocked or an old value: the defaults
@@ -67,7 +69,7 @@ export function usePlayNextSteam(userId) {
   );
 
   const request = useMemo(
-    () => ({ use: settings.use, played_hours: settings.playedHours, suggest_owned: settings.suggestOwned }),
+    () => ({ use: settings.use, suggest_played: settings.suggestPlayed, played_under: settings.playedUnder }),
     [settings]
   );
   return { status: userId ? status : false, settings, update, request };

@@ -24,14 +24,14 @@ const guideSchema = z
       .optional(),
     // The AI service validates the exact shape (platforms, moods, …)
     preferences: z.record(z.string(), z.any()).default({}),
-    // Play Next's Steam menu: use the library at all, how many hours make a game
-    // "played" (taste, never a pick), and whether owned games played less can be picked.
-    // The AI service reads the library only when `use` is on; an older one ignores it.
+    // Play Next's Steam menu: use the library at all; recommend games already played,
+    // and only those played less than `played_under` hours. The AI service reads the
+    // library only when `use` is on; an older one ignores it.
     steam: z
       .object({
         use: z.boolean(),
-        played_hours: z.union([z.literal(1), z.literal(2), z.literal(5), z.literal(10)]),
-        suggest_owned: z.boolean(),
+        suggest_played: z.boolean(),
+        played_under: z.union([z.literal(2), z.literal(5), z.literal(10), z.literal(20)]),
       })
       .optional(),
     // An edited question: it replaces the chat's question number N (the latest one)
