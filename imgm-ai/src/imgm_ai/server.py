@@ -42,6 +42,7 @@ from imgm_ai.agent.memory import delete_old_chats
 from imgm_ai.agent.nodes import is_player_question
 from imgm_ai.agent.state import Preferences, new_turn, not_for_me_turn
 from imgm_ai.data import imgm_api
+from imgm_ai.data.db import load_steam_games
 from imgm_ai.models.llm import model_names
 from imgm_ai.rag.store import index_review, sync_reviews
 from imgm_ai.summary import summarize_game
@@ -94,6 +95,17 @@ class NotForMe(BaseModel):
     reason: Literal["not_for_me", "played"] = "not_for_me"  # "Played it" on the card
 
 
+class SteamChoice(BaseModel):
+    """Play Next's Steam menu, sent by the page with every question."""
+
+    use: bool = False  # older pages send nothing: no library
+    suggest_played: bool = True  # games already played may come back as picks…
+    # …if played less than this many hours (None: no limit, to replay a favourite)
+    played_under: Literal[2, 5, 10, 20] | None = 2
+    # At most this many of the 5 picks from the player's library (0: none of it)
+    max_library: Literal[0, 1, 2, 3] = 2
+
+
 class GuideRequest(BaseModel):
     chat_id: str = Field(
         pattern=r"^[A-Za-z0-9-]{8,64}$"
@@ -103,6 +115,8 @@ class GuideRequest(BaseModel):
     preferences: Preferences = Field(default_factory=dict)
     # The player edited their question number N (their latest): it replaces the old one
     replace_turn: int | None = Field(default=None, ge=1, le=MAX_QUESTIONS_PER_CHAT)
+    # The Steam menu's choices (the Steam tool reads the library only when `use` is on)
+    steam: SteamChoice = Field(default_factory=SteamChoice)
 
     @model_validator(mode="after")
     def needs_a_message_or_a_rejection(self) -> "GuideRequest":
@@ -129,6 +143,7 @@ def step_label(call: dict) -> str:
     query = call["args"].get("query", "")
     return {
         "get_my_taste": "Reading your IMGM reviews",
+        "get_my_steam_games": "Reading your Steam hours",
         "search_imgm_reviews": f"Asking IMGM players about “{query}”",
         "search_games": f"Checking {query}",
         "get_game_profile": "Reading what IMGM players think",
@@ -142,6 +157,10 @@ def step_detail(tool: str, result: str) -> str:
     hits = [line for line in result.splitlines() if line.startswith("- ")]
     if tool == "get_my_taste":
         return f"Read {len(hits)} of your reviews" if hits else "No reviews to read yet"
+    if tool == "get_my_steam_games":
+        if "turned their Steam library off" in result:
+            return "Steam library off"
+        return "Read your Steam hours" if hits else "No Steam hours to read"
     if tool == "search_imgm_reviews":
         return f"{len(hits)} games match" if hits else "No matching reviews yet"
     if tool == "search_web":
@@ -227,6 +246,8 @@ def guide_events(request: GuideRequest, user_id: str | None):
         "configurable": {
             "user_id": user_id,
             "thread_id": f"{user_id or 'guest'}:{request.chat_id}",
+            # Read by the Steam tool, never chosen by the model (like user_id)
+            "steam": request.steam.model_dump(),
         },
         "recursion_limit": 40,
     }
@@ -415,6 +436,13 @@ def guide_events(request: GuideRequest, user_id: str | None):
                 {**games.get(card.game_id, {}), **card.model_dump()}
                 for card in recommendations.games
             ]
+            # A pick from the player's Steam library says so on its card, with their
+            # hours (from the library, never from the model): "In your library · 1.8h"
+            if user_id and request.steam.use:
+                library = {g["game_id"]: g["minutes"] for g in load_steam_games(user_id) if g["game_id"]}
+                for card in cards:
+                    if card["game_id"] in library:
+                        card["library_minutes"] = library[card["game_id"]]
             mentions = [
                 {**games.get(m.game_id, {}), **m.model_dump()}
                 for m in recommendations.mentions

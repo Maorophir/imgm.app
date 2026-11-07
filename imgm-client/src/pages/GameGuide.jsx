@@ -9,6 +9,8 @@
  * Noir: square panels on hairlines over the moving cover wall, no shadows, and lime
  * only on the page's one main action (the quest's last button, then "Ask").
  */
+import SteamSwitch from '../components/guide/SteamSwitch';
+import { usePlayNextSteam } from '../hooks/usePlayNextSteam';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
@@ -70,7 +72,10 @@ function GameGuide() {
 }
 
 function PlayNextChat({ userId }) {
-  const guide = useGameGuide(userId);
+  // The Steam menu (use the library, hours that make a game "played", owned games as
+  // picks): sent with every question
+  const steam = usePlayNextSteam(userId);
+  const guide = useGameGuide(userId, { steam: steam.request });
   const {
     chatId,
     turns,
@@ -291,6 +296,11 @@ function PlayNextChat({ userId }) {
             />
           </div>
         )}
+
+        {/* The Steam menu: small, at the panel's bottom left (not the page's main feature) */}
+        <div className="pt-3 lg:px-6 lg:pb-4">
+          <SteamSwitch steam={steam} disabled={running} />
+        </div>
       </section>
 
       {/* Side panel (large screens) */}
