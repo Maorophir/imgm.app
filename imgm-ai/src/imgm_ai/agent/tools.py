@@ -6,6 +6,7 @@ Who the player is never comes from the model: tools read it from the run's
 config (RunnableConfig), which the model can't see or change.
 """
 
+import logging
 from typing import Annotated
 from urllib.parse import urlparse
 
@@ -26,6 +27,8 @@ from imgm_ai.data.db import (
     load_steam_games,
 )
 from imgm_ai.rag.store import find_games_by_reviews
+
+log = logging.getLogger("imgm_ai.tools")
 
 
 def imgm_rating_text(avg_rating, review_count: int) -> str:
@@ -166,7 +169,14 @@ def get_my_steam_games(config: RunnableConfig) -> str:
     # The player's Steam menu decides, never the model: off means off
     if not user_id or not steam.get("use"):
         return "The player turned their Steam library off. Don't use Steam."
-    games = load_steam_games(user_id)
+    # The Steam data can't take Play Next down: if it can't be read (on 2026-11-07 the
+    # database user wasn't allowed to read the Steam tables, and every answer failed),
+    # the agent recommends without it
+    try:
+        games = load_steam_games(user_id)
+    except Exception:
+        log.exception("Steam library could not be read")
+        return "The player's Steam library can't be read right now. Recommend without it."
     if not games:
         return "No Steam hours to read (Steam not connected, or the library is private or hides its hours)."
 
