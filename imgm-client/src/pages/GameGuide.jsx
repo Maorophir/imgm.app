@@ -9,6 +9,8 @@
  * Noir: square panels on hairlines over the moving cover wall, no shadows, and lime
  * only on the page's one main action (the quest's last button, then "Ask").
  */
+import SteamSwitch from '../components/guide/SteamSwitch';
+import { usePlayNextSteam } from '../hooks/usePlayNextSteam';
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { ChevronDown } from "lucide-react";
@@ -70,7 +72,9 @@ function GameGuide() {
 }
 
 function PlayNextChat({ userId }) {
-  const guide = useGameGuide(userId);
+  // The "Use my Steam library" switch: on by default, sent with every question
+  const steam = usePlayNextSteam(userId);
+  const guide = useGameGuide(userId, { useSteam: steam.on });
   const {
     chatId,
     turns,
@@ -215,6 +219,7 @@ function PlayNextChat({ userId }) {
               Your reviews and the IMGM community, dug through live to find your
               next game.
             </p>
+            <SteamSwitch steam={steam} disabled={running} />
           </div>
           {/* Smaller screens: the chats list opens here */}
           <button

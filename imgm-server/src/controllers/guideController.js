@@ -24,6 +24,9 @@ const guideSchema = z
       .optional(),
     // The AI service validates the exact shape (platforms, moods, …)
     preferences: z.record(z.string(), z.any()).default({}),
+    // The page's "Use my Steam library" switch (the AI service reads the played games
+    // only when it's on; an older AI service ignores it)
+    use_steam: z.boolean().optional(),
     // An edited question: it replaces the chat's question number N (the latest one)
     replace_turn: z.int().min(1).max(50).optional(),
   })

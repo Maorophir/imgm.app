@@ -53,6 +53,9 @@ const runImport = async (userId, steamId) => {
 };
 
 // GET /api/steam/me
+// 2 hours: from here a Steam game counts as played (Play Next's taste); under it, barely tried
+const PLAYED_MINUTES = 120;
+
 export const getSteamStatus = async (req, res) => {
   try {
     const steamId = await findSteamId(req.user.id);
@@ -62,8 +65,12 @@ export const getSteamStatus = async (req, res) => {
           select: { state: true, gameCount: true, hoursHidden: true, personaName: true, importedAt: true },
         })
       : null;
+    // Games played 2 hours or more: what Play Next learns from (the page's Steam switch
+    // shows the count). Under 2 hours is "barely tried", not taste.
+    const played = library ? await prisma.steamLibraryGame.count({ where: { userId: req.user.id, minutes: { gte: PLAYED_MINUTES } } }) : 0;
     res.json({
       connected: Boolean(steamId),
+      played,
       steamId,
       profileUrl: steamId ? steamProfileUrl(steamId) : null,
       libraryEnabled: Boolean(steamApiKey),
