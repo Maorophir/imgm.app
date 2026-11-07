@@ -29,6 +29,7 @@
 
 <p align="center">
   <a href="#rate-a-game-in-two-minutes">Features</a> ·
+  <a href="#guess-the-game-every-day">Daily game</a> ·
   <a href="#play-next-the-ai-agent">Play Next</a> ·
   <a href="#under-the-hood">Under the hood</a> ·
   <a href="#run-it-locally">Run it locally</a>
@@ -93,6 +94,23 @@
 
 <p align="center"><img src="docs/readme/discover-desktop.webp" alt="Discover on a computer: Dear Passengers from the Upcoming feed, its trailer filling the screen, with the actions down the right edge." width="88%"></p>
 
+## Guess the game, every day
+
+<table>
+  <tr>
+    <td>
+      <p>One game a day, the same for everyone: guess it from a blurred screenshot in six tries.</p>
+      <ul>
+        <li><b>Clearer with every miss:</b> each screenshot gets two tries, sharper the second time, then a new one comes in.</li>
+        <li><b>Clues as you go:</b> the genre, the year, <b>a line from the game</b>, the studio, and on the last try a blurred moment of its trailer.</li>
+        <li><b>How close was it?</b> Every guess says Cold, Warm, Hot or So close, with tiles for genre, year, studio and series.</li>
+        <li><b>Skip</b> a try for the next picture and clue. Streaks, today's results, and a <b>share picture</b> that never shows the answer.</li>
+      </ul>
+    </td>
+    <td width="55%" align="center"><img src="docs/readme/daily.webp" alt="Guess the game #2 on a computer: a blurred screenshot, the clues box on the right with Genre and Released (marked New), and the guesses with their Warm verdicts and tiles."></td>
+  </tr>
+</table>
+
 ## Play Next: the AI agent
 
 Tell Play Next what you're in the mood for (*"something cozy for a rainy evening"*, *"games like Hades but longer"*) and it picks **five games for you**. It reads your own reviews and what IMGM players say about each game, and it checks its own answer before you see it.
@@ -120,12 +138,20 @@ flowchart LR
 | `get_game_profile` | What IMGM players think of one game: its score, top vibes, when it gets good, the checklist verdicts. |
 | `get_game_family` | A game's series, its studio's games that play like it, and similar games, so new releases aren't missed. |
 | `search_web` | A web search (Tavily) for what's too new for the rest, at most twice an answer. |
+| `get_my_steam_games` | Your Steam hours: the games you love (many hours), the ones that didn't click, and the ones you own but never played. |
 
 **The prompt asks, the code enforces.** Every hard rule lives in plain Python in [`check_answer()`](imgm-ai/src/imgm_ai/agent/nodes.py): five different games, each one found by a real search, nothing you've already reviewed or turned down, playable on your platforms, no longer than you asked for, never the game you named, at most one from its series, and exactly one Best Pick. A broken rule sends the draft back to the agent to fix. The agent never sees your user id as something it could change: its tools read it from the graph's config, so a prompt injection can't make it look at someone else's reviews.
+
+**Your Steam hours, your rules.** Connect Steam and a small menu decides what Play Next may do with your library: use it at all, recommend games you've already played (only under 2, 5, 10 or 20 hours, or with no limit to replay a favourite), and at most how many of the five picks may come from it. The menu travels in the graph's config like your id, and one function decides what's allowed: the tool tells the model with it, and the check enforces it with it, so the two can't disagree. A pick from your library says so on its card, with your hours.
+
+Each message is screened first by **Jev** (TypeSafe), a fast classifier, in about 0.2s: find games, talk about the picks, or politely decline. Gemini decides when Jev isn't sure.
 
 The answer comes as **shelves**: your five picks and a few honorable mentions, grouped by what you'd want from them, and *If you only play one* at the end. Then you **sort your picks**: mark the ones you've played or don't want, and one search replaces just those.
 
 ## And the rest of IMGM
+
+<p align="center"><img src="docs/readme/games.webp" alt="The Games page: a search box that shows results as you type, then shelves of game covers: Hot right now, Top rated on IMGM, and more." width="88%"></p>
+<p align="center"><b>Games</b>: search as you type (a title typed halfway still finds it), then shelves: hot right now, top rated on IMGM, coming soon, just reviewed, and picked for you.</p>
 
 <table>
   <tr>
@@ -138,7 +164,7 @@ The answer comes as **shelves**: your five picks and a few honorable mentions, g
   </tr>
 </table>
 
-Plus a **backlog** for later, **player profiles** with levels and badges, and helpful votes on reviews.
+Plus a **community**: follow players and see how much your taste matches theirs (or send a friend a compare link), collect **card sets** (a studio's games, a series, the Game of the Year nominees), and a game's first review becomes a **First Edition** card with a crown of gems. A **bell** for replies and backlog releases, opt-in emails, a **backlog** for later, **player profiles** with levels and badges, and helpful votes on reviews.
 
 ---
 
@@ -174,6 +200,8 @@ flowchart LR
 
 - **The prompt asks, the code enforces.** A model will happily recommend a game you've already played, one that isn't on your console, or the very game you asked about. So every hard rule is plain Python in [`check_answer()`](imgm-ai/src/imgm_ai/agent/nodes.py), which reads the real search results and sends a broken answer back with the exact problems, up to two rounds. The player never saw that draft, so the fixed answer is told to read as a first answer, never *"I swapped out…"*.
 - **It missed the obvious next game.** Asked for games like *It Takes Two*, the agent never found *Split Fiction*, the same studio's 2025 game: it was newer than the model, and a "sequel" web search came back with noise. Now a tool asks IGDB for the game's series and its studio's other games, keeping a studio game only if it shares a genre *and* a game mode (FromSoftware also made a Hello Kitty game). The check then allows one game from the series and three from the whole family, so the other picks are discoveries.
+- **Your Steam library, your rules.** The Steam menu's choices ride in the graph's config, out of the model's reach, and a single function (`steam_may_suggest`) decides which library games may be picks: the tool uses it to tell the model, the check uses it to enforce. When what the model is told and what the code checks come from one place, they can't drift apart.
+- **Quotes that can't be made up.** The daily game's line from the game: ask a model for a famous quote and you get a confident misquote. So Gemini suggests a few lines (names blanked), and a web search keeps one only if a real page has its longest stretch word for word. In a test it got 9 of 10 famous games right, and the check caught the tenth, a reworded *Last of Us* line. Swearing stays, starred but readable.
 - **Your id is never the model's to choose.** The tools read the player from LangGraph's config, which the model can't see or set, so no prompt injection can open someone else's reviews.
 - **What the model never sees, it can't repeat.** Swearing in review quotes is masked before the agent reads them, so it can't quote it back to you.
 - **AI summaries that can't make things up.** A game's *what players think* block gets its facts from code (counts, majority answers); the model only writes the words, and a theme survives only if two real reviews back it. A broken answer gets one retry with the exact problems, and if that fails too the old summary stays.
@@ -194,6 +222,9 @@ flowchart LR
 **Accounts and community**
 
 - **Steam login without a Steam SDK.** Steam speaks OpenID 2.0, which Better Auth doesn't, so [`steamAuth.js`](imgm-server/src/lib/steamAuth.js) is a Better Auth plugin written for it: connect, log in, sign up (Steam gives no email, so it asks for one) and disconnect, with every check on Steam's answer in one place.
+- **One login limit for the whole site.** A security check before launch found that, behind Vercel and Render, the login library saw several proxy addresses on every request, gave up on finding the visitor's, and kept one bucket for everyone: three logins per 10 seconds for the whole site. Every limit now counts the visitor's real address (the first one in the forwarding header, which Vercel always sets), and logins, sign-ups and reset emails are also limited per email, so faking an address calling the server directly doesn't help.
+- **Signing up with someone else's email.** An unconfirmed account made with your email would have blocked your Google login, or kept its password after you linked Google (account pre-hijacking). Now a Google login with a confirmed email takes the account over clean: the stranger's password, sessions and Steam go.
+- **No starting over once you know the answer.** The daily game is kept per browser in a signed cookie as well as the page's storage, so logging out or clearing one of them shows the finished game, not a fresh one. Each account still starts the day clean.
 - **Comments that stay civil.** Links, slurs and "kys" are refused after folding l33t speak and accents, by whole words, so Scunthorpe still gets through.
 
 </details>
@@ -259,6 +290,7 @@ Locally it can use [Ollama](https://ollama.com) (`LLM_PROVIDER=ollama`, free and
 
 - **Design:** the "Noir" look is by **roiegold**.
 - **Game data:** [IGDB](https://www.igdb.com). **Trailers:** Steam and Xbox, played from their own servers, and YouTube.
+- **Quotes:** checked with a [Tavily](https://tavily.com) web search, or from [Wikiquote](https://en.wikiquote.org). **Visitor countries:** [IP2Location LITE](https://lite.ip2location.com).
 - Built by **Maorophir**, one developer, as a public beta. Feedback is welcome on the site (the Feedback button) or in an issue.
 
 ## License
