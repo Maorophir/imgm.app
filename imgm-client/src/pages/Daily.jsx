@@ -700,21 +700,9 @@ export default function Daily() {
             solved={data.status === 'solved'}
             shake={!finished && justGuessed}
           />
-          {!finished && latest && (
-            <Verdict
-              key={data.guesses.length}
-              guess={latest}
-              triesLeft={triesLeft}
-              newShot={newShot}
-              clip={Boolean(data.pictures.at(-1)?.clip)}
-              newClue={CLUE_WORDS[data.clues.find((clue) => clue.fresh)?.label]}
-            />
-          )}
-          <div className="mt-5">
-            <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
-          </div>
-
-          <div className="mt-6">
+          {/* The guess right under the picture (with the verdict and clues above it, a phone
+              had to scroll to type, the user's report 2026-11-07) */}
+          <div className="mt-4">
             {finished ? (
               <Result data={data} streak={streak} />
             ) : (
@@ -738,6 +726,20 @@ export default function Daily() {
                 </button>
               </form>
             )}
+          </div>
+
+          {!finished && latest && (
+            <Verdict
+              key={data.guesses.length}
+              guess={latest}
+              triesLeft={triesLeft}
+              newShot={newShot}
+              clip={Boolean(data.pictures.at(-1)?.clip)}
+              newClue={CLUE_WORDS[data.clues.find((clue) => clue.fresh)?.label]}
+            />
+          )}
+          <div className="mt-5">
+            <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
           </div>
 
           {data.guesses.length > 0 && (
