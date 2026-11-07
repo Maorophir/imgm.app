@@ -241,7 +241,17 @@ const TONE = {
 // Right after a wrong guess: how warm it was in big words, what it told you, and that a
 // new picture is up. Read out by screen readers; keyed by the guess, so each one pops in.
 const Verdict = ({ guess, triesLeft, newShot, clip, newClue }) => {
-  const nowPlaying = `${clip ? 'A moment of the game is playing.' : newShot ? 'A new screenshot is up.' : 'The picture is sharper now.'}${newClue ? ` New clue: ${newClue}, just below.` : ''}`;
+  // Where the clue is: below on a phone, the side column on a computer
+  const nowPlaying = (
+    <>
+      {clip ? 'A moment of the game is playing.' : newShot ? 'A new screenshot is up.' : 'The picture is sharper now.'}
+      {newClue && (
+        <>
+          {' '}New clue: {newClue}, <span className="lg:hidden">just below.</span><span className="hidden lg:inline">on the right.</span>
+        </>
+      )}
+    </>
+  );
   if (guess.skipped) {
     return (
       <div role="status" className="mt-5 p-4 sm:p-5 rounded-sm border border-slate-600 bg-slate-900 animate-pop">
@@ -525,7 +535,7 @@ const Record = ({ me, guestStreakDays, finished }) => {
 // the side column, 2026-11-06): a framed box with a count, the one just unlocked marked
 // New, a quote as a quote, and what's still to come
 const CLUE_COUNT = 4;
-// A clue in the verdict's sentence ("New clue: release year, just below."), as the
+// A clue in the verdict's sentence ("New clue: release year, on the right."), as the
 // picture captions say it
 const CLUE_WORDS = { Genre: 'genre', Released: 'release year', Quote: 'a line from the game', On: 'platforms', Studio: 'studio' };
 const NewTag = () => (
@@ -738,7 +748,8 @@ export default function Daily() {
               newClue={CLUE_WORDS[data.clues.find((clue) => clue.fresh)?.label]}
             />
           )}
-          <div className="mt-5">
+          {/* Phones: the clues under the verdict (computers have them in the side column) */}
+          <div className="mt-5 lg:hidden">
             <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
           </div>
 
@@ -753,6 +764,10 @@ export default function Daily() {
         </div>
 
         <aside className="flex flex-col gap-4 min-w-0">
+          {/* Computers: the clues at the top of the side column, beside the picture */}
+          <div className="hidden lg:block">
+            <Clues clues={data.clues} nextClueAfter={data.nextClueAfter} wrong={wrong} quoteSource={data.quoteSource} />
+          </div>
           {finished && <Today today={data.today} mine={myTries} />}
           <Record me={data.me} guestStreakDays={streak} finished={finished} />
           <p className="flex items-center gap-2 text-sm text-slate-400 tabular-nums">
