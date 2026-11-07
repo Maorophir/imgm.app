@@ -5,9 +5,14 @@
  * "Games" link opens it with no query. Results come from IGDB via our backend
  * (/api/games/search).
  *
- * With no query the page is a way in, not a dead end: its own search box, then
- * "Popular right now" (the home page's featured games), so a visitor can tap a cover
- * instead of having to remember a title.
+ * The search box searches as you type (a moment after the last key, 2+ letters) and
+ * stays on the page with the results.
+ *
+ * With no query the page is a way in, not a dead end: shelves of games to browse
+ * (GameShelf, built 2026-11-06 when the user found the page "quite dull, just popular
+ * games"): Hot right now and Coming soon (Discover's feeds), Top rated on IMGM (the Hall
+ * of Fame), Just reviewed, and Picked for you (the all-time greats for visitors). Each
+ * shelf loads on its own and steps aside if it can't.
  *
  * Quest mode (/search?quest=1, from the home page's "Rate a game you played"): the page
  * asks which game you played last, and picking one opens its review quest. A game
@@ -21,14 +26,53 @@
 import { useState, useEffect } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon } from 'lucide-react';
-import { getFeaturedGames, searchGames } from '../lib/api';
+import { getDiscoverGames, getFeaturedGames, getRecentReviews, getReviewPicks, getTopGames, searchGames } from '../lib/api';
 import { coverSrcSet, COVER_SIZES } from '../lib/igdbImage';
 import { isUnreleased, releaseLabel } from '../lib/release';
 import { WRAP, GHOST_BUTTON, SECTION_TITLE } from '../lib/ui';
 import GameCard from '../components/GameCard';
 import GameCardSkeleton from '../components/GameCardSkeleton';
+import GameShelf from '../components/games/GameShelf';
+import { releaseLine } from '../components/discover/feedText';
 
 const MIN_QUERY_LENGTH = 2;
+const TYPING_PAUSE = 300; // ms after the last key before the search runs
+const SHELF_SIZE = 20;
+
+// The shelves' lists, each loaded on its own: null while loading, false if it failed
+// (that shelf then steps aside)
+const SHELF_SOURCES = {
+  hot: (signal) => getDiscoverGames('hot', signal),
+  top: (signal) => getTopGames({ sort: 'rank' }, signal).then((d) =>
+    d.games.map((g) => ({ ...g, ratings: { imgm: g.average } }))),
+  upcoming: (signal) => getDiscoverGames('upcoming', signal),
+  // The newest reviews' games, each once, with who rated it what
+  recent: (signal) => getRecentReviews(signal).then((reviews) => {
+    const seen = new Set();
+    return (Array.isArray(reviews) ? reviews : reviews.reviews ?? [])
+      .filter((r) => r.game && !seen.has(r.game.id) && seen.add(r.game.id))
+      .map((r) => ({ ...r.game, reviewNote: `${r.author} · ${r.rating}/10` }));
+  }),
+  picks: (signal) => getReviewPicks(signal),
+};
+
+// The shelves when there's no search
+const useShelves = (wanted) => {
+  const [lists, setLists] = useState({});
+  useEffect(() => {
+    if (!wanted) return undefined;
+    const controller = new AbortController();
+    for (const [key, load] of Object.entries(SHELF_SOURCES)) {
+      load(controller.signal)
+        .then((list) => setLists((old) => ({ ...old, [key]: list })))
+        .catch((error) => error.name !== 'AbortError' && setLists((old) => ({ ...old, [key]: false })));
+    }
+    return () => controller.abort();
+  }, [wanted]);
+  return lists;
+};
+
+const firstOf = (list) => (Array.isArray(list) ? list.slice(0, SHELF_SIZE) : list);
 // Popular games on the page with no query: two of the home page's pages of them
 const POPULAR_COUNT = 20;
 
@@ -114,7 +158,7 @@ const Search = () => {
   // false = they couldn't be loaded: the section then steps aside)
   const [popular, setPopular] = useState(null);
   useEffect(() => {
-    if (isSearchable || popular !== null) return;
+    if (isSearchable || !questMode || popular !== null) return;
 
     const controller = new AbortController();
     getFeaturedGames(controller.signal)
@@ -122,17 +166,34 @@ const Search = () => {
       .catch((error) => error.name !== 'AbortError' && setPopular(false));
 
     return () => controller.abort();
-  }, [isSearchable, popular]);
+  }, [isSearchable, questMode, popular]);
 
-  // The page's own search box. Quest mode always has it (the navbar's would drop
-  // ?quest=1); with no query it's there too, as the navbar's field hides behind a
-  // button on phones.
-  const showSearchBox = questMode || !isSearchable;
+  // The page's own search box, always there (the navbar's field hides behind a button
+  // on phones, and would drop ?quest=1). It searches as you type: the address follows
+  // the text a moment after the last key, replacing the history entry (no Back through
+  // every letter). A search from the header changes the address: the box follows it.
+  const [text, setText] = useState(query);
+  const [shownQuery, setShownQuery] = useState(query);
+  if (query !== shownQuery) {
+    setShownQuery(query);
+    if (query !== text.trim()) setText(query);
+  }
+  const paramsFor = (q) => ({ ...(questMode && { quest: '1' }), ...(q && { q }) });
+  useEffect(() => {
+    const q = text.trim();
+    if (q === query || (q.length > 0 && q.length < MIN_QUERY_LENGTH)) return undefined;
+    const timer = setTimeout(() => setSearchParams(paramsFor(q), { replace: true }), TYPING_PAUSE);
+    return () => clearTimeout(timer);
+  }, [text]); // eslint-disable-line react-hooks/exhaustive-deps -- only the typing starts a search
   const searchHere = (event) => {
     event.preventDefault();
-    const q = String(new FormData(event.currentTarget).get('q') ?? '').trim();
-    setSearchParams(questMode ? { quest: '1', q } : { q });
+    const q = text.trim();
+    if (q.length >= MIN_QUERY_LENGTH && q !== query) setSearchParams(paramsFor(q));
   };
+
+  // The shelves, when there's no search (quest mode keeps its popular picks)
+  const shelves = useShelves(!isSearchable && !questMode);
+  const [now] = useState(() => Date.now()); // for "Out tomorrow" and the like
 
   // One game on the shelf: a quest pick in quest mode, otherwise its game card
   const tile = (game) => questMode ? (
@@ -164,7 +225,7 @@ const Search = () => {
             Pick it to start its quest: about two minutes, and you get a card at the end.
           </p>
         )}
-        {showSearchBox && (
+        {(
           <form role="search" onSubmit={searchHere} className="mt-6 flex gap-2 max-w-xl">
             {/* The header's search field: card stock, a control-grey edge that turns
                 ivory while it has focus */}
@@ -177,9 +238,8 @@ const Search = () => {
               <input
                 type="search"
                 name="q"
-                defaultValue={query}
-                required
-                minLength={MIN_QUERY_LENGTH}
+                value={text}
+                onChange={(event) => setText(event.target.value)}
                 autoFocus={questMode && !query}
                 autoComplete="off"
                 placeholder="Search games"
@@ -198,8 +258,38 @@ const Search = () => {
         )}
       </div>
 
-      {/* No query: popular games to tap instead (quest picks in quest mode) */}
-      {!isSearchable && popular !== false && (
+      {/* No query: shelves of games to browse */}
+      {!isSearchable && !questMode && (
+        <div className="mt-6 sm:mt-10">
+          {shelves.hot !== false && (
+            <GameShelf title="Hot right now" link={{ to: '/discover', label: 'Watch the trailers' }} games={firstOf(shelves.hot)} />
+          )}
+          {shelves.top !== false && shelves.top?.length !== 0 && (
+            <GameShelf title="Top rated on IMGM" link={{ to: '/hall-of-fame', label: 'Hall of Fame' }} games={firstOf(shelves.top)} />
+          )}
+          {shelves.upcoming !== false && (
+            <GameShelf
+              title="Coming soon"
+              link={{ to: '/discover?feed=upcoming', label: 'Watch the trailers' }}
+              games={firstOf(shelves.upcoming)}
+              note={(game) => releaseLine(game.releaseDate, now)}
+            />
+          )}
+          {shelves.recent !== false && shelves.recent?.length !== 0 && (
+            <GameShelf title="Just reviewed" games={firstOf(shelves.recent)} note={(game) => game.reviewNote} />
+          )}
+          {shelves.picks !== false && shelves.picks?.games?.length !== 0 && (
+            <GameShelf
+              title={shelves.picks?.personal ? 'Picked for you' : 'All-time greats'}
+              intro={shelves.picks?.personal && shelves.picks.genres?.length ? `From the genres you rate most: ${shelves.picks.genres.slice(0, 2).join(', ')}` : undefined}
+              games={shelves.picks ? firstOf(shelves.picks.games) : null}
+            />
+          )}
+        </div>
+      )}
+
+      {/* Quest mode with no query: popular games to pick from */}
+      {!isSearchable && questMode && popular !== false && (
         <section aria-labelledby="popular-title" className="mt-6 sm:mt-10">
           <h2 id="popular-title" className={`${SECTION_TITLE} mb-6 sm:mb-8`}>Popular right now</h2>
           {popular === null ? (
