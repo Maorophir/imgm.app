@@ -188,7 +188,13 @@ function reducer(turns, action) {
 const forHistory = (turns) =>
   turns.map((turn) => (turn.cards ? { ...turn, games: [] } : turn));
 
-export function useGameGuide(userId) {
+// options.steam: the Steam menu's choices ({ use, played_hours, suggest_owned }, from
+// usePlayNextSteam), sent with every question
+export function useGameGuide(userId, { steam = null } = {}) {
+  const steamRef = useRef(steam);
+  useEffect(() => {
+    steamRef.current = steam;
+  }, [steam]);
   const [saved] = useState(() => loadChat(userId)); // read once, when the page opens
   const [turns, dispatch] = useReducer(reducer, saved.turns);
   const [prefs, setPrefs] = useState(saved.prefs);
@@ -265,7 +271,7 @@ export function useGameGuide(userId) {
 
     try {
       await streamGuide(
-        { chat_id: chatIdRef.current, ...body },
+        { chat_id: chatIdRef.current, ...body, ...(steamRef.current && { steam: steamRef.current }) },
         {
           signal: controller.signal,
           onEvent: (event, data) => {

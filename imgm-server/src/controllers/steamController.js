@@ -53,6 +53,10 @@ const runImport = async (userId, steamId) => {
 };
 
 // GET /api/steam/me
+// Play Next's Steam menu: "Recommend games I've already played … only if I've played
+// them less than" 2, 5, 10 or 20 hours (2 by default)
+const UNDER_HOURS = [2, 5, 10, 20];
+
 export const getSteamStatus = async (req, res) => {
   try {
     const steamId = await findSteamId(req.user.id);
@@ -62,8 +66,17 @@ export const getSteamStatus = async (req, res) => {
           select: { state: true, gameCount: true, hoursHidden: true, personaName: true, importedAt: true },
         })
       : null;
+    // What Play Next's Steam menu counts: games played (taste), owned but never played,
+    // and played games under each limit (the ones it may suggest again)
+    const minutes = library
+      ? (await prisma.steamLibraryGame.findMany({ where: { userId: req.user.id }, select: { minutes: true } })).map((g) => g.minutes)
+      : [];
     res.json({
       connected: Boolean(steamId),
+      played: minutes.filter((m) => m > 0).length,
+      unplayed: minutes.filter((m) => m === 0).length,
+      playedUnder: Object.fromEntries(UNDER_HOURS.map((h) => [h, minutes.filter((m) => m > 0 && m < h * 60).length])),
+      owned: minutes.length,
       steamId,
       profileUrl: steamId ? steamProfileUrl(steamId) : null,
       libraryEnabled: Boolean(steamApiKey),
