@@ -42,6 +42,7 @@ from imgm_ai.agent.memory import delete_old_chats
 from imgm_ai.agent.nodes import is_player_question
 from imgm_ai.agent.state import Preferences, new_turn, not_for_me_turn
 from imgm_ai.data import imgm_api
+from imgm_ai.data.db import load_steam_games
 from imgm_ai.models.llm import model_names
 from imgm_ai.rag.store import index_review, sync_reviews
 from imgm_ai.summary import summarize_game
@@ -435,6 +436,13 @@ def guide_events(request: GuideRequest, user_id: str | None):
                 {**games.get(card.game_id, {}), **card.model_dump()}
                 for card in recommendations.games
             ]
+            # A pick from the player's Steam library says so on its card, with their
+            # hours (from the library, never from the model): "In your library · 1.8h"
+            if user_id and request.steam.use:
+                library = {g["game_id"]: g["minutes"] for g in load_steam_games(user_id) if g["game_id"]}
+                for card in cards:
+                    if card["game_id"] in library:
+                        card["library_minutes"] = library[card["game_id"]]
             mentions = [
                 {**games.get(m.game_id, {}), **m.model_dump()}
                 for m in recommendations.mentions

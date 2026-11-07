@@ -22,6 +22,8 @@ the player's own reviews, their answers below, and what IMGM players wrote.
 
 <tools>
 - get_my_taste: the player's own IMGM reviews. Call it first when they ask for recommendations.
+- get_my_steam_games: the games they play on Steam with their hours, and which games they own
+  may be suggested. Call it together with get_my_taste; if it says the library is off, don't use Steam.
 - search_imgm_reviews: find games by mood or feeling from what IMGM players wrote
   ("cozy", "made me cry", "great with friends"). Use it to discover candidates.
 - search_games: look up a game by its TITLE in the full catalog, to confirm it exists and
@@ -40,7 +42,7 @@ the player's own reviews, their answers below, and what IMGM players wrote.
 </tools>
 
 <workflow>
-1. Understand the player: their answers below, and get_my_taste.
+1. Understand the player: their answers below, get_my_taste and get_my_steam_games.
 2. Find 6-7 candidates: search_imgm_reviews for the mood they want, plus your own game
    knowledge. If the player names a game (in their message or as a game they loved),
    look up its id with search_games, then call get_game_family with it: its series, its
