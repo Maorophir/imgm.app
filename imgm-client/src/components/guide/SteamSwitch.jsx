@@ -5,7 +5,8 @@
  * keeps them. Laid out by the user:
  *   Use my Steam library                      on / off
  *   Recommend games I've already played       on / off   (while the library is on)
- *   Only if I've played them less than        2h 5h 10h 20h  (while that is on)
+ *   Only if I've played them less than        2h 5h 10h 20h No limit  (while that is on;
+ *                                             no limit = replaying a favourite)
  * Owned games never played can always come up, marked as in the library.
  *
  * Every player sees something small, so they know the option is there:
@@ -95,7 +96,8 @@ const SteamSwitch = ({ steam, disabled }) => {
   }
 
   const games = (n) => `${n} game${n === 1 ? '' : 's'}`;
-  const under = status.playedUnder?.[settings.playedUnder] ?? 0;
+  const noLimit = settings.playedUnder === null;
+  const under = noLimit ? status.played : status.playedUnder?.[settings.playedUnder] ?? 0;
   return (
     <div ref={boxRef} className="relative inline-block">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open} className={CHIP}>
@@ -122,7 +124,7 @@ const SteamSwitch = ({ steam, disabled }) => {
               <div className="mt-1.5 flex gap-1.5" role="radiogroup" aria-label="Only if I've played them less than">
                 {UNDER_HOURS.map((hours) => (
                   <button
-                    key={hours}
+                    key={hours ?? 'none'}
                     type="button"
                     role="radio"
                     aria-checked={settings.playedUnder === hours}
@@ -131,11 +133,13 @@ const SteamSwitch = ({ steam, disabled }) => {
                       settings.playedUnder === hours ? 'bg-white text-slate-950 border-white' : 'border-slate-600 text-white hover:border-white'
                     }`}
                   >
-                    {hours}h
+                    {hours === null ? 'No limit' : `${hours}h`}
                   </button>
                 ))}
               </div>
-              <p className="mt-1.5 text-xs text-slate-400">{games(under)} you've played under {settings.playedUnder}h</p>
+              <p className="mt-1.5 text-xs text-slate-400">
+                {noLimit ? `Any of your ${games(under)} can come up again, to replay` : `${games(under)} you've played under ${settings.playedUnder}h`}
+              </p>
             </fieldset>
           )}
         </div>

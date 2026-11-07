@@ -4,7 +4,8 @@
  * limit) and their three choices:
  *   use             use my Steam library (on)
  *   suggestPlayed   recommend games I've already played (on)…
- *   playedUnder     …only if I've played them less than 2, 5, 10 or 20 hours (2)
+ *   playedUnder     …only if I've played them less than 2, 5, 10 or 20 hours, or with
+ *                   no limit (null: replaying a favourite) (2)
  * Owned games never played can always be suggested (marked as in the library); played
  * games teach Play Next the player's taste. Remembered per player in this browser, sent
  * with every Play Next question as `steam` ({ use, suggest_played, played_under }); the
@@ -16,7 +17,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSteamStatus } from '../lib/api';
 
-export const UNDER_HOURS = [2, 5, 10, 20];
+export const UNDER_HOURS = [2, 5, 10, 20, null]; // null: no limit
 const DEFAULTS = { use: true, suggestPlayed: true, playedUnder: 2 };
 const keyFor = (userId) => `imgm:play-next:steam:${userId}`;
 
