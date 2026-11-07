@@ -7,6 +7,8 @@
  *   Recommend games I've already played       on / off   (while the library is on)
  *   Only if I've played them less than        2h 5h 10h 20h No limit  (while that is on;
  *                                             no limit = replaying a favourite)
+ *   From my library, at most                  None 1 2 3  (of the 5 picks; while the
+ *                                             library is on)
  * Owned games never played can always come up, marked as in the library.
  *
  * Every player sees something small, so they know the option is there:
@@ -20,7 +22,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronUp, Gamepad2 } from 'lucide-react';
-import { UNDER_HOURS } from '../../hooks/usePlayNextSteam';
+import { LIBRARY_PICKS, UNDER_HOURS } from '../../hooks/usePlayNextSteam';
 
 const CHIP = 'inline-flex items-center gap-1.5 h-8 px-2.5 rounded-sm border border-slate-700 text-xs font-medium text-slate-300 hover:border-slate-400 hover:text-white transition-colors duration-120';
 const icon = <Gamepad2 className="w-3.5 h-3.5 shrink-0" strokeWidth={1.8} aria-hidden="true" />;
@@ -41,6 +43,26 @@ const Toggle = ({ on, onChange, label, disabled }) => (
       className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 rounded-full transition-[left,background-color] duration-120 ${on ? 'left-[20px] bg-slate-950' : 'left-[3px] bg-slate-400'}`}
     />
   </button>
+);
+
+// A row of small choice buttons (the hours, the library picks)
+const Choices = ({ label, options, value, onChange, text }) => (
+  <div className="mt-1.5 flex gap-1.5" role="radiogroup" aria-label={label}>
+    {options.map((option) => (
+      <button
+        key={String(option)}
+        type="button"
+        role="radio"
+        aria-checked={value === option}
+        onClick={() => onChange(option)}
+        className={`h-7 min-w-10 px-2 rounded-sm border text-xs font-medium tabular-nums transition-colors duration-120 ${
+          value === option ? 'bg-white text-slate-950 border-white' : 'border-slate-600 text-white hover:border-white'
+        }`}
+      >
+        {text(option)}
+      </button>
+    ))}
+  </div>
 );
 
 // One line of the menu: its words, its switch on the right
@@ -121,24 +143,31 @@ const SteamSwitch = ({ steam, disabled }) => {
             <fieldset disabled={disabled} className="border-t border-slate-700 pt-2">
               <legend className="sr-only">Only if I've played them less than</legend>
               <p className="text-sm text-white">Only if I've played them less than</p>
-              <div className="mt-1.5 flex gap-1.5" role="radiogroup" aria-label="Only if I've played them less than">
-                {UNDER_HOURS.map((hours) => (
-                  <button
-                    key={hours ?? 'none'}
-                    type="button"
-                    role="radio"
-                    aria-checked={settings.playedUnder === hours}
-                    onClick={() => update({ playedUnder: hours })}
-                    className={`h-7 min-w-10 px-2 rounded-sm border text-xs font-medium tabular-nums transition-colors duration-120 ${
-                      settings.playedUnder === hours ? 'bg-white text-slate-950 border-white' : 'border-slate-600 text-white hover:border-white'
-                    }`}
-                  >
-                    {hours === null ? 'No limit' : `${hours}h`}
-                  </button>
-                ))}
-              </div>
+              <Choices
+                label="Only if I've played them less than"
+                options={UNDER_HOURS}
+                value={settings.playedUnder}
+                onChange={(playedUnder) => update({ playedUnder })}
+                text={(hours) => (hours === null ? 'No limit' : `${hours}h`)}
+              />
               <p className="mt-1.5 text-xs text-slate-400">
                 {noLimit ? `Any of your ${games(under)} can come up again, to replay` : `${games(under)} you've played under ${settings.playedUnder}h`}
+              </p>
+            </fieldset>
+          )}
+          {settings.use && (
+            <fieldset disabled={disabled} className="border-t border-slate-700 pt-2 mt-2">
+              <legend className="sr-only">From my library, at most</legend>
+              <p className="text-sm text-white">From my library, at most</p>
+              <Choices
+                label="From my library, at most"
+                options={LIBRARY_PICKS}
+                value={settings.maxLibrary}
+                onChange={(maxLibrary) => update({ maxLibrary })}
+                text={(n) => (n === 0 ? 'None' : String(n))}
+              />
+              <p className="mt-1.5 text-xs text-slate-400">
+                {settings.maxLibrary === 0 ? 'Only games you don’t own yet' : `of the 5 picks; the rest are games you don’t own`}
               </p>
             </fieldset>
           )}

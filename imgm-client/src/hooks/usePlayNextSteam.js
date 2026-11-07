@@ -6,6 +6,7 @@
  *   suggestPlayed   recommend games I've already played (on)…
  *   playedUnder     …only if I've played them less than 2, 5, 10 or 20 hours, or with
  *                   no limit (null: replaying a favourite) (2)
+ *   maxLibrary      at most this many of the 5 picks from my library: 0 (none), 1, 2, 3 (2)
  * Owned games never played can always be suggested (marked as in the library); played
  * games teach Play Next the player's taste. Remembered per player in this browser, sent
  * with every Play Next question as `steam` ({ use, suggest_played, played_under }); the
@@ -18,7 +19,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { getSteamStatus } from '../lib/api';
 
 export const UNDER_HOURS = [2, 5, 10, 20, null]; // null: no limit
-const DEFAULTS = { use: true, suggestPlayed: true, playedUnder: 2 };
+export const LIBRARY_PICKS = [0, 1, 2, 3]; // of the 5 picks
+const DEFAULTS = { use: true, suggestPlayed: true, playedUnder: 2, maxLibrary: 2 };
 const keyFor = (userId) => `imgm:play-next:steam:${userId}`;
 
 const readSettings = (userId) => {
@@ -29,6 +31,7 @@ const readSettings = (userId) => {
       use: saved.use !== false,
       suggestPlayed: saved.suggestPlayed !== false,
       playedUnder: UNDER_HOURS.includes(saved.playedUnder) ? saved.playedUnder : DEFAULTS.playedUnder,
+      maxLibrary: LIBRARY_PICKS.includes(saved.maxLibrary) ? saved.maxLibrary : DEFAULTS.maxLibrary,
     };
   } catch {
     return DEFAULTS; // storage blocked or an old value: the defaults
@@ -70,7 +73,7 @@ export function usePlayNextSteam(userId) {
   );
 
   const request = useMemo(
-    () => ({ use: settings.use, suggest_played: settings.suggestPlayed, played_under: settings.playedUnder }),
+    () => ({ use: settings.use, suggest_played: settings.suggestPlayed, played_under: settings.playedUnder, max_library: settings.maxLibrary }),
     [settings]
   );
   return { status: userId ? status : false, settings, update, request };

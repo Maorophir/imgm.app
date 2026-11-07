@@ -33,6 +33,8 @@ const guideSchema = z
         use: z.boolean(),
         suggest_played: z.boolean(),
         played_under: z.union([z.literal(2), z.literal(5), z.literal(10), z.literal(20), z.null()]),
+        // At most this many of the 5 picks from the player's library (0: none of it)
+        max_library: z.union([z.literal(0), z.literal(1), z.literal(2), z.literal(3)]).default(2),
       })
       .optional(),
     // An edited question: it replaces the chat's question number N (the latest one)
