@@ -202,12 +202,9 @@ function PlayNextChat({ userId }) {
     <div className="isolate max-w-[1600px] mx-auto px-4 md:px-6 py-4 lg:py-5 grid grid-cols-[minmax(0,1fr)] lg:grid-cols-[minmax(0,1fr)_400px] xl:grid-cols-[240px_minmax(0,1fr)_400px] gap-6 lg:h-[calc(100dvh-73px)]">
       <PlayNextBackdrop covers={wallCovers} />
 
-      {/* Chat history (wide screens), and the Steam menu at its bottom */}
-      <aside className="hidden xl:flex flex-col min-h-0 pr-1">
-        <div className="flex-1 min-h-0 overflow-y-auto">{history}</div>
-        <div className="pt-3">
-          <SteamSwitch steam={steam} disabled={running} />
-        </div>
+      {/* Chat history (wide screens) */}
+      <aside className="hidden xl:block min-h-0 overflow-y-auto pr-1">
+        {history}
       </aside>
 
       {/* Chat */}
@@ -300,8 +297,8 @@ function PlayNextChat({ userId }) {
           </div>
         )}
 
-        {/* Smaller screens (no chats column): the Steam menu at the chat's bottom left */}
-        <div className="xl:hidden pt-3 lg:px-6 lg:pb-4">
+        {/* The Steam menu: small, at the panel's bottom left (not the page's main feature) */}
+        <div className="pt-3 lg:px-6 lg:pb-4">
           <SteamSwitch steam={steam} disabled={running} />
         </div>
       </section>
