@@ -543,7 +543,11 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
     # and at most max_library picks come from their library
     steam = config.get("configurable", {}).get("steam") or {}
     if user_id and steam.get("use"):
-        library = {g["game_id"]: g for g in load_steam_games(user_id) if g["game_id"]}
+        try:
+            library = {g["game_id"]: g for g in load_steam_games(user_id) if g["game_id"]}
+        except Exception:  # unreadable: the tool told the model to go without it too
+            log.exception("Steam library could not be read for the check")
+            library = {}
         for game in games:
             mine = library.get(game.game_id)
             if mine and not steam_may_suggest(mine, steam, game_hours(verified.get(game.game_id, ""))):

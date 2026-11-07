@@ -439,7 +439,11 @@ def guide_events(request: GuideRequest, user_id: str | None):
             # A pick from the player's Steam library says so on its card, with their
             # hours (from the library, never from the model): "In your library · 1.8h"
             if user_id and request.steam.use:
-                library = {g["game_id"]: g["minutes"] for g in load_steam_games(user_id) if g["game_id"]}
+                try:
+                    library = {g["game_id"]: g["minutes"] for g in load_steam_games(user_id) if g["game_id"]}
+                except Exception:  # the marks are extras: the cards go out without them
+                    log.exception("Steam library could not be read for the cards")
+                    library = {}
                 for card in cards:
                     if card["game_id"] in library:
                         card["library_minutes"] = library[card["game_id"]]
