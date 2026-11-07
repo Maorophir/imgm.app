@@ -5,8 +5,9 @@
  * the game carries on across devices. A logged-out player's stay in their browser: the
  * page sends them along (?guesses=1,2,3), and the server also keeps them in a signed
  * cookie (lib/dailyCookie.js), so logging out or clearing the page's storage can't
- * start the day over once the answer is known. Logging in with no game today keeps
- * this browser's game (the first visit logged in saves it).
+ * start the day over once the answer is known. Every account starts the day clean;
+ * logging in keeps the game only if it was played logged out (the first visit logged in
+ * saves it).
  */
 import { z } from 'zod';
 import { prisma } from '../lib/db.js';
@@ -24,11 +25,14 @@ const guessList = z.array(z.number().int().nonnegative()).max(MAX_TRIES).refine(
 const listFromQuery = (text) =>
   guessList.safeParse(String(text ?? '').split(',').filter(Boolean).map(Number)).data ?? [];
 
-// This browser's game today: the server's cookie, or what the page kept (localStorage),
-// whichever has more tries, so clearing only one of the two changes nothing
-const browserGuesses = (req, puzzle, sent = []) => {
-  const kept = guessList.safeParse(readBrowserGame(req, puzzle.day) ?? []).data ?? [];
-  return kept.length >= sent.length ? kept : sent;
+// This browser's game today, { guesses, owner }: the server's cookie, or what the page
+// kept (localStorage), whichever has more tries, so clearing only one of the two
+// changes nothing. The page's copy is only ever a logged-out visitor's (the page clears
+// it while logged in), so its owner is null.
+const browserGame = (req, puzzle, sent = []) => {
+  const cookie = readBrowserGame(req, puzzle.day);
+  const kept = guessList.safeParse(cookie?.guesses ?? []).data ?? [];
+  return kept.length > 0 && kept.length >= sent.length ? { guesses: kept, owner: cookie.owner } : { guesses: sent, owner: null };
 };
 
 // The page's data: the puzzle, where the player stands, and (once finished) how
@@ -76,20 +80,23 @@ export const getDaily = async (req, res) => {
   try {
     const user = await getSessionUser(req).catch(() => null);
     const puzzle = await todaysPuzzle();
-    const fromBrowser = browserGuesses(req, puzzle, listFromQuery(req.query.guesses));
+    const browser = browserGame(req, puzzle, listFromQuery(req.query.guesses));
 
+    // Logged out: the game this browser played, whoever played it (logging out doesn't
+    // start the day over)
     if (!user) {
-      const state = await playState(puzzle, fromBrowser);
-      if (state.ids.length > 0) writeBrowserGame(res, puzzle.day, state.ids);
+      const state = await playState(puzzle, browser.guesses);
+      if (state.ids.length > 0) writeBrowserGame(res, puzzle.day, state.ids, browser.owner);
       return res.json(await answerFor(puzzle, state, null));
     }
 
-    // Logged in: the account's game, and the browser remembers it too (so logging out
-    // shows the same game, not a fresh one)
+    // Logged in: the account's own game. With none yet, the browser's game only if it
+    // was played logged out (progress before logging in); another account's game stays
+    // theirs, and this account starts clean. The browser remembers it as this account's.
     const row = await prisma.dailyGuess.findUnique({ where: { day_userId: { day: puzzle.day, userId: user.id } } });
-    const state = row ? await savedState(puzzle, row) : await playState(puzzle, fromBrowser);
-    if (!row && state.ids.length > 0) await save(puzzle, user, state); // this browser's game, from before logging in
-    if (state.ids.length > 0) writeBrowserGame(res, puzzle.day, state.ids);
+    const state = row ? await savedState(puzzle, row) : await playState(puzzle, browser.owner == null ? browser.guesses : []);
+    if (!row && state.ids.length > 0) await save(puzzle, user, state);
+    if (state.ids.length > 0) writeBrowserGame(res, puzzle.day, state.ids, user.id);
     res.json(await answerFor(puzzle, state, user));
   } catch (error) {
     failed(res, error, 'loading');
@@ -103,14 +110,15 @@ const playOn = async (req, res, next, earlier, what) => {
     const user = await getSessionUser(req).catch(() => null);
     const puzzle = await todaysPuzzle();
     const row = user ? await prisma.dailyGuess.findUnique({ where: { day_userId: { day: puzzle.day, userId: user.id } } }) : null;
-    const before = row ? await savedState(puzzle, row) : await playState(puzzle, user ? [] : browserGuesses(req, puzzle, earlier ?? []));
+    const browser = user ? null : browserGame(req, puzzle, earlier ?? []);
+    const before = row ? await savedState(puzzle, row) : await playState(puzzle, user ? [] : browser.guesses);
     if (before.status !== 'playing') return res.status(409).json({ error: "You've finished today's game. A new one comes at midnight." });
     if (next !== SKIP && before.ids.includes(next)) return res.status(400).json({ error: 'You already guessed that one.' });
 
     const state = await playState(puzzle, [...before.ids, next]);
     if (state.ids.length === before.ids.length) return res.status(404).json({ error: 'Game not found' });
     if (user) await save(puzzle, user, state);
-    writeBrowserGame(res, puzzle.day, state.ids);
+    writeBrowserGame(res, puzzle.day, state.ids, user ? user.id : browser.owner);
     res.json(await answerFor(puzzle, state, user));
   } catch (error) {
     failed(res, error, what);
