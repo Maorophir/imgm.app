@@ -94,6 +94,14 @@ class NotForMe(BaseModel):
     reason: Literal["not_for_me", "played"] = "not_for_me"  # "Played it" on the card
 
 
+class SteamChoice(BaseModel):
+    """Play Next's Steam menu, sent by the page with every question."""
+
+    use: bool = False  # older pages send nothing: no library
+    suggest_played: bool = True  # games already played may come back as picks…
+    played_under: Literal[2, 5, 10, 20] = 2  # …if played less than this many hours
+
+
 class GuideRequest(BaseModel):
     chat_id: str = Field(
         pattern=r"^[A-Za-z0-9-]{8,64}$"
@@ -103,6 +111,8 @@ class GuideRequest(BaseModel):
     preferences: Preferences = Field(default_factory=dict)
     # The player edited their question number N (their latest): it replaces the old one
     replace_turn: int | None = Field(default=None, ge=1, le=MAX_QUESTIONS_PER_CHAT)
+    # The Steam menu's choices (the Steam tool reads the library only when `use` is on)
+    steam: SteamChoice = Field(default_factory=SteamChoice)
 
     @model_validator(mode="after")
     def needs_a_message_or_a_rejection(self) -> "GuideRequest":
@@ -227,6 +237,8 @@ def guide_events(request: GuideRequest, user_id: str | None):
         "configurable": {
             "user_id": user_id,
             "thread_id": f"{user_id or 'guest'}:{request.chat_id}",
+            # Read by the Steam tool, never chosen by the model (like user_id)
+            "steam": request.steam.model_dump(),
         },
         "recursion_limit": 40,
     }
