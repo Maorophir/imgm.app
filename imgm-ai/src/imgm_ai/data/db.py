@@ -252,6 +252,33 @@ def load_review_versions() -> dict[str, str]:
         return {row["id"]: row["updated_at"].isoformat() for row in cur.fetchall()}
 
 
+# ── The player's Steam library ───────────────────────────
+
+STEAM_GAMES_QUERY = """
+SELECT coalesce(a.title, g.name) AS title,          -- IMGM's title, else Steam's own
+       a."gameId"               AS game_id,         -- the IGDB id (null: IGDB doesn't know it)
+       g.minutes,                                   -- all-time playtime
+       g."minutes2Weeks"        AS minutes_recent,  -- the last two weeks
+       g.shared                                     -- played through Family Sharing
+FROM "SteamLibraryGame" g
+JOIN "SteamLibrary" l ON l."userId" = g."userId"
+LEFT JOIN "SteamApp" a ON a.appid = g.appid
+WHERE g."userId" = %(user_id)s
+  AND l.state = 'ok'                 -- not private, not empty
+  AND NOT l."hoursHidden"            -- hours we can trust
+ORDER BY g.minutes DESC              -- most played first, never played last
+LIMIT 500                            -- Python sorts these; the model sees a short summary
+"""
+
+
+def load_steam_games(user_id: str) -> list[dict]:
+    """The player's Steam games with their hours, most played first (none if their
+    library is private, empty, or its hours are hidden)."""
+    with connect() as conn, conn.cursor() as cur:
+        cur.execute(STEAM_GAMES_QUERY, {"user_id": user_id})
+        return cur.fetchall()
+
+
 if __name__ == "__main__":
     print("Games in IMGM:", count_games())
     game = find_game("hades")
