@@ -4,6 +4,8 @@
  * and is framed in its IMGM score's rarity (Epic purple, Rare blue, the gilt for a
  * 10/10), so a game looks the same here as in Sort your picks; a game with no IMGM
  * score gets a plain hairline. Every card links to the game's IMGM page.
+ * A pick from the player's Steam library says so (LibraryMark: "In your library · 1.8h
+ * played"), from the AI service's library_minutes, never from the model's words.
  * Each card's bottom row has Add to Backlog; "Played it" and "Not for me" live in the
  * Sort your picks screen, which answers all 5 at once (SortYourPicks).
  * Noir: the frames are thin edges in the tier's ink, with square corners, square
@@ -11,7 +13,7 @@
  */
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Star } from 'lucide-react';
+import { ChevronDown, Gamepad2, Star } from 'lucide-react';
 import { getRarity } from '../reviewQuest/questOptions';
 import BacklogButton from '../BacklogButton';
 import RarityMark from '../RarityMark';
@@ -46,6 +48,20 @@ const Cover = ({ src, title, className }) =>
 
 // "~2.5h to beat" (normal playthrough, from IGDB player reports)
 const hoursText = (hours) => (hours ? `~${hours}h to beat` : null);
+
+// "In your library · never played" / "· 1.8h played" / "· 97h played" (Play Next's
+// Steam menu let it be picked: barely played, never played, or a replay)
+const LibraryMark = ({ minutes }) => {
+  if (minutes == null) return null;
+  const played = minutes === 0 ? 'never played'
+    : minutes < 60 ? `${minutes} min played`
+      : `${minutes < 600 ? (minutes / 60).toFixed(1).replace(/\.0$/, '') : Math.round(minutes / 60)}h played`;
+  return (
+    <span className="inline-flex items-center gap-1.5 self-start h-6 px-2 rounded-xs border border-slate-600 text-xs text-slate-300">
+      <Gamepad2 className="w-3.5 h-3.5" strokeWidth={1.8} aria-hidden="true" /> In your library · {played}
+    </span>
+  );
+};
 
 const platformsText = (platforms = []) =>
   platforms.length > 3 ? `${platforms.slice(0, 3).join(' · ')} +${platforms.length - 3}` : platforms.join(' · ');
@@ -126,6 +142,7 @@ const PickCard = ({ pick, rank }) => {
             {[pick.year, hoursText(pick.hours), platformsText(pick.platforms)].filter(Boolean).join(' · ')}
           </p>
           <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
+          <LibraryMark minutes={pick.library_minutes} />
           <Why text={pick.why} defaultOpen className="text-sm text-slate-200 leading-relaxed mt-1" />
           {actions}
         </div>
@@ -144,6 +161,7 @@ const PickCard = ({ pick, rank }) => {
           <ImgmBadge rating={pick.rating} reviewCount={pick.review_count} />
           {hoursText(pick.hours) && <span className="text-sm text-slate-400">· {hoursText(pick.hours)}</span>}
         </span>
+        <LibraryMark minutes={pick.library_minutes} />
         <Why text={pick.why} className="text-sm text-slate-300 leading-snug" />
         {actions}
       </div>
