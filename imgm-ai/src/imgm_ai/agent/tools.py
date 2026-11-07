@@ -23,6 +23,7 @@ from imgm_ai.data.db import (
     load_game_profile,
     load_player_game_ids,
     load_player_reviews,
+    load_steam_games,
 )
 from imgm_ai.rag.store import find_games_by_reviews
 
@@ -116,6 +117,87 @@ def get_my_taste(config: RunnableConfig) -> str:
         f"The player's IMGM reviews ({len(reviews)}, best-rated first):\n"
         + "\n".join(lines)
     )
+
+
+STEAM_TASTE_GAMES = 25  # the most-played games the model reads (more would be noise)
+STEAM_LIST_GAMES = 15  # of each list of games it may suggest
+
+
+def hours_text(minutes: int) -> str:
+    """20 → "20 min", 90 → "1.5h", 3600 → "60h"."""
+    if minutes < 60:
+        return f"{minutes} min"
+    hours = minutes / 60
+    return f"{hours:.1f}h".replace(".0h", "h") if hours < 10 else f"{hours:.0f}h"
+
+
+def steam_may_suggest(game: dict, steam: dict, hours_to_beat: float | None = None) -> bool:
+    """May this game from the player's Steam library be a pick, by their Steam menu?
+
+    None from the library at all (max_library 0): no. Never played: yes. Played: only
+    with "Recommend games I've already played" on, and under their limit (no limit: any,
+    to replay). A short game played for half its length or more counts as finished,
+    under any limit but "no limit". The tool and the check (nodes.py) both use this, so
+    what the model is told and what the code enforces can't drift apart.
+    """
+    if steam.get("max_library", 2) == 0:
+        return False
+    minutes = game["minutes"]
+    if minutes == 0:
+        return True
+    if not steam.get("suggest_played"):
+        return False
+    under = steam.get("played_under", 2)
+    if under is None:
+        return True
+    if hours_to_beat and minutes >= hours_to_beat * 60 / 2:
+        return False
+    return minutes < under * 60
+
+
+@tool
+def get_my_steam_games(config: RunnableConfig) -> str:
+    """Get the games the current player plays on Steam, with their hours: what they
+    love (many hours), what didn't click (few), and which games they own may be
+    suggested. Use it with get_my_taste before recommending."""
+    settings = config.get("configurable", {})
+    steam = settings.get("steam") or {}
+    user_id = settings.get("user_id")
+    # The player's Steam menu decides, never the model: off means off
+    if not user_id or not steam.get("use"):
+        return "The player turned their Steam library off. Don't use Steam."
+    games = load_steam_games(user_id)
+    if not games:
+        return "No Steam hours to read (Steam not connected, or the library is private or hides its hours)."
+
+    played = [g for g in games if g["minutes"] > 0]
+    again = [g for g in played if steam_may_suggest(g, steam)]
+    never = [g for g in games if g["minutes"] == 0 and steam_may_suggest(g, steam)]
+    under = steam.get("played_under", 2)
+    most = steam.get("max_library", 2)
+
+    def line(game: dict) -> str:
+        # → "- [id 119133] Elden Ring: 97h, 3h in the last 2 weeks"
+        game_id = f"[id {game['game_id']}] " if game["game_id"] else ""
+        shared = " (Family Sharing)" if game["shared"] else ""
+        recent = f", {hours_text(game['minutes_recent'])} in the last 2 weeks" if game["minutes_recent"] else ""
+        return f"- {game_id}{game['title']}{shared}: {hours_text(game['minutes'])}{recent}"
+
+    parts = [
+        f"Played on Steam, most hours first ({len(played)} games; many hours = loved it, a few = it didn't click):",
+        *map(line, played[:STEAM_TASTE_GAMES]),
+    ]
+    if again:
+        why = "They'd replay any game they played" if under is None else f"Played less than {under}h"
+        parts += [f"{why}, so these may be suggested again (say how long they played):", *map(line, again[:STEAM_LIST_GAMES])]
+    if never:
+        parts += ["Owned but never played, may be suggested (say it's already in their library):", *map(line, never[:STEAM_LIST_GAMES])]
+    if most:
+        parts.append(f"At most {most} of the 5 picks may come from their Steam library; the rest must be games they don't own.")
+    else:
+        parts.append("Don't suggest any game they own on Steam: they want new ones.")
+    parts.append("Never suggest any other game they played on Steam.")
+    return "\n".join(parts)
 
 
 def popularity_text(rating_count: int, hypes: int) -> str:
@@ -345,4 +427,4 @@ def get_game_family(game_id: int, config: RunnableConfig) -> str:
     return "\n".join(lines)
 
 
-TOOLS = [get_my_taste, search_imgm_reviews, search_games, get_game_profile, search_web, get_game_family]
+TOOLS = [get_my_taste, get_my_steam_games, search_imgm_reviews, search_games, get_game_profile, search_web, get_game_family]

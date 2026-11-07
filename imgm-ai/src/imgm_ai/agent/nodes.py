@@ -26,8 +26,8 @@ from imgm_ai.agent.state import (
     fits_length,
     is_player_question,
 )
-from imgm_ai.agent.tools import FAMILY_SECTIONS, TOOLS
-from imgm_ai.data.db import load_player_game_ids
+from imgm_ai.agent.tools import FAMILY_SECTIONS, TOOLS, hours_text, steam_may_suggest
+from imgm_ai.data.db import load_player_game_ids, load_steam_games
 from imgm_ai.models.llm import get_model
 
 # Created once, and told which tools exist. Without bind_tools the model
@@ -456,8 +456,9 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
     5 different games, each verified by search_games, none already played, none the
     player rejected, none longer than the player asked for (max_hours), all playable on
     the player's platforms, none practically unknown, none graded a weak fit by the
-    formatter (first check only), and exactly one Best Pick. Problems go back to the
-    agent as a message to fix.
+    formatter (first check only), exactly one Best Pick, and the player's Steam menu
+    (a game they played on Steam only under their rules, at most max_library picks from
+    their library). Problems go back to the agent as a message to fix.
     """
     recommendations = state.get("recommendations")
     games = recommendations.games if recommendations else []
@@ -536,6 +537,24 @@ def check_answer(state: RecommenderState, config: RunnableConfig) -> dict:
             problems.append(
                 f"{game.title} takes about {hours:g}h to beat, but the player wants games "
                 f"under {max_hours:g}h: replace it with a shorter one."
+            )
+    # The player's Steam menu (server.py SteamChoice): a game from their library is a pick
+    # only under their rules (steam_may_suggest, the same rule the tool told the model),
+    # and at most max_library picks come from their library
+    steam = config.get("configurable", {}).get("steam") or {}
+    if user_id and steam.get("use"):
+        library = {g["game_id"]: g for g in load_steam_games(user_id) if g["game_id"]}
+        for game in games:
+            mine = library.get(game.game_id)
+            if mine and not steam_may_suggest(mine, steam, game_hours(verified.get(game.game_id, ""))):
+                how = f"played {game.title} for {hours_text(mine['minutes'])}" if mine["minutes"] else f"owns {game.title}"
+                problems.append(f"The player {how} on Steam, and their Steam settings rule it out: replace it.")
+        from_library = [g.title for g in games if g.game_id in library]
+        most = steam.get("max_library", 2)
+        if most and len(from_library) > most:
+            problems.append(
+                f"{', '.join(from_library)} are all in the player's Steam library, but they want at most "
+                f"{most} of those: keep the best {most} and replace the others with games they don't own."
             )
     # The game the player named ("like Valorant"): they play it already
     named = {family["id"]: family["of"] for family in game_families(state["messages"])}

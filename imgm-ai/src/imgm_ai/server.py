@@ -99,7 +99,10 @@ class SteamChoice(BaseModel):
 
     use: bool = False  # older pages send nothing: no library
     suggest_played: bool = True  # games already played may come back as picks…
-    played_under: Literal[2, 5, 10, 20] = 2  # …if played less than this many hours
+    # …if played less than this many hours (None: no limit, to replay a favourite)
+    played_under: Literal[2, 5, 10, 20] | None = 2
+    # At most this many of the 5 picks from the player's library (0: none of it)
+    max_library: Literal[0, 1, 2, 3] = 2
 
 
 class GuideRequest(BaseModel):
@@ -139,6 +142,7 @@ def step_label(call: dict) -> str:
     query = call["args"].get("query", "")
     return {
         "get_my_taste": "Reading your IMGM reviews",
+        "get_my_steam_games": "Reading your Steam hours",
         "search_imgm_reviews": f"Asking IMGM players about “{query}”",
         "search_games": f"Checking {query}",
         "get_game_profile": "Reading what IMGM players think",
@@ -152,6 +156,10 @@ def step_detail(tool: str, result: str) -> str:
     hits = [line for line in result.splitlines() if line.startswith("- ")]
     if tool == "get_my_taste":
         return f"Read {len(hits)} of your reviews" if hits else "No reviews to read yet"
+    if tool == "get_my_steam_games":
+        if "turned their Steam library off" in result:
+            return "Steam library off"
+        return "Read your Steam hours" if hits else "No Steam hours to read"
     if tool == "search_imgm_reviews":
         return f"{len(hits)} games match" if hits else "No matching reviews yet"
     if tool == "search_web":
