@@ -10,6 +10,7 @@ IMGM ("I Am Gaming") is a game review site. Reviews are quick "quests" with loot
 | Database | Postgres + pgvector | Neon |
 | `imgm-ai` | Python 3.12, FastAPI, LangGraph, LangChain, uv | Google Cloud Run, built and deployed by Cloud Build on a push to `main` that changes `imgm-ai/` (see Releasing) |
 
+- **The AI service reads IMGM's database as a read-only Neon user** that only reads the tables it was granted (in Neon's SQL Editor, on IMGM's main database, not the imgm-ai project). **A table the agent starts reading needs `GRANT SELECT ON "Table" TO <that user>;` before the release**: the Steam tool's tables weren't granted, and on 2026-11-07 every Play Next answer failed with `permission denied for table SteamLibraryGame` until the user ran the GRANT. Locally the agent uses the full-access user, so this never shows on the laptop. Since then a Steam read that fails (tool, check, card marks) is logged and skipped, never fatal.
 - **The AI service is not public.** Express proxies to it and sends `X-User-Id` + `X-Internal-Key`. The agent's tools get the player's id from the LangGraph `config`, never as a tool argument the model controls (prompt-injection safety).
 - **The Play Next graph:** `screen` (find / chat / off_topic; Jev decides, Gemini as the fallback: see Decisions) → `agent` ⇄ `tools` → `format` (structured `Recommendations`) → `check`. The check is plain code that enforces the rules and sends problems back, up to 2 fix rounds.
   - The code is in `imgm-ai/src/imgm_ai/agent/`: `nodes.py`, `prompts.py`, `schemas.py`, `tools.py`.
