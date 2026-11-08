@@ -54,8 +54,8 @@
  *
  * First Edition: the first review of a game (the same reviews that earn the First
  * Reviewer badge) prints its card in a First Edition setting (FirstEditionSetting): all
- * four corners cut off, a line from each corner widening towards the middle, a gem in
- * the middle of the bottom edge and a FIRST EDITION plate with a gem on the top edge
+ * four corners cut off, a line from each corner widening towards the middle, and a
+ * FIRST EDITION plate with a gem on the top edge
  * (a gem there on a mini card, with a "1st" stamp beside the tier), all in the tier's
  * own ink (a Legendary's is gold, over its gilt). The user's design, 2026-11-08: the
  * top mirrors the bottom; it replaced a crown of gems along the top.
@@ -165,11 +165,12 @@ export const FirstEditionSetting = ({ mini, ink }) => {
   const k = mini ? 1.2 : 1;
   const bottom = 880 - edge;
   // One cut corner (the bottom left), and the line from it to the middle, widening as
-  // it goes. The other three corners are this one mirrored.
+  // it goes (meeting its mirror there, so the bottom edge is one line, no gem: the
+  // user's call). The other three corners are this one mirrored.
   const corner = (
     <>
       <line stroke={shades.ink} strokeLinecap="square" strokeWidth={rail} x1={edge + rail / 2} y1={bottom - CHAMFER} x2={edge + CHAMFER} y2={bottom - rail / 2} />
-      <polygon fill={shades.hi} points={`${edge + CHAMFER},${bottom - rail} 297,${bottom - rail - 3} 297,${bottom + 2} ${edge + CHAMFER},${bottom}`} />
+      <polygon fill={shades.hi} points={`${edge + CHAMFER},${bottom - rail} 315,${bottom - rail - 3} 315,${bottom + 2} ${edge + CHAMFER},${bottom}`} />
     </>
   );
   // The plate on the top edge (full cards): a long six-sided tab, pointed at both ends
@@ -181,10 +182,8 @@ export const FirstEditionSetting = ({ mini, ink }) => {
       <g transform="translate(630 0) scale(-1 1)">{corner}</g>
       <g transform="translate(0 880) scale(1 -1)">{corner}</g>
       <g transform="translate(630 880) scale(-1 -1)">{corner}</g>
-      {/* The bottom: a gem in the middle of the edge */}
-      <CutGem cx={315} cy={bottom - 4} w={22 * k} h={20 * k} shades={shades} />
       {mini ? (
-        // A mini card is too small for words: the top's gem mirrors the bottom's
+        // A mini card is too small for words: a gem in the middle of the top edge
         <CutGem cx={315} cy={edge + 4} w={22 * k} h={20 * k} shades={shades} />
       ) : (
         <g>
