@@ -11,7 +11,8 @@
  *                          replaces the old one, in the AI's memory too)
  *   stopped / failed       a quiet "You stopped this answer" divider (or the error),
  *                          and a redo button that asks the same question again
- * On small screens the latest turn also shows the full picks (the side panel is hidden).
+ * On small screens the latest turn also shows the full picks (the side panel is hidden),
+ * first, before the answer's words.
  * Noir: square message boxes on hairlines, no shadows, and no lime (Play Next keeps
  * its lime for "Ask").
  */
@@ -212,6 +213,19 @@ const GuideTurn = ({
             collapsible={Boolean(turn.cards)}
           />
 
+          {/* Small screens: the picks first, right under the steps, then the written
+              answer (the user's call, 2026-11-08: below it, a phone had to scroll past the
+              whole brief to see them). Computers have them in the side panel. */}
+          {isLatest && (turn.cards || turn.games.length > 0) && (
+            <div className="lg:hidden">
+              <GuidePanel
+                turn={turn}
+                onSort={onSort}
+                disabled={running}
+              />
+            </div>
+          )}
+
           {turn.cards ? (
             <div className="rounded-sm bg-slate-900 border border-slate-700 px-5 py-4">
               <p className="text-[17px] leading-relaxed text-white">
@@ -267,17 +281,6 @@ const GuideTurn = ({
           )}
           {isLatest && turn.error && !running && (
             <RetryButton onClick={onRetry} />
-          )}
-
-          {/* Small screens: the picks right here, under the answer */}
-          {isLatest && (turn.cards || turn.games.length > 0) && (
-            <div className="lg:hidden">
-              <GuidePanel
-                turn={turn}
-                onSort={onSort}
-                disabled={running}
-              />
-            </div>
           )}
 
           {isLatest && turn.cards && canAsk && (
