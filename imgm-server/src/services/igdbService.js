@@ -24,6 +24,51 @@ const TOKEN_EXPIRY_BUFFER = 60 * 1000;         // refresh 60s before actual expi
 const REQUEST_TIMEOUT = 15 * 1000;
 const RATE_LIMIT_RETRY = 1000;                 // wait this long after a 429, then try once more
 
+// ---------------------------------------------------------------------------
+// Taking turns
+// ---------------------------------------------------------------------------
+// IGDB allows 4 requests a second and 8 open at once, for the whole site (every player
+// shares them). Requests take turns here: at most 4 start in any second and 8 are open,
+// and the rest wait a moment instead of failing. Before this, a burst of searches went
+// out together and IGDB refused some: in the launch check (2026-11-08), 3 of 12
+// searches made at the same moment failed.
+const PER_SECOND = 4;
+const MAX_OPEN = 8;
+const startedAt = []; // when the requests of the last second started
+const queue = []; // resolvers of the requests waiting for their turn
+let open = 0;
+let wakeUp = null;
+
+const nextTurns = () => {
+  while (queue.length > 0) {
+    const now = Date.now();
+    while (startedAt.length > 0 && now - startedAt[0] >= 1000) startedAt.shift();
+    if (open >= MAX_OPEN) return; // a request finishing calls this again
+    if (startedAt.length >= PER_SECOND) {
+      // Try again when the oldest start leaves the one-second window
+      if (!wakeUp) {
+        wakeUp = setTimeout(() => {
+          wakeUp = null;
+          nextTurns();
+        }, 1000 - (now - startedAt[0]) + 5);
+      }
+      return;
+    }
+    startedAt.push(now);
+    open += 1;
+    queue.shift()();
+  }
+};
+const takeTurn = () =>
+  new Promise((resolve) => {
+    queue.push(resolve);
+    nextTurns();
+  });
+const endTurn = () => {
+  open -= 1;
+  nextTurns();
+};
+
 const GAME_FIELDS = `fields name, slug, summary, first_release_date, cover.image_id,
   artworks.image_id, artworks.artwork_type, artworks.alpha_channel, artworks.width, artworks.height,
   screenshots.image_id, genres.name, platforms.name, videos.video_id, videos.name,
@@ -99,24 +144,31 @@ const clearToken = () => {
 
 /**
  * POSTs an Apicalypse query to an IGDB endpoint.
- * Retries once with a fresh token if IGDB responds with 401, and once after a
- * second if it responds with 429 (over IGDB's 4 requests a second, which every
- * player shares).
+ * Waits its turn first (at most 4 a second, see Taking turns). Retries once with a
+ * fresh token if IGDB responds with 401, and once after a second if it still responds
+ * with 429 (over IGDB's 4 requests a second, which every player shares).
  */
 const igdbRequest = async (endpoint, body, retried = {}) => {
   const accessToken = await getAccessToken();
 
-  const response = await fetch(`${IGDB_BASE_URL}/${endpoint}`, {
-    method: 'POST',
-    headers: {
-      'Client-ID': process.env.TWITCH_CLIENT_ID,
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'text/plain',
-      Accept: 'application/json',
-    },
-    body,
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT),
-  });
+  // Wait for a turn (see Taking turns), and give it back once IGDB has answered
+  await takeTurn();
+  let response;
+  try {
+    response = await fetch(`${IGDB_BASE_URL}/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Client-ID': process.env.TWITCH_CLIENT_ID,
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'text/plain',
+        Accept: 'application/json',
+      },
+      body,
+      signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+    });
+  } finally {
+    endTurn();
+  }
 
   if (response.status === 401 && !retried.token) {
     clearToken();
@@ -379,8 +431,8 @@ export const getGamesBySteamAppIds = async (appids) => {
   return matches;
 };
 
-export const searchGames = async (query, limit = 12) => {
-  const key = `${query.trim().toLowerCase()}|${limit}`;
+export const searchGames = async (query, limit = 12, { times = true } = {}) => {
+  const key = `${query.trim().toLowerCase()}|${limit}|${times ? 'times' : ''}`;
   const cached = searchCache.get(key);
   if (cached && Date.now() < cached.expiresAt) {
     return cached.results;
@@ -406,13 +458,16 @@ export const searchGames = async (query, limit = 12) => {
     .slice(0, limit)
     .map((raw) => ({ ...mapIgdbGame(raw), ratingCount: raw.total_rating_count ?? 0, hypes: raw.hypes ?? 0 }));
 
-  // How long each one takes (Play Next uses it for "shorter ones please").
-  // Search still works if this extra lookup fails.
-  const times = await getTimesToBeat(games.map((game) => game.id)).catch((error) => {
-    console.error('Time-to-beat lookup failed:', error.message);
-    return new Map();
-  });
-  const results = games.map((game) => ({ ...game, timeToBeat: times.get(game.id) ?? null }));
+  // How long each one takes (Play Next uses it for "shorter ones please"; the site's
+  // own search boxes don't show it, so they skip this third IGDB request). Search still
+  // works if this extra lookup fails.
+  const lengths = times
+    ? await getTimesToBeat(games.map((game) => game.id)).catch((error) => {
+      console.error('Time-to-beat lookup failed:', error.message);
+      return new Map();
+    })
+    : new Map();
+  const results = games.map((game) => ({ ...game, timeToBeat: lengths.get(game.id) ?? null }));
 
   searchCache.set(key, { expiresAt: Date.now() + SEARCH_CACHE_TTL, results });
   return results;
