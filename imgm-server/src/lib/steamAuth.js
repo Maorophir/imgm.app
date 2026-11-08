@@ -48,7 +48,7 @@ import { expireCookie, setSessionCookie } from 'better-auth/cookies';
 import { generateRandomString } from 'better-auth/crypto';
 import { clientOrigins } from './config.js';
 import { sendEmail, steamConnectedEmail } from './email.js';
-import { STEAM_ISSUER, STEAM_PROVIDER, disconnectSteam } from './steamAccount.js';
+import { STEAM_ISSUER, STEAM_PROVIDER, disconnectSteam, stampSteamIssuer } from './steamAccount.js';
 
 // Steam's OpenID address: where the player logs in, and the only place a note is checked
 const STEAM_LOGIN = 'https://steamcommunity.com/openid/login';
@@ -283,13 +283,17 @@ export const steam = () => {
     const current = await getSessionFromCtx(ctx, { disableCookieCache: true });
     if (!current?.user || current.user.id !== trip.userId) return failed('session_changed');
 
-    const existing = await adapter.findAccountByKey({ issuer: STEAM_ISSUER, accountId: steamId });
+    const existing = await adapter.findAccountByKey({ providerId: STEAM_PROVIDER, accountId: steamId });
     if (existing) return existing.userId === trip.userId ? siteUrl(trip.returnTo, { steam: 'connected' }) : failed('taken');
     if ((await adapter.findAccounts(trip.userId)).some((account) => account.providerId === STEAM_PROVIDER)) return failed('already_connected');
     try {
       await adapter.createAccount({ userId: trip.userId, providerId: STEAM_PROVIDER, issuer: STEAM_ISSUER, accountId: steamId });
+      await stampSteamIssuer(trip.userId, steamId); // Better Auth leaves the issuer out
     } catch {
-      return failed('taken'); // someone connected the same Steam account a moment earlier (unique issuer + accountId)
+      // Someone connected the same Steam account a moment earlier (unique issuer +
+      // accountId): undo this player's new row, if it was made
+      await disconnectSteam(trip.userId).catch(() => {});
+      return failed('taken');
     }
     sendEmail({ to: current.user.email, ...steamConnectedEmail(siteUrl('/settings')) }).catch((error) =>
       console.error('Steam connected email failed:', error.message)
@@ -301,7 +305,7 @@ export const steam = () => {
   const logIn = async (ctx, trip, steamId) => {
     const adapter = ctx.context.internalAdapter;
     const failed = (code) => siteUrl('/login', { steam_error: code, ...(trip.returnTo !== '/' && { redirect: trip.returnTo }) });
-    const owner = await adapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId });
+    const owner = await adapter.findAccountOwnerByKey({ providerId: STEAM_PROVIDER, accountId: steamId });
     // A Steam account new to IMGM: logging in with it means signing up (an email next)
     if (!owner) return startSignUp(ctx, trip, steamId);
     if (owner.kind !== 'owned' || owner.account.providerId !== STEAM_PROVIDER) return failed('not_connected');
@@ -320,7 +324,7 @@ export const steam = () => {
   // (logIn and startSignUp hand over to each other only when the other one fits, so they
   // never go round in circles)
   const startSignUp = async (ctx, trip, steamId) => {
-    const owner = await ctx.context.internalAdapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId });
+    const owner = await ctx.context.internalAdapter.findAccountOwnerByKey({ providerId: STEAM_PROVIDER, accountId: steamId });
     if (owner) return logIn(ctx, trip, steamId);
     const token = generateRandomString(32);
     await ctx.context.internalAdapter.createVerificationValue({
@@ -486,7 +490,7 @@ export const steam = () => {
             throw stepError('CONFLICT', 'EMAIL_TAKEN', 'That email already has an IMGM account. Log in, then connect Steam in Settings.');
           }
           expireCookie(ctx, cookie);
-          if (await adapter.findAccountOwnerByKey({ issuer: STEAM_ISSUER, accountId: steamId })) {
+          if (await adapter.findAccountOwnerByKey({ providerId: STEAM_PROVIDER, accountId: steamId })) {
             throw stepError('CONFLICT', 'STEAM_TAKEN', 'That Steam account is already on IMGM. Log in with Steam.');
           }
 
@@ -499,6 +503,15 @@ export const steam = () => {
             ));
           } catch {
             // The same email or Steam account signed up a moment earlier (both are unique)
+            throw stepError('CONFLICT', 'STEAM_SIGN_UP_CLASH', 'That email or Steam account was just used to sign up. Try logging in.');
+          }
+          // Better Auth leaves the issuer out. If this Steam account turns out to be on
+          // another IMGM account after all (two sign-ups at the same moment), the new
+          // account goes again: one Steam account is never on two IMGM accounts.
+          try {
+            await stampSteamIssuer(user.id, steamId);
+          } catch {
+            await ctx.context.internalAdapter.deleteUser(user.id).catch(() => {});
             throw stepError('CONFLICT', 'STEAM_SIGN_UP_CLASH', 'That email or Steam account was just used to sign up. Try logging in.');
           }
           sendConfirmEmail(ctx, user).catch((error) => console.error('Steam sign-up confirm email failed:', error.message));
