@@ -56,7 +56,7 @@
  * Reviewer badge) prints its card in a First Edition setting (FirstEditionSetting): all
  * four corners cut off, a line from each corner widening towards the middle, and a
  * FIRST EDITION plate with a gem on the top edge
- * (a gem there on a mini card, with a "1st" stamp beside the tier), all in the tier's
+ * (on a mini card, too small for it, a "1st" stamp beside the tier), all in the tier's
  * own ink (a Legendary's is gold, over its gilt). The user's design, 2026-11-08: the
  * top mirrors the bottom; it replaced a crown of gems along the top.
  */
@@ -159,10 +159,9 @@ const CHAMFER = 44.1;
 export const FirstEditionSetting = ({ mini, ink }) => {
   const shades = shadesOf(ink);
   // Where the frame's outer edge is (the card stock's margin) and how thick it is, in
-  // the box's units; a mini card's gems are a bit bigger, so they still read at 110px
+  // the box's units
   const edge = mini ? 16.4 : 15.1;
   const rail = mini ? 4.4 : 3.5;
-  const k = mini ? 1.2 : 1;
   const bottom = 880 - edge;
   // One cut corner (the bottom left), and the line from it to the middle, widening as
   // it goes (meeting its mirror there, so the bottom edge is one line, no gem: the
@@ -182,10 +181,9 @@ export const FirstEditionSetting = ({ mini, ink }) => {
       <g transform="translate(630 0) scale(-1 1)">{corner}</g>
       <g transform="translate(0 880) scale(1 -1)">{corner}</g>
       <g transform="translate(630 880) scale(-1 -1)">{corner}</g>
-      {mini ? (
-        // A mini card is too small for words: a gem in the middle of the top edge
-        <CutGem cx={315} cy={edge + 4} w={22 * k} h={20 * k} shades={shades} />
-      ) : (
+      {/* The FIRST EDITION plate on the top edge. Not on a mini card: too small for its
+          words, and the user wanted no gem there either (the "1st" stamp says it) */}
+      {!mini && (
         <g>
           <polygon
             fill="#1a1815"
@@ -292,7 +290,7 @@ const CollectibleCard = ({
             around the face */}
         <div className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${metal.frame}`} style={metal.style}>
           <div className={`flex-1 min-w-0 flex flex-col bg-slate-900 ${metal.face}`}>
-            {firstEdition && <SettingRoom />}
+            {firstEdition && !mini && <SettingRoom />}
             {/* Title and score */}
             <div className="flex items-start justify-between gap-[3cqi]">
               <p className={`${size.title} min-w-0 font-display leading-[.9] tracking-[.01em] uppercase text-balance break-words line-clamp-3`}>
