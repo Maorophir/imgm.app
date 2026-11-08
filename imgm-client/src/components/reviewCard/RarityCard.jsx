@@ -13,7 +13,7 @@
  * art and busy cards never cut text off. Sizes are in cqi (a share of the card's
  * width), like CollectibleCard, so the card is the same design at any width.
  */
-import { Gem, Hourglass, Monitor, RotateCcw } from 'lucide-react';
+import { Hourglass, Monitor, RotateCcw } from 'lucide-react';
 import ArtIcon from '../ArtIcon';
 import { useState } from 'react';
 import RarityMark from '../RarityMark';
@@ -23,7 +23,7 @@ import {
 } from '../reviewQuest/questOptions';
 import { avatarColor, avatarUrl, formatDate, tickedChecklist, isQuickReview, reviewerName } from './reviewDisplay';
 import CardChecklist from './CardChecklist';
-import { CrownRoom, FirstEditionCrown } from '../CollectibleCard';
+import { SettingRoom, FirstEditionSetting } from '../CollectibleCard';
 
 // A player's face: their profile picture if they set one, otherwise their coloured initial.
 // `user` = { id, avatarUpdatedAt }; the time in the address makes a new picture show at once.
@@ -58,8 +58,8 @@ const HAIRLINE = 'border-white/14';
 
 // One face of the card: printed card stock, the frame in the tier's ink (the gilt for
 // a Legendary 10), and the dark face inside it that holds the content. A First Edition
-// (the game's first review) gets CollectibleCard's diamond setting: the bottom corners
-// cut off (.card-first) and the crown of gems drawn over the face.
+// (the game's first review) gets CollectibleCard's First Edition setting: the corners
+// cut off (.card-first), and the edges, gem and FIRST EDITION plate drawn over the face.
 const Face = ({ rarity, firstEdition = false, className = '', children }) => {
   const legendary = rarity.key === 'legendary';
   const frame = `${legendary ? 'p-[1.3cqi] shadow-[inset_0_0_0_max(1px,.2cqi)_rgba(40,28,6,.6)]' : 'p-[max(1px,.55cqi)] bg-(--ink)'} ${
@@ -72,11 +72,11 @@ const Face = ({ rarity, firstEdition = false, className = '', children }) => {
     <div className={`${className} flex flex-col rounded-[4.76%/3.41%] overflow-hidden bg-slate-900 text-white inset-ring inset-ring-white/7 p-[2.4cqi]`}>
       <div className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${frame}`} style={legendary ? GILT : undefined}>
         <div className={`flex-1 min-w-0 flex flex-col overflow-hidden bg-slate-900 pt-[3cqi] px-[3.2cqi] pb-[2.6cqi] ${face}`}>
-          {firstEdition && <CrownRoom />}
+          {firstEdition && <SettingRoom />}
           {children}
         </div>
       </div>
-      {firstEdition && <FirstEditionCrown ink={rarity.color} />}
+      {firstEdition && <FirstEditionSetting ink={rarity.color} />}
     </div>
   );
 };
@@ -178,12 +178,6 @@ const RarityCard = ({ review, game, artUrl }) => {
             <span className="inline-flex items-center gap-[1.4cqi] text-[length:max(11px,3.8cqi)] font-semibold leading-none text-(--ink)">
               <RarityMark tier={rarity.key} className="w-[max(10px,3.8cqi)] h-[max(10px,3.8cqi)]" />
               {rarity.label}
-              {firstEdition && (
-                <span className="inline-flex items-center gap-[.8cqi] ml-[1cqi] px-[1.2cqi] py-[.7cqi] rounded-[.5cqi] border-[length:max(1px,.25cqi)] border-[color-mix(in_srgb,var(--ink)_60%,transparent)] text-[length:max(9px,2.8cqi)] tracking-[.04em] uppercase">
-                  <Gem className="w-[max(9px,2.8cqi)] h-[max(9px,2.8cqi)]" strokeWidth={2} aria-hidden="true" />
-                  First Edition
-                </span>
-              )}
             </span>
             <span className="min-w-0 truncate text-[length:max(10px,3.2cqi)] leading-none text-slate-400">{RATING_LABELS[review.rating]}</span>
           </div>

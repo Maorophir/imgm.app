@@ -2,7 +2,8 @@
  * ShareImage — what a shared card looks like as a picture: a 1080×1350 portrait (the
  * size Instagram and most feeds show whole), Noir black, with the IMGM mark and address
  * across the top, the card's share edition (the player's words and the power mark on it)
- * standing in the middle, and the invitation at the bottom.
+ * standing in the middle, and the invitation at the bottom. A First Edition (the game's
+ * first review on IMGM) says so there instead: bragging rights, and it explains the card.
  *
  * It's drawn off screen at its real size and photographed into a PNG (lib/cardImage).
  * Pass a ref to reach the node.
@@ -23,6 +24,9 @@ const sharpCover = (url) => (isCover(url) ? igdbImage(url, 't_cover_big_2x') : i
 
 const ShareImage = forwardRef(({ card }, ref) => {
   const rarity = getRarity(card.score);
+  const firstEdition = card.firstEdition ?? Boolean(card.badges?.includes('first_reviewer'));
+  // The game's name in the line when it's short enough for two lines at this size
+  const firstOf = card.title && card.title.length <= 24 ? card.title : 'this game';
   return (
     <div
       ref={ref}
@@ -45,12 +49,20 @@ const ShareImage = forwardRef(({ card }, ref) => {
       {/* The invitation, with a line in the card's ink */}
       <div className="w-full flex items-end justify-between gap-8 pt-6 border-t-2 border-(--ink)">
         <p className="font-display uppercase text-[60px] leading-[.9] tracking-[.005em] text-white">
-          Rate what you play<span className="text-brand">.</span>
+          {firstEdition ? 'First to rate it' : 'Rate what you play'}<span className="text-brand">.</span>
         </p>
-        <p className="text-[28px] leading-tight text-slate-400 text-right">
-          Every rating is
-          <br />a collectible card
-        </p>
+        {firstEdition ? (
+          <p className="max-w-[420px] text-[28px] leading-tight text-slate-400 text-right">
+            The first review of
+            <br />
+            <span className="text-(--ink)">{firstOf}</span> on IMGM
+          </p>
+        ) : (
+          <p className="text-[28px] leading-tight text-slate-400 text-right">
+            Every rating is
+            <br />a collectible card
+          </p>
+        )}
       </div>
     </div>
   );

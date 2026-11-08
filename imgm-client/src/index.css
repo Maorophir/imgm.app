@@ -303,11 +303,11 @@ body {
 }
 .card-face-back { transform: rotateY(180deg); }
 
-/* First Edition (CollectibleCard's FirstEditionCrown): the frame's bottom corners cut
-   off at 45°, 7cqi along each side (the crown draws the rail along the cut). The gems'
+/* First Edition (CollectibleCard's FirstEditionSetting): the frame's four corners cut
+   off at 45°, 7cqi along each side (the setting draws the rail along each cut). The gems'
    shades are worked out in the component, not here (see shadesOf there). */
 .card-first {
-  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7cqi), calc(100% - 7cqi) 100%, 7cqi 100%, 0 calc(100% - 7cqi));
+  clip-path: polygon(7cqi 0, calc(100% - 7cqi) 0, 100% 7cqi, 100% calc(100% - 7cqi), calc(100% - 7cqi) 100%, 7cqi 100%, 0 calc(100% - 7cqi), 0 7cqi);
 }
 
 /* Rarity frame (Play Next's picks, components/guide/PickCard.jsx): a padded wrapper

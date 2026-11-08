@@ -53,11 +53,12 @@
  * the --gilt-at CSS variable the stage sets.
  *
  * First Edition: the first review of a game (the same reviews that earn the First
- * Reviewer badge) prints its card in a diamond setting (FirstEditionCrown): a crown of
- * cut gems along the top with clusters on the corners, the bottom corners cut off, and
- * one gem in the middle of the bottom edge, all in the tier's own ink (a Legendary's is
- * gold, over its gilt). "First Edition" is printed in the small print, with a gem (a
- * "1st" stamp on a mini card).
+ * Reviewer badge) prints its card in a First Edition setting (FirstEditionSetting): all
+ * four corners cut off, a line from each corner widening towards the middle, a gem in
+ * the middle of the bottom edge and a FIRST EDITION plate with a gem on the top edge
+ * (a gem there on a mini card, with a "1st" stamp beside the tier), all in the tier's
+ * own ink (a Legendary's is gold, over its gilt). The user's design, 2026-11-08: the
+ * top mirrors the bottom; it replaced a crown of gems along the top.
  */
 import { useState } from 'react';
 import RarityMark from './RarityMark';
@@ -119,10 +120,10 @@ const frameOf = (size, legendary, firstEdition) => {
   return firstEdition ? { ...metal, frame: `${metal.frame} card-first` } : metal;
 };
 
-// ── The First Edition's diamond setting ──
+// ── The First Edition setting ──
 // Drawn over the card in its own 630×880 box (the card's 63:88 shape, so 6.3 units are
 // 1cqi), in shades of the tier's ink. Each gem is cut in four facets lit from the top
-// left; the right half is the left half mirrored.
+// left; the four corners are one corner mirrored.
 //
 // The shades are worked out here and written on the shapes as plain colours, not set by
 // CSS classes: the share picture (lib/cardImage) copies the card's own styles but not the
@@ -152,46 +153,70 @@ const CutGem = ({ cx, cy, w, h, shades }) => (
   </g>
 );
 
-// The cut-off bottom corners are 7cqi along each side (the same as .card-first's)
+// The cut-off corners are 7cqi along each side (the same as .card-first's)
 const CHAMFER = 44.1;
 
-export const FirstEditionCrown = ({ mini, ink }) => {
+export const FirstEditionSetting = ({ mini, ink }) => {
   const shades = shadesOf(ink);
   // Where the frame's outer edge is (the card stock's margin) and how thick it is, in
   // the box's units; a mini card's gems are a bit bigger, so they still read at 110px
   const edge = mini ? 16.4 : 15.1;
   const rail = mini ? 4.4 : 3.5;
   const k = mini ? 1.2 : 1;
-  const top = edge + 3;
   const bottom = 880 - edge;
-  // The gems along the top, from the middle out, each smaller than the last
-  const shards = [[254, 16, 26], [214, 14, 22], [180, 12, 19], [151, 10, 15], [127, 8, 12]];
-  const half = (
+  // One cut corner (the bottom left), and the line from it to the middle, widening as
+  // it goes. The other three corners are this one mirrored.
+  const corner = (
     <>
-      {/* The setting the top gems sit in, a dark bar along the frame */}
-      <polygon fill={shades.dk} points={`110,${top - 5} 315,${top - 9} 315,${top + 9} 110,${top + 5}`} />
-      {shards.map(([cx, w, h]) => <CutGem key={cx} cx={cx} cy={top} w={w * k} h={h * k} shades={shades} />)}
-      {/* The corner cluster: one gem down the side, one along the top */}
-      <CutGem cx={edge + 70} cy={top} w={40 * k} h={10 * k} shades={shades} />
-      <CutGem cx={edge + rail / 2} cy={edge + 76} w={10 * k} h={40 * k} shades={shades} />
-      {/* The cut bottom corner, and the line from it to the bottom gem, widening as it goes */}
       <line stroke={shades.ink} strokeLinecap="square" strokeWidth={rail} x1={edge + rail / 2} y1={bottom - CHAMFER} x2={edge + CHAMFER} y2={bottom - rail / 2} />
       <polygon fill={shades.hi} points={`${edge + CHAMFER},${bottom - rail} 297,${bottom - rail - 3} 297,${bottom + 2} ${edge + CHAMFER},${bottom}`} />
     </>
   );
+  // The plate on the top edge (full cards): a long six-sided tab, pointed at both ends
+  // like the gems, with a gem and FIRST EDITION in the tier's ink
+  const mid = edge + rail / 2;
   return (
     <svg viewBox="0 0 630 880" preserveAspectRatio="none" aria-hidden="true" className="absolute inset-0 w-full h-full pointer-events-none">
-      {half}
-      <g transform="translate(630 0) scale(-1 1)">{half}</g>
-      {/* The middle gem, narrow and pointed like the bottom one, its tip just inside the card */}
-      <CutGem cx={315} cy={2 + 30 * k} w={26 * k} h={30 * k} shades={shades} />
+      {corner}
+      <g transform="translate(630 0) scale(-1 1)">{corner}</g>
+      <g transform="translate(0 880) scale(1 -1)">{corner}</g>
+      <g transform="translate(630 880) scale(-1 -1)">{corner}</g>
+      {/* The bottom: a gem in the middle of the edge */}
       <CutGem cx={315} cy={bottom - 4} w={22 * k} h={20 * k} shades={shades} />
+      {mini ? (
+        // A mini card is too small for words: the top's gem mirrors the bottom's
+        <CutGem cx={315} cy={edge + 4} w={22 * k} h={20 * k} shades={shades} />
+      ) : (
+        <g>
+          <polygon
+            fill="#1a1815"
+            stroke={shades.ink}
+            strokeWidth="2.4"
+            strokeLinejoin="round"
+            points={`205,${mid} 223,${mid - 17} 407,${mid - 17} 425,${mid} 407,${mid + 17} 223,${mid + 17}`}
+          />
+          <CutGem cx={242} cy={mid} w={8} h={10} shades={shades} />
+          <text
+            x={328}
+            y={mid + 0.5}
+            fill={shades.ink}
+            fontFamily="'Host Grotesk', ui-sans-serif, system-ui, sans-serif"
+            fontSize="15"
+            fontWeight="600"
+            letterSpacing="1.6"
+            textAnchor="middle"
+            dominantBaseline="middle"
+          >
+            FIRST EDITION
+          </text>
+        </g>
+      )}
     </svg>
   );
 };
 
-// A First Edition's face starts a little lower, so the crown's middle gem clears the title
-export const CrownRoom = () => <div aria-hidden="true" className="h-[5cqi] shrink-0" />;
+// A First Edition's face starts a little lower, so the top's plate or gem clears the title
+export const SettingRoom = () => <div aria-hidden="true" className="h-[2.6cqi] shrink-0" />;
 
 // The mini card's "1st" stamp: a hairline box in the tier's ink (short, so it fits
 // beside "Legendary" on a 110px card)
@@ -265,7 +290,7 @@ const CollectibleCard = ({
             around the face */}
         <div className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${metal.frame}`} style={metal.style}>
           <div className={`flex-1 min-w-0 flex flex-col bg-slate-900 ${metal.face}`}>
-            {firstEdition && <CrownRoom />}
+            {firstEdition && <SettingRoom />}
             {/* Title and score */}
             <div className="flex items-start justify-between gap-[3cqi]">
               <p className={`${size.title} min-w-0 font-display leading-[.9] tracking-[.01em] uppercase text-balance break-words line-clamp-3`}>
@@ -389,23 +414,14 @@ const CollectibleCard = ({
                 )}
                 {/* The small print along the bottom of every card */}
                 <p className={`${SMALL_PRINT} ${reviewer || hasDate ? 'mt-[1.8cqi]' : ''}`}>
-                  {firstEdition ? (
-                    <>
-                      <span className="inline-flex items-center gap-[1cqi] font-semibold tracking-[.04em] uppercase text-(--ink)"><Gem className="w-[3.2cqi] h-[3.2cqi] min-w-2.5 min-h-2.5" strokeWidth={2} />First Edition</span>
-                      <span>Beta · imgm.app</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Beta</span>
-                      <span>imgm.app</span>
-                    </>
-                  )}
+                  <span>Beta</span>
+                  <span>imgm.app</span>
                 </p>
               </div>
             )}
           </div>
         </div>
-        {firstEdition && <FirstEditionCrown mini={mini} ink={rarity.color} />}
+        {firstEdition && <FirstEditionSetting mini={mini} ink={rarity.color} />}
       </article>
     </div>
   );
@@ -478,7 +494,7 @@ export const ChecklistBack = ({ score, ticks, name, firstEdition = false, classN
       <article aria-label={`${name}'s checklist`} className={`${STOCK} ${size.stock}`} style={{ '--ink': rarity.color }}>
         <div className={`flex-1 min-h-0 flex rounded-[2.6cqi/1.86cqi] ${metal.frame}`} style={metal.style}>
           <div className={`flex-1 min-w-0 min-h-0 flex flex-col bg-slate-900 ${metal.face}`}>
-            {firstEdition && <CrownRoom />}
+            {firstEdition && <SettingRoom />}
             {/* The answers scroll if a small card can't fit them all; the small print
                 stays at the bottom, as on the front */}
             <div className="flex-1 min-h-0">
@@ -490,7 +506,7 @@ export const ChecklistBack = ({ score, ticks, name, firstEdition = false, classN
             </p>
           </div>
         </div>
-        {firstEdition && <FirstEditionCrown ink={rarity.color} />}
+        {firstEdition && <FirstEditionSetting ink={rarity.color} />}
       </article>
     </div>
   );
