@@ -18,7 +18,7 @@
  */
 import { prisma } from '../lib/db.js';
 import { steamApiKey } from '../lib/config.js';
-import { STEAM_ISSUER, STEAM_PROVIDER, findSteamId, steamProfileUrl } from '../lib/steamAccount.js';
+import { STEAM_PROVIDER, findSteamId, steamProfileUrl } from '../lib/steamAccount.js';
 import { SteamUnavailableError, getOwnedGames, getPersonaName, getRecentlyPlayedGames } from './steamApi.js';
 import * as igdb from './igdbService.js';
 
@@ -184,7 +184,7 @@ export const importLibrary = async (
       // first, this finds no row): an import never leaves a library behind a disconnect.
       const [connected] = await tx.$queryRaw`
         SELECT 1 FROM "Account"
-        WHERE "userId" = ${userId} AND "providerId" = ${STEAM_PROVIDER} AND "issuer" = ${STEAM_ISSUER} AND "accountId" = ${steamId}
+        WHERE "userId" = ${userId} AND "providerId" = ${STEAM_PROVIDER} AND "accountId" = ${steamId}
         FOR UPDATE`;
       if (!connected) throw new SteamNotConnectedError();
 
