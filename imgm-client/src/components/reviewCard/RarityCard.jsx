@@ -76,7 +76,7 @@ const Face = ({ rarity, firstEdition = false, className = '', children }) => {
           {children}
         </div>
       </div>
-      {firstEdition && <FirstEditionCrown />}
+      {firstEdition && <FirstEditionCrown ink={rarity.color} />}
     </div>
   );
 };

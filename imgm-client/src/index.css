@@ -304,18 +304,11 @@ body {
 .card-face-back { transform: rotateY(180deg); }
 
 /* First Edition (CollectibleCard's FirstEditionCrown): the frame's bottom corners cut
-   off at 45°, 7cqi along each side (the crown draws the rail along the cut), and the
-   crown's gems in four shades of the tier's ink (--ink, set on the card), lit from the
-   top left. Flat facets with a dark edge: they read as cut stone, with no glow. */
+   off at 45°, 7cqi along each side (the crown draws the rail along the cut). The gems'
+   shades are worked out in the component, not here (see shadesOf there). */
 .card-first {
   clip-path: polygon(0 0, 100% 0, 100% calc(100% - 7cqi), calc(100% - 7cqi) 100%, 7cqi 100%, 0 calc(100% - 7cqi));
 }
-.fe-hi { fill: color-mix(in srgb, var(--ink) 35%, #ffffff); }
-.fe-lo { fill: color-mix(in srgb, var(--ink) 65%, #ffffff); }
-.fe-ink { fill: var(--ink); }
-.fe-dk { fill: color-mix(in srgb, var(--ink) 50%, #100f0d); }
-.fe-edge { fill: none; stroke: color-mix(in srgb, var(--ink) 35%, #100f0d); stroke-width: 1.2; stroke-linejoin: round; }
-.fe-rail { stroke: var(--ink); stroke-linecap: square; }
 
 /* Rarity frame (Play Next's picks, components/guide/PickCard.jsx): a padded wrapper
    whose background shows as a 2px edge, flat in the tier's ink (--rc, set inline). Near-

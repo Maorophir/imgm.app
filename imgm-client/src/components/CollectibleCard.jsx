@@ -121,25 +121,42 @@ const frameOf = (size, legendary, firstEdition) => {
 
 // ── The First Edition's diamond setting ──
 // Drawn over the card in its own 630×880 box (the card's 63:88 shape, so 6.3 units are
-// 1cqi), in shades of the tier's ink (the .fe-* classes in index.css). Each gem is cut in
-// four facets lit from the top left; the right half is the left half mirrored.
-const facets = (cx, cy, w, h) => [
-  ['fe-hi', `${cx},${cy - h} ${cx - w},${cy} ${cx},${cy}`],
-  ['fe-lo', `${cx},${cy - h} ${cx + w},${cy} ${cx},${cy}`],
-  ['fe-ink', `${cx - w},${cy} ${cx},${cy + h} ${cx},${cy}`],
-  ['fe-dk', `${cx + w},${cy} ${cx},${cy + h} ${cx},${cy}`],
-];
-const CutGem = ({ cx, cy, w, h }) => (
+// 1cqi), in shades of the tier's ink. Each gem is cut in four facets lit from the top
+// left; the right half is the left half mirrored.
+//
+// The shades are worked out here and written on the shapes as plain colours, not set by
+// CSS classes: the share picture (lib/cardImage) copies the card's own styles but not the
+// page's style sheet, and the gems came out black in it.
+const mix = (a, b, share) => {
+  const rgb = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  const [x, y] = [rgb(a), rgb(b)];
+  return `#${x.map((v, i) => Math.round(v * share + y[i] * (1 - share)).toString(16).padStart(2, '0')).join('')}`;
+};
+const shadesOf = (ink) => {
+  const base = /^#[0-9a-f]{6}$/i.test(ink ?? '') ? ink : '#eee7d9';
+  return {
+    hi: mix(base, '#ffffff', 0.35), // the lit facet
+    lo: mix(base, '#ffffff', 0.65),
+    ink: base,
+    dk: mix(base, '#100f0d', 0.5), // the facet in shadow, and the setting's bar
+    edge: mix(base, '#100f0d', 0.35), // the line around each gem
+  };
+};
+const CutGem = ({ cx, cy, w, h, shades }) => (
   <g>
-    {facets(cx, cy, w, h).map(([shade, points]) => <polygon key={shade} className={shade} points={points} />)}
-    <polygon className="fe-edge" points={`${cx},${cy - h} ${cx + w},${cy} ${cx},${cy + h} ${cx - w},${cy}`} />
+    <polygon fill={shades.hi} points={`${cx},${cy - h} ${cx - w},${cy} ${cx},${cy}`} />
+    <polygon fill={shades.lo} points={`${cx},${cy - h} ${cx + w},${cy} ${cx},${cy}`} />
+    <polygon fill={shades.ink} points={`${cx - w},${cy} ${cx},${cy + h} ${cx},${cy}`} />
+    <polygon fill={shades.dk} points={`${cx + w},${cy} ${cx},${cy + h} ${cx},${cy}`} />
+    <polygon fill="none" stroke={shades.edge} strokeWidth="1.2" strokeLinejoin="round" points={`${cx},${cy - h} ${cx + w},${cy} ${cx},${cy + h} ${cx - w},${cy}`} />
   </g>
 );
 
 // The cut-off bottom corners are 7cqi along each side (the same as .card-first's)
 const CHAMFER = 44.1;
 
-export const FirstEditionCrown = ({ mini }) => {
+export const FirstEditionCrown = ({ mini, ink }) => {
+  const shades = shadesOf(ink);
   // Where the frame's outer edge is (the card stock's margin) and how thick it is, in
   // the box's units; a mini card's gems are a bit bigger, so they still read at 110px
   const edge = mini ? 16.4 : 15.1;
@@ -152,14 +169,14 @@ export const FirstEditionCrown = ({ mini }) => {
   const half = (
     <>
       {/* The setting the top gems sit in, a dark bar along the frame */}
-      <polygon className="fe-dk" points={`110,${top - 5} 315,${top - 9} 315,${top + 9} 110,${top + 5}`} />
-      {shards.map(([cx, w, h]) => <CutGem key={cx} cx={cx} cy={top} w={w * k} h={h * k} />)}
+      <polygon fill={shades.dk} points={`110,${top - 5} 315,${top - 9} 315,${top + 9} 110,${top + 5}`} />
+      {shards.map(([cx, w, h]) => <CutGem key={cx} cx={cx} cy={top} w={w * k} h={h * k} shades={shades} />)}
       {/* The corner cluster: one gem down the side, one along the top */}
-      <CutGem cx={edge + 70} cy={top} w={40 * k} h={10 * k} />
-      <CutGem cx={edge + rail / 2} cy={edge + 76} w={10 * k} h={40 * k} />
+      <CutGem cx={edge + 70} cy={top} w={40 * k} h={10 * k} shades={shades} />
+      <CutGem cx={edge + rail / 2} cy={edge + 76} w={10 * k} h={40 * k} shades={shades} />
       {/* The cut bottom corner, and the line from it to the bottom gem, widening as it goes */}
-      <line className="fe-rail" strokeWidth={rail} x1={edge + rail / 2} y1={bottom - CHAMFER} x2={edge + CHAMFER} y2={bottom - rail / 2} />
-      <polygon className="fe-hi" points={`${edge + CHAMFER},${bottom - rail} 297,${bottom - rail - 3} 297,${bottom + 2} ${edge + CHAMFER},${bottom}`} />
+      <line stroke={shades.ink} strokeLinecap="square" strokeWidth={rail} x1={edge + rail / 2} y1={bottom - CHAMFER} x2={edge + CHAMFER} y2={bottom - rail / 2} />
+      <polygon fill={shades.hi} points={`${edge + CHAMFER},${bottom - rail} 297,${bottom - rail - 3} 297,${bottom + 2} ${edge + CHAMFER},${bottom}`} />
     </>
   );
   return (
@@ -167,8 +184,8 @@ export const FirstEditionCrown = ({ mini }) => {
       {half}
       <g transform="translate(630 0) scale(-1 1)">{half}</g>
       {/* The middle gem, narrow and pointed like the bottom one, its tip just inside the card */}
-      <CutGem cx={315} cy={2 + 30 * k} w={26 * k} h={30 * k} />
-      <CutGem cx={315} cy={bottom - 4} w={22 * k} h={20 * k} />
+      <CutGem cx={315} cy={2 + 30 * k} w={26 * k} h={30 * k} shades={shades} />
+      <CutGem cx={315} cy={bottom - 4} w={22 * k} h={20 * k} shades={shades} />
     </svg>
   );
 };
@@ -388,7 +405,7 @@ const CollectibleCard = ({
             )}
           </div>
         </div>
-        {firstEdition && <FirstEditionCrown mini={mini} />}
+        {firstEdition && <FirstEditionCrown mini={mini} ink={rarity.color} />}
       </article>
     </div>
   );
@@ -473,7 +490,7 @@ export const ChecklistBack = ({ score, ticks, name, firstEdition = false, classN
             </p>
           </div>
         </div>
-        {firstEdition && <FirstEditionCrown />}
+        {firstEdition && <FirstEditionCrown ink={rarity.color} />}
       </article>
     </div>
   );
