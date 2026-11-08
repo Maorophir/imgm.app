@@ -26,11 +26,14 @@
  * 309px, in 328px. Below 360px, the sign-up page's "Already have an account? Log in" is
  * one tap away.
  *
+ * On a phone the header steps aside while the page scrolls down and comes back when it
+ * scrolls up (useHideOnScroll), unless a menu or the search is open in it.
+ *
  * Players: the notification bell (NotificationBell) sits just left of their menu: logo
  * about 104px + 8 + search 44 + 8 + bell 44 + 4 + menu about 62 = about 274px.
  */
 import { Search, X } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useSession } from '../lib/authClient';
@@ -44,6 +47,7 @@ import CommunityMenu from './CommunityMenu';
 import Logo from './Logo';
 import { usePlayNextAccess } from '../hooks/usePlayNextAccess';
 import { useDiscoverAccess } from '../hooks/useDiscoverAccess';
+import { useHideOnScroll } from '../hooks/useHideOnScroll';
 
 // Ivory links. Hovering underlines one; the current page keeps a heavier underline. On
 // phones the row can scroll sideways, which would clip a focus ring drawn outside the
@@ -106,6 +110,13 @@ function Navbar() {
   const searchOpen = searchOpenOn === location.key;
   const searchRef = useRef(null);
 
+  // A phone's header hides while scrolling down, but never with something open in it:
+  // the search, the Community dropdown, the bell or the account menu (each says so with
+  // aria-expanded). Not on Discover, which tucks the header away itself.
+  const headerRef = useRef(null);
+  const somethingOpen = useCallback(() => Boolean(headerRef.current?.querySelector('[aria-expanded="true"]')), []);
+  const [tucked, showHeader] = useHideOnScroll(somethingOpen, navMode == null);
+
   const toggleSearch = () => {
     if (searchOpen) {
       setSearchOpenOn(null);
@@ -137,7 +148,14 @@ function Navbar() {
 
   return (
     // (Discover on an upright phone tucks it away, and its tab lays it over the page)
-    <header className={`${navMode === 'over' ? 'fixed inset-x-0' : 'sticky'} top-0 z-50 bg-slate-950 border-b border-slate-700 ${navMode === 'hidden' ? 'hidden' : ''}`}>
+    <header
+      ref={headerRef}
+      // A keyboard focus inside a tucked-away header brings it back
+      onFocus={showHeader}
+      className={`${navMode === 'over' ? 'fixed inset-x-0' : 'sticky'} top-0 z-50 bg-slate-950 border-b border-slate-700 transition-transform duration-200 ease-out ${
+        navMode === 'hidden' ? 'hidden' : ''
+      } ${tucked ? '-translate-y-full' : ''}`}
+    >
       <nav aria-label="Main">
         <div className={`${WRAP} flex flex-wrap items-center gap-x-2 sm:gap-x-4 min-h-14 pt-1.5 sm:pt-3.5 sm:pb-1 min-[75rem]:py-0 min-[75rem]:min-h-[72px]`}>
           {/* Logo, with a small "beta" up by the top of the wordmark. The tiniest phones
