@@ -224,6 +224,9 @@ const FIRST_STAMP =
 
 // The small print along the bottom of every card face ("Beta · imgm.app")
 const SMALL_PRINT = `flex justify-between gap-[2cqi] pt-[1.6cqi] border-t-[length:max(1px,.22cqi)] ${HAIRLINE} text-[length:max(9px,2.8cqi)] leading-none text-slate-400`;
+// A First Edition's corners are cut off, so its small print sits further in, clear of
+// the angled edges
+const SMALL_PRINT_INSET = 'px-[3.6cqi]';
 
 // A review's date on the card ("12 Oct 2026") and for screen readers ("12 October 2026")
 const shortDate = (when) => when.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -412,7 +415,7 @@ const CollectibleCard = ({
                   </p>
                 )}
                 {/* The small print along the bottom of every card */}
-                <p className={`${SMALL_PRINT} ${reviewer || hasDate ? 'mt-[1.8cqi]' : ''}`}>
+                <p className={`${SMALL_PRINT} ${firstEdition ? SMALL_PRINT_INSET : ''} ${reviewer || hasDate ? 'mt-[1.8cqi]' : ''}`}>
                   <span>Beta</span>
                   <span>imgm.app</span>
                 </p>
@@ -499,7 +502,7 @@ export const ChecklistBack = ({ score, ticks, name, firstEdition = false, classN
             <div className="flex-1 min-h-0">
               <CardChecklist ticks={ticks} name={name} />
             </div>
-            <p className={`mt-[2.4cqi] ${SMALL_PRINT}`}>
+            <p className={`mt-[2.4cqi] ${SMALL_PRINT} ${firstEdition ? SMALL_PRINT_INSET : ''}`}>
               <span>Beta</span>
               <span>imgm.app</span>
             </p>
