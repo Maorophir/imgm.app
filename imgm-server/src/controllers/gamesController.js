@@ -6,6 +6,8 @@ import { upsertGame } from '../services/gameStore.js';
 import { getSteamTrailers } from '../services/steamTrailers.js';
 import { getXboxTrailers, xboxIdOf } from '../services/xboxTrailers.js';
 import { getSessionUser } from '../lib/session.js';
+import { isInternalRequest } from '../lib/internal.js';
+import { internalApiKey } from '../lib/config.js';
 
 // Re-fetch a cached game from IGDB once it's older than this
 const GAME_STALE_AFTER = 7 * 24 * 60 * 60 * 1000; // 7 days
@@ -86,7 +88,10 @@ export const searchGames = async (req, res) => {
   }
 
   try {
-    const results = await igdb.searchGames(query);
+    // Only Play Next (an internal call) needs each game's time to beat: the site's search
+    // boxes don't show it, and leaving it out saves an IGDB request per search. Without
+    // an internal key (local development) every search keeps it, as Play Next needs.
+    const results = await igdb.searchGames(query, 12, { times: !internalApiKey || isInternalRequest(req) });
     res.json(await withImgmRatings(results));
   } catch (error) {
     console.error(`Error searching IGDB for "${query}":`, error);
