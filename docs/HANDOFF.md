@@ -1,4 +1,4 @@
-# Handoff (2026-11-08, after the launch week; continue on either machine)
+# Handoff (2026-11-18: the Gemini model migration is pending; continue on either machine)
 
 Read `.claude/CLAUDE.md` first: it explains how everything works. This file says where things stand.
 
@@ -44,6 +44,12 @@ cd imgm-ai && uv sync                                           # nothing new si
 - **Old saved chats** keep a wrong "0 reviews" in their data; the badge hides a 0 count. Shared Steam games older than two weeks can't be fetched.
 
 ## Next
+0. **Move Play Next off Gemini 3.6 Flash before 2027-01-28** (Google's notice of 2026-11-18: 3.6 Flash shuts down on Vertex on 2027-01-28; new projects are blocked from 2026-11-19, but `gen-lang-client-0029420490` is active, so it keeps working until then). Google's recommended replacement is **Gemini 4 Hydrogen** (`gemini-4-hydrogen`). Findings on 2026-11-18 (CLAUDE.md → Models has the details):
+   - Hydrogen costs the same as 3.8 Flash from January ($1.50 / $7.50 per 1M tokens) and has a free tier; it exists only on Vertex's **global** endpoint (us-central1 and europe-west4 answer 404).
+   - It passed a tool call (2.2s) and a structured answer (2.6s) on Vertex once, then **all day it was overloaded**: 429 "Resource exhausted" on Vertex, 503s and timeouts on the free key. 3.8 Flash had a few 504s too.
+   - **Gemini 4 Argon and Carbon are out**: their structured answers (how the format node writes the picks) hung for ~2 minutes (Carbon 3 of 3, Argon 1 of 3), they cost ~2.7× more and have no free tier.
+   - The 5-question benchmark (3.8 Flash vs Hydrogen) couldn't finish because of Hydrogen's 429s. 3.8 Flash answered 4 of 5 well with no fix rounds.
+   - **To do:** rerun the benchmark when Hydrogen isn't overloaded (same 5 questions, both models in parallel, through Vertex, Steam off; force one model by replacing `llm.gemini_tiers` before importing the graph, and clear `llm._skip_until` before each question, or one failure skips the model for the rest of the run). Then the change to `llm.py`, shown to the user as a diff and applied only when they say so (agent code): replace `gemini-3.6-flash` with `gemini-4-hydrogen` in `FREE_TIER_MODELS` and `PAID_TIER_MODELS` (Vertex uses the paid list), and keep 3.8 Flash first unless Hydrogen proves as good and as reliable.
 1. **The LinkedIn post** (the user's), then watch the admin pages (who comes, what they do, countries) and Render's / Cloud Run's logs.
 2. **Emails:** `EMAILS` is still off on Render (only a dry run in the log). The user decides when to turn the opt-in emails on.
 3. **Jev suggesting the agent's path** (the user's idea for the agent; the user writes it, one small step at a time, Claude asks before every agent edit): Jev answers yes/no questions about a find request (names a game? new games? limits?) in the same call as the route, and the agent gets hints. Measure in traces.
